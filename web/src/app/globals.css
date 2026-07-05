@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Devices with a mouse or trackpad. Used for app chrome (top nav vs. phone tab bar) so a
+   narrow desktop window keeps the desktop layout. Content grids still use width breakpoints. */
+@custom-variant desktop (@media (hover: hover) and (pointer: fine));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -22,5 +26,5 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
