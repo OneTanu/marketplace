@@ -9,6 +9,7 @@ dependencies = [
     "djangorestframework>=3.18.1",
     "drf-spectacular>=0.30.0",
     "gunicorn>=26.2.0",
+    "pillow>=12.3.0",
     "procrastinate[django]>=3.10.0",
     "psycopg[binary]>=3.3.6",
 ]

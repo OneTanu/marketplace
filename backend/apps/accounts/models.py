@@ -30,6 +30,15 @@ class User(AbstractUser):
 
     username = None
     email = models.EmailField(unique=True)
+    # Set from the verified email domain at signup. Null only for staff accounts
+    # created outside signup (e.g. createsuperuser).
+    school = models.ForeignKey(
+        "schools.School",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="users",
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS: list[str] = []
