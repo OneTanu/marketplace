@@ -20,7 +20,8 @@ services:
       context: ./backend
       args:
         INSTALL_DEV: "true"
-    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    # exec makes runserver the main process, so Ctrl+C / docker stop reach Django directly.
+    command: sh -c "python manage.py migrate && exec python manage.py runserver 0.0.0.0:8000"
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.dev
       POSTGRES_HOST: db
