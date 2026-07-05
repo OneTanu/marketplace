@@ -1,6 +1,6 @@
 # Tanu
 
-Marketplace for UMD students. V1: students list services (tutoring, photography, design, hair/beauty, etc.), customers book and pay through Tanu, and providers are paid out via Stripe Connect. V2 adds goods (buy/sell items, Facebook Marketplace style) and messaging.
+Student-only marketplace for buying and selling items on campus, starting at UMD and expanding to other schools. Every user is a verified student, and each user and listing belongs to one school. V1 is items (payment happens off-platform between buyer and seller). V2 brings back services (tutoring, photography, etc.) with bookings and Stripe Connect.
 
 Full architecture rationale and trade-offs: @docs/architecture-decisions.md (local only; `docs/` is gitignored).
 
@@ -8,14 +8,15 @@ Full architecture rationale and trade-offs: @docs/architecture-decisions.md (loc
 
 - `backend/` – Django + Django REST Framework. One service, one Postgres database. API-first.
   - `config/` – settings (`base`, `dev`, `test`, `prod`), URLs, WSGI/ASGI.
-  - `apps/accounts` – custom `User` (email login, no username), UMD-email signup check.
-  - `apps/listings` – service listings, categories, photos.
-  - `apps/bookings` – availability, appointments, booking state machine.
-  - `apps/payments` – Stripe Connect, ledger, webhooks.
-  - `apps/reviews`, `apps/trust` (license verification, reports, moderation), `apps/notifications` (emails, background jobs).
-- `web/` – Next.js + TypeScript. Currently a mock UI for exercising the API.
-- `mobile/` – React Native (Expo), planned.
-- `contracts/openapi.yaml` – generated from the backend. Never edit by hand; regenerate (see Commands). Web/mobile generate their TypeScript types from it.
+  - `apps/schools` – `School` and `SchoolDomain` (which email domains belong to which school).
+  - `apps/accounts` – custom `User` (email login, no username, `school`), signup restricted to registered school domains.
+  - `apps/listings` – `Listing` (shared fields) plus one-to-one `ItemDetails` / `ServiceDetails`, `Category`, `ListingPhoto`.
+  - `apps/messaging` – conversations between buyers and sellers.
+  - `apps/deals` – offers, Buy now, Pending/Sold, handoff confirmation.
+  - `apps/reviews`, `apps/trust` (reports, blocking, moderation), `apps/notifications` (notifications, watched searches, emails).
+  - `apps/bookings`, `apps/payments` – V2 (services), empty for now.
+- `web/` – Next.js + TypeScript, responsive (mobile-first) and installable as a PWA. Proxies `/api` and `/media` to Django.
+- `contracts/openapi.yaml` – generated from the backend. Never edit by hand. `web/src/lib/api/schema.d.ts` is generated from it.
 - `docker-compose.yml` – local Postgres + backend.
 
 ## Commands
@@ -24,43 +25,51 @@ Full architecture rationale and trade-offs: @docs/architecture-decisions.md (loc
 docker compose up --build                       # Postgres (host port 5433) + API at http://localhost:8000
 docker compose exec backend pytest              # backend tests
 docker compose exec backend python manage.py makemigrations
+docker compose exec backend python manage.py createsuperuser   # then use /admin
 cd backend && uv run python manage.py spectacular --file ../contracts/openapi.yaml   # regenerate contract
 cd web && npm run dev                           # web app at http://localhost:3000 (run natively, not in Docker)
+cd web && npm run api:types                     # regenerate TS types after the contract changes
+cd web && npm run typecheck                     # Next.js route types + tsc
 ```
 
-API docs: http://localhost:8000/api/docs/. Health: `/api/health/`. Auth (django-allauth headless): `/api/auth/`.
+API docs: http://localhost:8000/api/docs/. Health: `/api/health/`. Auth (django-allauth headless): `/api/auth/`. Admin: `/admin/`.
 
 ## Hard rules
 
 ### Code organization
-- Business rules and state changes live in each app's `services.py` (e.g. `bookings.services.confirm_booking()`). Views and serializers call services; they never set `status` fields or write ledger rows directly.
+- Business rules and state changes live in each app's `services.py` (e.g. `deals.services.accept_offer()`). Views and serializers call services; they never set `status` fields directly.
 - Apps don't reach into another app's models to change them; call that app's services.
-- External providers sit behind our own interface: Stripe only via `apps/payments/services.py`, email via Django mailers, files via Django storages, background jobs via Procrastinate tasks.
+- External providers sit behind our own interface: email via Django mailers, files via Django storages, background jobs via Procrastinate tasks, and (V2) Stripe only via `apps/payments/services.py`.
 
 ### API-first
 - All features go through DRF JSON endpoints, because web and mobile share one API. Django templates only for admin.
-- After changing endpoints or serializers, regenerate `contracts/openapi.yaml` in the same change. CI fails if it is stale.
+- After changing endpoints or serializers, regenerate `contracts/openapi.yaml` and `web/src/lib/api/schema.d.ts` in the same change. CI fails if either is stale.
+- Our DRF URLs end in `/`, so call them with the slash (`/api/health/`). allauth's `/api/auth/...` URLs have no trailing slash.
 
-### Accounts
-- Signup is limited to verified UMD emails, `umd.edu` and `terpmail.umd.edu` (`TANU_ALLOWED_EMAIL_DOMAINS`); email verification is mandatory before login. Don't weaken this.
+### Schools and accounts
+- Signup requires a verified email on a domain registered to an active `School` (UMD: `umd.edu`, `terpmail.umd.edu`). Email verification is mandatory before login. Don't weaken this.
+- Adding a school is data (an admin or migration row), never code or settings.
+- A user's school is set once at signup from their verified email; changing it is an admin action.
+- A listing's `school` is always its seller's school. Feeds and searches filter by the viewer's school unless they explicitly widen the scope.
 
-### Money and payments
+### Listings
+- Shared fields go on `Listing`; kind-specific fields go on `ItemDetails` / `ServiceDetails`. Don't add item-only or service-only columns to `Listing`.
+- Item status: Available → Pending (seller accepted a buyer) → Sold (both confirmed the handoff). Pending can return to Available. Removed is for sellers and moderation. Never mark Sold on a Buy now click.
+- Timers: the seller has 24h to answer a request or offer; a Pending deal returns to Available after 72h without a confirmed handoff. Both run as background jobs.
+
+### Data and money
 - Money is integer cents with an explicit currency. Never floats.
-- `apps/payments` is the only app that imports `stripe`. Stripe keys come from environment variables, never source control.
-- The ledger is append-only, double-entry. Balances are derived from entries, never edited.
-- A state change and its ledger entries commit in one `transaction.atomic()`.
+- Every database change is a migration. Never change a database by hand, including production.
 - Background jobs that must only run if a transaction commits are enqueued inside that transaction (Procrastinate stores jobs in the same Postgres database).
-- Webhooks: verify the Stripe signature, then store Stripe `event.id` under a unique constraint before handling. Duplicates are acknowledged and skipped.
-- Pass Stripe idempotency keys on all outgoing writes (charges, transfers, refunds).
-- Booking and payment status are state machines with explicit allowed transitions. Never overwrite state with whatever event arrived last.
-- Services are paid on-platform (through Stripe). Goods (V2) are paid off-platform between buyer and seller.
+- V2 payments: append-only double-entry ledger, Stripe webhook signature verification and `event.id` dedupe, idempotency keys on every Stripe write, explicit payment state machine.
 
 ### Product and compliance constraints
-- Regulated categories (haircuts/barbering, nails, lashes, brows, esthetics) require a verified Maryland license number before a listing can go live. Unregulated categories need no license.
-- Service locations must not include UMD residence halls. Allowed: provider's off-campus place, client's off-campus place, licensed shop, or remote.
-- Tutoring listings may not offer completing graded work or exam answers.
-- No UMD logos, Testudo, or "official UMD" wording. The footer states Tanu is independent and not affiliated with or endorsed by UMD.
-- Store datetimes in UTC; display in America/New_York.
+- Prohibited items: weapons, alcohol, tobacco/vapes, drugs and prescriptions, food, counterfeits, stolen goods.
+- No university logos, mascots, or "official" wording. The footer states Tanu is independent and not affiliated with or endorsed by any university.
+- Store datetimes in UTC; display in America/New_York (`TIME_ZONE`). Add a per-school time zone when a school outside Eastern time joins.
+- V2 services: regulated categories (hair, nails, lashes, brows, esthetics) need a verified Maryland license before going live; no dorm-room service locations; tutoring may not include doing graded work.
 
 ## CI
-- `.github/workflows/ci.yml`, path-filtered: `backend/` changes run ruff, migration check, contract check, and pytest; `web/` changes run lint, type check, and build.
+- `.github/workflows/ci.yml`, path-filtered:
+  - `backend/` or `contracts/` changes: ruff, migration check, contract check, pytest.
+  - `web/` or `contracts/` changes: API-types check, lint, type check, build.
