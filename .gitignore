@@ -1,0 +1,28 @@
+# Private planning docs: kept locally / shared, not in git
+docs/
+
+# Secrets and local environment files
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+backend/staticfiles/
+backend/media/
+
+# Node / Next.js (web/ has its own .gitignore as well)
+node_modules/
+.next/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Claude Code personal settings
+.claude/settings.local.json

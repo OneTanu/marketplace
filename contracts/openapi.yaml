@@ -1,0 +1,7 @@
+openapi: 3.0.3
+info:
+  title: Tanu API
+  version: 0.1.0
+  description: Marketplace API shared by the Tanu web and mobile apps.
+paths: {}
+components: {}
