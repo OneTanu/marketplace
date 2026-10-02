@@ -1,0 +1,4 @@
+# Packages allowed to run install scripts (pnpm blocks them by default).
+# unrs-resolver: native helper used by eslint-config-next; npm ran its script implicitly.
+allowBuilds:
+  unrs-resolver: true

@@ -84,19 +84,23 @@ jobs:
         working-directory: web
     steps:
       - uses: actions/checkout@v5
+      # Installs the pnpm version pinned in web/package.json ("packageManager").
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: web/package.json
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - run: npm ci
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
       - name: API types are up to date
         run: |
-          npm run api:types
+          pnpm api:types
           git diff --exit-code -- src/lib/api/schema.d.ts
       - name: Lint
-        run: npm run lint
+        run: pnpm lint
       - name: Type check
-        run: npm run typecheck
+        run: pnpm typecheck
       - name: Build
-        run: npm run build
+        run: pnpm build

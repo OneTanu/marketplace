@@ -37,11 +37,11 @@ contracts/   OpenAPI spec generated from the backend, shared with the web app
 
 ## Running locally
 
-Requires Docker and Node.js.
+Requires Docker, Node.js, and pnpm (`npm install -g pnpm@12.8.1`).
 
 ```bash
 docker compose up --build              # API at http://localhost:8000 (docs at /api/docs/)
-cd web && npm install && npm run dev   # web app at http://localhost:3000
+cd web && pnpm install && pnpm dev    # web app at http://localhost:3000
 ```
 
 ## Status

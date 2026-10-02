@@ -27,14 +27,20 @@ docker compose exec backend pytest              # backend tests
 docker compose exec backend python manage.py makemigrations
 docker compose exec backend python manage.py createsuperuser   # then use /admin
 cd backend && uv run python manage.py spectacular --file ../contracts/openapi.yaml   # regenerate contract
-cd web && npm run dev                           # web app at http://localhost:3000 (run natively, not in Docker)
-cd web && npm run api:types                     # regenerate TS types after the contract changes
-cd web && npm run typecheck                     # Next.js route types + tsc
+cd web && pnpm install                          # web dependencies (pnpm, not npm; one-time: npm install -g pnpm@12.8.1)
+cd web && pnpm dev                              # web app at http://localhost:3000 (run natively, not in Docker)
+cd web && pnpm api:types                        # regenerate TS types after the contract changes
+cd web && pnpm typecheck                        # Next.js route types + tsc
 ```
 
 API docs: http://localhost:8000/api/docs/. Health: `/api/health/`. Auth (django-allauth headless): `/api/auth/`. Admin: `/admin/`.
 
 ## Hard rules
+
+### Tooling
+- The web app uses **pnpm**, pinned in `web/package.json` (`packageManager`). Never run `npm install` in `web/` or commit a `package-lock.json`. Add packages with `pnpm add <pkg>` (`-D` for dev tools).
+- pnpm blocks dependency install scripts unless listed under `allowBuilds` in `web/pnpm-workspace.yaml`. Approve one only when it's needed, with `pnpm approve-builds <pkg>`.
+- The backend uses **uv** (`uv add`, `uv run`); `uv.lock` is committed.
 
 ### Code organization
 - Business rules and state changes live in each app's `services.py` (e.g. `deals.services.accept_offer()`). Views and serializers call services; they never set `status` fields directly.
