@@ -2,30 +2,12 @@ import pytest
 from django.core import mail
 from django.db import IntegrityError
 
-from apps.accounts.adapter import is_allowed_email
 from apps.accounts.models import User
+from apps.schools.models import School
 
 SIGNUP_URL = "/api/auth/browser/v1/auth/signup"
 LOGIN_URL = "/api/auth/browser/v1/auth/login"
 PASSWORD = "a-long-test-password-123"
-
-
-@pytest.mark.parametrize(
-    ("email", "allowed"),
-    [
-        ("terp@umd.edu", True),
-        ("Terp@UMD.EDU", True),
-        ("terp@terpmail.umd.edu", True),
-        ("Terp@TerpMail.UMD.edu", True),
-        ("terp@fake-terpmail.umd.edu", False),
-        ("terp@gmail.com", False),
-        ("terp@fakeumd.edu", False),
-        ("terp@umd.edu.evil.com", False),
-        ("terp@cs.umd.edu", False),
-    ],
-)
-def test_is_allowed_email(email, allowed):
-    assert is_allowed_email(email) is allowed
 
 
 @pytest.mark.django_db
@@ -50,7 +32,8 @@ def test_signup_with_umd_email_requires_verification(client):
     assert response.status_code == 401
     flows = response.json()["data"]["flows"]
     assert any(f["id"] == "verify_email" and f.get("is_pending") for f in flows)
-    assert User.objects.filter(email="terp@umd.edu").exists()
+    user = User.objects.get(email="terp@umd.edu")
+    assert user.school.slug == "umd"
     assert len(mail.outbox) == 1
 
 
@@ -88,4 +71,16 @@ def test_signup_with_terpmail_email_requires_verification(client):
         content_type="application/json",
     )
     assert response.status_code == 401
-    assert User.objects.filter(email="terp@terpmail.umd.edu").exists()
+    assert User.objects.get(email="terp@terpmail.umd.edu").school.slug == "umd"
+
+
+@pytest.mark.django_db
+def test_signup_rejected_when_school_is_inactive(client):
+    School.objects.filter(slug="umd").update(is_active=False)
+    response = client.post(
+        SIGNUP_URL,
+        {"email": "terp@umd.edu", "password": PASSWORD},
+        content_type="application/json",
+    )
+    assert response.status_code == 400
+    assert not User.objects.exists()

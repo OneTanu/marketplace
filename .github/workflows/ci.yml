@@ -33,6 +33,7 @@ jobs:
               - '.github/workflows/ci.yml'
             web:
               - 'web/**'
+              - 'contracts/**'
               - '.github/workflows/ci.yml'
 
   backend:
@@ -89,6 +90,10 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
+      - name: API types are up to date
+        run: |
+          npm run api:types
+          git diff --exit-code -- src/lib/api/schema.d.ts
       - name: Lint
         run: npm run lint
       - name: Type check

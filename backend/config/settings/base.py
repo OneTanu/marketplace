@@ -16,6 +16,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",
     # Third party
     "rest_framework",
     "drf_spectacular",
@@ -24,13 +25,17 @@ INSTALLED_APPS = [
     "allauth.headless",
     "procrastinate.contrib.django",
     # Tanu
+    "apps.schools",
     "apps.accounts",
     "apps.listings",
-    "apps.bookings",
-    "apps.payments",
+    "apps.messaging",
+    "apps.deals",
     "apps.reviews",
     "apps.trust",
     "apps.notifications",
+    # V2 (services)
+    "apps.bookings",
+    "apps.payments",
 ]
 
 MIDDLEWARE = [
@@ -96,21 +101,27 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# --- Accounts (django-allauth, headless) ---
-# Signup is limited to verified UMD email addresses.
-TANU_ALLOWED_EMAIL_DOMAINS = ["umd.edu", "terpmail.umd.edu"]
+# User uploads (listing photos). Local disk in dev; cloud storage (S3/R2) in production.
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
+# --- Accounts (django-allauth, headless) ---
+# Signup is limited to verified emails on a domain registered to an active School
+# (see apps.schools). Adding a school is a database row, not a settings change.
 ACCOUNT_ADAPTER = "apps.accounts.adapter.AccountAdapter"
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*"]
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 # Caution: enabling ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED lets a pending signup change its
-# email through a form that skips AccountAdapter.clean_email. Re-check the UMD restriction first.
+# email through a form that skips AccountAdapter.clean_email. Re-check the school check first.
 ACCOUNT_UNIQUE_EMAIL = True
 
 HEADLESS_ONLY = True
 WEB_APP_URL = os.environ.get("WEB_APP_URL", "http://localhost:3000")
+# The web app proxies /api to Django, so browser requests carry the web app's Origin
+# while the Host is Django's. Trust that origin or every browser POST fails CSRF.
+CSRF_TRUSTED_ORIGINS = [WEB_APP_URL]
 HEADLESS_FRONTEND_URLS = {
     "account_confirm_email": f"{WEB_APP_URL}/account/verify-email/{{key}}",
     "account_reset_password_from_key": f"{WEB_APP_URL}/account/password/reset/{{key}}",
