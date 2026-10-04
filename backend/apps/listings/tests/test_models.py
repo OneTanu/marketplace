@@ -13,7 +13,7 @@ def umd():
 
 @pytest.fixture
 def seller(umd):
-    return User.objects.create_user("seller@umd.edu", "pw-123456789", school=umd)
+    return User.objects.create_user("seller@umd.edu", "pw-123456789", username="seller", school=umd)
 
 
 @pytest.fixture

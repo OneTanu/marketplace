@@ -12,12 +12,12 @@ export interface paths {
             cookie?: never;
         };
         get: operations["me_retrieve"];
-        put?: never;
+        put: operations["me_update"];
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        patch: operations["me_partial_update"];
         trace?: never;
     };
     "/api/schools/": {
@@ -61,10 +61,13 @@ export interface components {
         CurrentUser: {
             readonly id: number;
             /** Format: email */
-            email: string;
-            first_name?: string;
-            last_name?: string;
+            readonly email: string;
+            readonly username: string;
+            readonly first_name: string;
+            readonly last_name: string;
             readonly school: components["schemas"]["School"];
+            instagram_handle?: string | null;
+            profile_description?: string;
         };
         /**
          * @description * `planned` - Planned
@@ -74,6 +77,17 @@ export interface components {
          * @enum {string}
          */
         MarketplaceStatusEnum: "planned" | "waitlist" | "open" | "paused";
+        PatchedCurrentUser: {
+            readonly id?: number;
+            /** Format: email */
+            readonly email?: string;
+            readonly username?: string;
+            readonly first_name?: string;
+            readonly last_name?: string;
+            readonly school?: components["schemas"]["School"];
+            instagram_handle?: string | null;
+            profile_description?: string;
+        };
         School: {
             name: string;
             short_name: string;
@@ -103,6 +117,56 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurrentUser"];
+                };
+            };
+        };
+    };
+    me_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CurrentUser"];
+                "application/x-www-form-urlencoded": components["schemas"]["CurrentUser"];
+                "multipart/form-data": components["schemas"]["CurrentUser"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurrentUser"];
+                };
+            };
+        };
+    };
+    me_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedCurrentUser"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedCurrentUser"];
+                "multipart/form-data": components["schemas"]["PatchedCurrentUser"];
+            };
+        };
         responses: {
             200: {
                 headers: {

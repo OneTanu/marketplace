@@ -14,9 +14,18 @@ export type SchoolMarketplace = {
 export type CurrentUser = {
   id: number;
   email: string;
+  username: string;
   first_name: string;
   last_name: string;
   school: SchoolMarketplace | null;
+  instagram_handle: string | null;
+  profile_description: string;
+};
+
+export type ProfileUpdateErrors = {
+  instagram_handle?: string;
+  profile_description?: string;
+  detail?: string;
 };
 
 async function getJson<T>(path: string): Promise<T> {
@@ -38,6 +47,59 @@ export async function getCurrentUser() {
   if (response.status === 401 || response.status === 403) return null;
   if (!response.ok) throw new Error(`Request failed with ${response.status}`);
   return response.json() as Promise<CurrentUser>;
+}
+
+function cookie(name: string) {
+  return document.cookie
+    .split("; ")
+    .find((part) => part.startsWith(`${name}=`))
+    ?.split("=")
+    .slice(1)
+    .join("=");
+}
+
+export async function updateCurrentUser(update: {
+  instagram_handle: string;
+  profile_description: string;
+}): Promise<{ user?: CurrentUser; errors: ProfileUpdateErrors }> {
+  let csrf = cookie("csrftoken");
+  if (!csrf) {
+    await fetch("/api/auth/browser/v1/config", { credentials: "same-origin" });
+    csrf = cookie("csrftoken");
+  }
+  try {
+    const response = await fetch("/api/me/", {
+      method: "PATCH",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        ...(csrf ? { "X-CSRFToken": decodeURIComponent(csrf) } : {}),
+      },
+      body: JSON.stringify(update),
+    });
+    const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    if (response.ok) return { user: body as CurrentUser, errors: {} };
+    const message = (key: string) => {
+      const value = body[key];
+      if (Array.isArray(value)) return String(value[0]);
+      return typeof value === "string" ? value : undefined;
+    };
+    const instagramError = message("instagram_handle");
+    const descriptionError = message("profile_description");
+    return {
+      errors: {
+        instagram_handle: instagramError,
+        profile_description: descriptionError,
+        detail:
+          message("detail") ??
+          (instagramError || descriptionError
+            ? undefined
+            : "We couldn’t save your profile. Please try again."),
+      },
+    };
+  } catch {
+    return { errors: { detail: "Tanu couldn’t reach the server. Check your connection and try again." } };
+  }
 }
 
 export async function homeMarketplacePath() {

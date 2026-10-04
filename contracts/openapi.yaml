@@ -19,6 +19,56 @@ paths:
               schema:
                 $ref: '#/components/schemas/CurrentUser'
           description: ''
+    put:
+      operationId: me_update
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CurrentUser'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CurrentUser'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CurrentUser'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+          description: ''
+    patch:
+      operationId: me_partial_update
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCurrentUser'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCurrentUser'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCurrentUser'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+          description: ''
   /api/schools/:
     get:
       operationId: schools_list
@@ -74,21 +124,33 @@ components:
         email:
           type: string
           format: email
-          maxLength: 254
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
         first_name:
           type: string
-          maxLength: 150
+          readOnly: true
         last_name:
           type: string
-          maxLength: 150
+          readOnly: true
         school:
           allOf:
           - $ref: '#/components/schemas/School'
           readOnly: true
+        instagram_handle:
+          type: string
+          nullable: true
+        profile_description:
+          type: string
+          maxLength: 300
       required:
       - email
+      - first_name
       - id
+      - last_name
       - school
+      - username
     MarketplaceStatusEnum:
       enum:
       - planned
@@ -101,6 +163,35 @@ components:
         * `waitlist` - Waitlist
         * `open` - Open
         * `paused` - Paused
+    PatchedCurrentUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+        first_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+        school:
+          allOf:
+          - $ref: '#/components/schemas/School'
+          readOnly: true
+        instagram_handle:
+          type: string
+          nullable: true
+        profile_description:
+          type: string
+          maxLength: 300
     School:
       type: object
       properties:

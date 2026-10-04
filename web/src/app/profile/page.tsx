@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
-import { Placeholder } from "@/components/placeholder";
+import { ProfileClient } from "@/components/profile/profile-client";
 
-export const metadata: Metadata = { title: "Profile" };
+export const metadata: Metadata = { title: "Your profile" };
 
 export default function ProfilePage() {
-  return <Placeholder title="Profile" note="Your profile, listings, and bookmarks (workstreams 1 and 3)." />;
+  return <ProfileClient />;
 }

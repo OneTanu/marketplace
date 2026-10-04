@@ -15,6 +15,6 @@ ADMIN_PAGES = [
 @pytest.mark.django_db
 @pytest.mark.parametrize("url", ADMIN_PAGES)
 def test_admin_pages_render(client, url):
-    admin = User.objects.create_superuser("admin@umd.edu", "pw-123456789")
+    admin = User.objects.create_superuser("admin@umd.edu", "pw-123456789", username="admin")
     client.force_login(admin)
     assert client.get(url).status_code == 200

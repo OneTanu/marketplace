@@ -15,7 +15,9 @@ from apps.schools.models import School
 )
 def test_listing_admin_shows_only_matching_details(client, kind, shown, hidden):
     umd = School.objects.get(slug="umd")
-    admin = User.objects.create_superuser("admin@umd.edu", "pw-123456789", school=umd)
+    admin = User.objects.create_superuser(
+        "admin@umd.edu", "pw-123456789", username="admin", school=umd
+    )
     category = Category.objects.create(name=str(kind), slug=str(kind), kind=kind)
     listing = Listing.objects.create(
         school=umd, seller=admin, kind=kind, category=category, title="x", price_cents=100
