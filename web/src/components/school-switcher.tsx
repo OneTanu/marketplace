@@ -20,7 +20,7 @@ export function SchoolSwitcher() {
         if (!active) return;
         setHomeSlug(user?.school?.slug ?? "");
         setSchools(directory.filter((school) => school.marketplace_status === "open"));
-        setReady(Boolean(user));
+        setReady(true);
       })
       .catch(() => active && setReady(false));
     return () => {
@@ -32,7 +32,7 @@ export function SchoolSwitcher() {
 
   const selected = routeSlug && schools.some((school) => school.slug === routeSlug)
     ? routeSlug
-    : homeSlug;
+    : homeSlug || schools[0]?.slug;
 
   return (
     <label className="relative block">
@@ -41,11 +41,11 @@ export function SchoolSwitcher() {
         aria-label="School marketplace"
         value={selected}
         onChange={(event) => router.push(`/schools/${event.target.value}`)}
-        className="h-10 max-w-32 appearance-none truncate rounded-full border border-line bg-white/70 py-2 pl-3 pr-8 text-sm font-semibold text-foreground outline-none transition hover:bg-white focus:border-forest focus:ring-4 focus:ring-forest/10 sm:max-w-48 sm:pl-4 sm:pr-9"
+        className="h-10 max-w-40 appearance-none truncate rounded-full border border-line bg-white/70 py-2 pl-3 pr-8 text-[13px] font-semibold text-foreground outline-none transition hover:bg-white focus:border-forest focus:ring-4 focus:ring-forest/10 sm:max-w-48 sm:pl-4 sm:pr-9 sm:text-sm"
       >
         {schools.map((school) => (
           <option key={school.slug} value={school.slug}>
-            {school.short_name}{school.slug === homeSlug ? " · Home" : ""}
+            {school.short_name} Marketplace
           </option>
         ))}
       </select>
