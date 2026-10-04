@@ -54,6 +54,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/users/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["users_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/{username}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["users_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/{username}/follow/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["users_follow_create"];
+        delete: operations["users_follow_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -68,6 +116,8 @@ export interface components {
             readonly school: components["schemas"]["School"];
             instagram_handle?: string | null;
             profile_description?: string;
+            readonly follower_count: number;
+            readonly following_count: number;
         };
         /**
          * @description * `planned` - Planned
@@ -87,6 +137,20 @@ export interface components {
             readonly school?: components["schemas"]["School"];
             instagram_handle?: string | null;
             profile_description?: string;
+            readonly follower_count?: number;
+            readonly following_count?: number;
+        };
+        PublicUser: {
+            readonly id: number;
+            username: string;
+            first_name?: string;
+            readonly school: components["schemas"]["School"];
+            instagram_handle?: string;
+            profile_description?: string;
+            readonly follower_count: number;
+            readonly following_count: number;
+            readonly is_following: boolean;
+            readonly is_self: boolean;
         };
         School: {
             name: string;
@@ -215,6 +279,93 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["School"];
                 };
+            };
+        };
+    };
+    users_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicUser"][];
+                };
+            };
+        };
+    };
+    users_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicUser"];
+                };
+            };
+        };
+    };
+    users_follow_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicUser"];
+                "application/x-www-form-urlencoded": components["schemas"]["PublicUser"];
+                "multipart/form-data": components["schemas"]["PublicUser"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicUser"];
+                };
+            };
+        };
+    };
+    users_follow_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

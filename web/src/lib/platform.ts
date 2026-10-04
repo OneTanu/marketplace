@@ -20,12 +20,27 @@ export type CurrentUser = {
   school: SchoolMarketplace | null;
   instagram_handle: string | null;
   profile_description: string;
+  follower_count: number;
+  following_count: number;
 };
 
 export type ProfileUpdateErrors = {
   instagram_handle?: string;
   profile_description?: string;
   detail?: string;
+};
+
+export type PublicUser = {
+  id: number;
+  username: string;
+  first_name: string;
+  school: SchoolMarketplace | null;
+  instagram_handle: string;
+  profile_description: string;
+  follower_count: number;
+  following_count: number;
+  is_following: boolean;
+  is_self: boolean;
 };
 
 async function getJson<T>(path: string): Promise<T> {
@@ -47,6 +62,14 @@ export async function getCurrentUser() {
   if (response.status === 401 || response.status === 403) return null;
   if (!response.ok) throw new Error(`Request failed with ${response.status}`);
   return response.json() as Promise<CurrentUser>;
+}
+
+export function searchUsers(query: string) {
+  return getJson<PublicUser[]>(`/api/users/?q=${encodeURIComponent(query)}`);
+}
+
+export function getPublicUser(username: string) {
+  return getJson<PublicUser>(`/api/users/${encodeURIComponent(username)}/`);
 }
 
 function cookie(name: string) {
@@ -100,6 +123,25 @@ export async function updateCurrentUser(update: {
   } catch {
     return { errors: { detail: "Tanu couldn’t reach the server. Check your connection and try again." } };
   }
+}
+
+export async function setFollowing(username: string, following: boolean) {
+  let csrf = cookie("csrftoken");
+  if (!csrf) {
+    await fetch("/api/auth/browser/v1/config", { credentials: "same-origin" });
+    csrf = cookie("csrftoken");
+  }
+  const response = await fetch(`/api/users/${encodeURIComponent(username)}/follow/`, {
+    method: following ? "POST" : "DELETE",
+    credentials: "same-origin",
+    headers: csrf ? { "X-CSRFToken": decodeURIComponent(csrf) } : {},
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as { detail?: string };
+    throw new Error(body.detail ?? "We couldn’t update this follow.");
+  }
+  if (response.status === 204) return null;
+  return response.json() as Promise<PublicUser>;
 }
 
 export async function homeMarketplacePath() {

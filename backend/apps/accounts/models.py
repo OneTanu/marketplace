@@ -112,3 +112,33 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+
+
+class Follow(models.Model):
+    follower = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="following_relationships",
+    )
+    following = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="follower_relationships",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["follower", "following"],
+                name="accounts_follow_unique",
+            ),
+            models.CheckConstraint(
+                condition=~Q(follower=models.F("following")),
+                name="accounts_follow_not_self",
+            ),
+        ]
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.follower.username} follows {self.following.username}"

@@ -158,8 +158,8 @@ export function ProfileClient() {
                 {saved && <p className="mt-3 text-sm font-semibold text-forest">Profile saved.</p>}
               </div>
               <div className="flex gap-6 text-sm">
-                <div><strong className="block text-lg text-foreground">0</strong><span className="text-muted">Followers</span></div>
-                <div><strong className="block text-lg text-foreground">0</strong><span className="text-muted">Following</span></div>
+                <div><strong className="block text-lg text-foreground">{user.follower_count}</strong><span className="text-muted">Followers</span></div>
+                <div><strong className="block text-lg text-foreground">{user.following_count}</strong><span className="text-muted">Following</span></div>
               </div>
             </div>
           )}
