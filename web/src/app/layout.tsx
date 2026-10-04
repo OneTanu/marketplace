@@ -17,13 +17,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "Tanu", template: "%s · Tanu" },
-  description: "Buy and sell with students at your school.",
+  title: { default: "Tanu — Your campus marketplace", template: "%s · Tanu" },
+  description: "Buy and sell with verified students at your school.",
   appleWebApp: { capable: true, title: "Tanu", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#111827",
+  themeColor: "#f7f5ef",
   viewportFit: "cover",
 };
 
@@ -31,6 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">

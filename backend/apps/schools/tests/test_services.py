@@ -25,12 +25,17 @@ def test_school_for_email(email, slug):
 
 @pytest.mark.django_db
 def test_new_school_is_a_database_row():
-    gw = School.objects.create(name="George Washington University", short_name="GW", slug="gw")
+    gw = School.objects.create(
+        name="George Washington University",
+        short_name="GW",
+        slug="gw",
+        signup_is_open=True,
+    )
     SchoolDomain.objects.create(school=gw, domain=" GWU.edu ")
     assert school_for_email("colonial@gwu.edu") == gw
 
 
 @pytest.mark.django_db
-def test_inactive_school_does_not_match():
-    School.objects.filter(slug="umd").update(is_active=False)
+def test_school_closed_to_signup_does_not_match():
+    School.objects.filter(slug="umd").update(signup_is_open=False)
     assert school_for_email("terp@umd.edu") is None

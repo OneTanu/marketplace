@@ -1,30 +1,45 @@
 @import "tailwindcss";
 
-/* Devices with a mouse or trackpad. Used for app chrome (top nav vs. phone tab bar) so a
-   narrow desktop window keeps the desktop layout. Content grids still use width breakpoints. */
 @custom-variant desktop (@media (hover: hover) and (pointer: fine));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7f5ef;
+  --foreground: #14231d;
+  --surface: #fffdf8;
+  --muted: #66736c;
+  --line: #dfe3dc;
+  --brand: #ed5b2b;
+  --brand-soft: #fff0e8;
+  --forest: #174b37;
+  --forest-soft: #e3eee7;
+  --danger: #b42318;
+  --danger-soft: #fef3f2;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-forest: var(--forest);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+* { box-sizing: border-box; }
+html { background: var(--background); scroll-behavior: smooth; }
 body {
-  background: var(--background);
+  background: radial-gradient(circle at 10% 0%, rgb(237 91 43 / 8%), transparent 32rem), var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
+button, input { font: inherit; }
+::selection { background: #ffd3c2; }
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-in { animation: fade-up 500ms ease-out both; }

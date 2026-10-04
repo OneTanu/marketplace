@@ -75,8 +75,8 @@ def test_signup_with_terpmail_email_requires_verification(client):
 
 
 @pytest.mark.django_db
-def test_signup_rejected_when_school_is_inactive(client):
-    School.objects.filter(slug="umd").update(is_active=False)
+def test_signup_rejected_when_school_signup_is_closed(client):
+    School.objects.filter(slug="umd").update(signup_is_open=False)
     response = client.post(
         SIGNUP_URL,
         {"email": "terp@umd.edu", "password": PASSWORD},

@@ -10,8 +10,9 @@ class SchoolDomainInline(admin.TabularInline):
 
 @admin.register(School)
 class SchoolAdmin(admin.ModelAdmin):
-    list_display = ["name", "short_name", "slug", "is_active"]
-    list_filter = ["is_active"]
+    list_display = ["name", "short_name", "slug", "marketplace_status", "signup_is_open"]
+    list_filter = ["marketplace_status", "signup_is_open", "country_code"]
     search_fields = ["name", "short_name", "domains__domain"]
+    ordering = ["sort_order", "name"]
     prepopulated_fields = {"slug": ["short_name"]}
     inlines = [SchoolDomainInline]

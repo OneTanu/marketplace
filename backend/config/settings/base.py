@@ -106,7 +106,7 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 # --- Accounts (django-allauth, headless) ---
-# Signup is limited to verified emails on a domain registered to an active School
+# Signup is limited to verified emails on a domain registered to a signup-enabled School
 # (see apps.schools). Adding a school is a database row, not a settings change.
 ACCOUNT_ADAPTER = "apps.accounts.adapter.AccountAdapter"
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
