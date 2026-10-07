@@ -30,6 +30,10 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+    # Lets E2E runs (web/playwright.config.ts) reach Postgres via the host port on Linux too;
+    # Docker Desktop provides host.docker.internal already.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       db:
         condition: service_healthy
