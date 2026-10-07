@@ -19,3 +19,17 @@ export function dollarsToCents(input: string): number | null {
   if (whole.length > 9) return null;
   return Number.parseInt(`${whole}${fraction.padEnd(2, "0")}`, 10);
 }
+
+/**
+ * Formats integer cents for display: 2500 → "$25", 2499 → "$24.99", 120050 → "$1,200.50".
+ * The API only sends whole, non-negative cents, so anything else is a bug and throws.
+ */
+export function centsToDollars(cents: number): string {
+  if (!Number.isSafeInteger(cents) || cents < 0) {
+    throw new RangeError(`Expected a non-negative whole number of cents, got ${cents}.`);
+  }
+  const digits = String(cents).padStart(3, "0");
+  const whole = digits.slice(0, -2).replace(/\B(?=(\d{3})+$)/g, ",");
+  const fraction = digits.slice(-2);
+  return fraction === "00" ? `$${whole}` : `$${whole}.${fraction}`;
+}

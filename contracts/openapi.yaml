@@ -244,6 +244,34 @@ paths:
               schema:
                 $ref: '#/components/schemas/Listing'
           description: ''
+  /api/listings/mine/:
+    get:
+      operationId: listings_mine_list
+      description: The signed-in seller's own listings, newest first.
+      parameters:
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - available
+          - pending
+          - removed
+          - sold
+        description: Only listings with this status.
+      tags:
+      - listings
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Listing'
+          description: ''
   /api/me/:
     get:
       operationId: me_retrieve

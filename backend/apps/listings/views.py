@@ -61,6 +61,37 @@ class ListingCreateView(APIView):
         )
 
 
+@extend_schema(
+    parameters=[
+        OpenApiParameter(
+            "status", enum=Listing.Status.values, description="Only listings with this status."
+        )
+    ]
+)
+class MyListingsView(generics.ListAPIView):
+    """The signed-in seller's own listings, newest first."""
+
+    serializer_class = ListingSerializer
+
+    def get_queryset(self):
+        # Removed listings are left out for now. #11 adds removed_by and changes this to:
+        # exclude seller-removed listings, include moderation-removed ones (with a notice).
+        listings = (
+            listing_queryset()
+            .filter(seller=self.request.user)
+            .exclude(status=Listing.Status.REMOVED)
+            .order_by("-created_at", "-id")
+        )
+        listing_status = self.request.query_params.get("status")
+        if listing_status is not None:
+            if listing_status not in Listing.Status.values:
+                raise serializers.ValidationError(
+                    {"status": f'"{listing_status}" is not a listing status.'}
+                )
+            listings = listings.filter(status=listing_status)
+        return listings
+
+
 class ListingDetailView(generics.RetrieveAPIView):
     """Any signed-in student can fetch a listing, whatever its school."""
 
