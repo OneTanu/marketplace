@@ -3,5 +3,680 @@ info:
   title: Tanu API
   version: 0.1.0
   description: Marketplace API shared by the Tanu web and mobile apps.
-paths: {}
-components: {}
+paths:
+  /api/conversations/:
+    get:
+      operationId: conversations_list
+      tags:
+      - conversations
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Conversation'
+          description: ''
+    post:
+      operationId: conversations_create
+      tags:
+      - conversations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartConversation'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StartConversation'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StartConversation'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+          description: ''
+  /api/conversations/{id}/:
+    get:
+      operationId: conversations_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - conversations
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+          description: ''
+  /api/conversations/{id}/messages/:
+    get:
+      operationId: conversations_messages_retrieve
+      parameters:
+      - in: query
+        name: after_id
+        schema:
+          type: integer
+          minimum: 1
+      - in: query
+        name: before_id
+        schema:
+          type: integer
+          minimum: 1
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - conversations
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessagePage'
+          description: ''
+    post:
+      operationId: conversations_messages_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - conversations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessage'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SendMessage'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SendMessage'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/conversations/{id}/read/:
+    post:
+      operationId: conversations_read_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - conversations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkRead'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MarkRead'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MarkRead'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/conversations/unread-count/:
+    get:
+      operationId: conversations_unread_count_retrieve
+      tags:
+      - conversations
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/me/:
+    get:
+      operationId: me_retrieve
+      tags:
+      - me
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+          description: ''
+    put:
+      operationId: me_update
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CurrentUser'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CurrentUser'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CurrentUser'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+          description: ''
+    patch:
+      operationId: me_partial_update
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCurrentUser'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCurrentUser'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCurrentUser'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+          description: ''
+  /api/schools/:
+    get:
+      operationId: schools_list
+      description: Public directory of schools known to Tanu and their marketplace
+        state.
+      tags:
+      - schools
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/School'
+          description: ''
+  /api/schools/{slug}/:
+    get:
+      operationId: schools_retrieve
+      description: Public directory of schools known to Tanu and their marketplace
+        state.
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - schools
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/School'
+          description: ''
+  /api/users/:
+    get:
+      operationId: users_list
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicUser'
+          description: ''
+  /api/users/{username}/:
+    get:
+      operationId: users_retrieve
+      parameters:
+      - in: path
+        name: username
+        schema:
+          type: string
+        required: true
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicUser'
+          description: ''
+  /api/users/{username}/follow/:
+    post:
+      operationId: users_follow_create
+      parameters:
+      - in: path
+        name: username
+        schema:
+          type: string
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublicUser'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PublicUser'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PublicUser'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicUser'
+          description: ''
+    delete:
+      operationId: users_follow_destroy
+      parameters:
+      - in: path
+        name: username
+        schema:
+          type: string
+        required: true
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '204':
+          description: No response body
+components:
+  schemas:
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        other_user:
+          allOf:
+          - $ref: '#/components/schemas/MessagingUser'
+          readOnly: true
+        latest_message:
+          allOf:
+          - $ref: '#/components/schemas/Message'
+          readOnly: true
+        unread_count:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_message_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - created_at
+      - id
+      - latest_message
+      - other_user
+      - unread_count
+    CurrentUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+        first_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+        school:
+          allOf:
+          - $ref: '#/components/schemas/School'
+          readOnly: true
+        instagram_handle:
+          type: string
+          nullable: true
+        profile_description:
+          type: string
+          maxLength: 300
+        follower_count:
+          type: integer
+          readOnly: true
+        following_count:
+          type: integer
+          readOnly: true
+      required:
+      - email
+      - first_name
+      - follower_count
+      - following_count
+      - id
+      - last_name
+      - school
+      - username
+    MarkRead:
+      type: object
+      properties:
+        message_id:
+          type: integer
+          minimum: 1
+    MarketplaceStatusEnum:
+      enum:
+      - planned
+      - waitlist
+      - open
+      - paused
+      type: string
+      description: |-
+        * `planned` - Planned
+        * `waitlist` - Waitlist
+        * `open` - Open
+        * `paused` - Paused
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        conversation:
+          type: integer
+          readOnly: true
+        sender:
+          allOf:
+          - $ref: '#/components/schemas/MessagingUser'
+          readOnly: true
+        body:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_mine:
+          type: boolean
+          readOnly: true
+      required:
+      - body
+      - conversation
+      - created_at
+      - id
+      - is_mine
+      - sender
+    MessagePage:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+          readOnly: true
+        has_more:
+          type: boolean
+          readOnly: true
+      required:
+      - has_more
+      - messages
+    MessagingUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          pattern: ^[A-Za-z0-9._]+$
+          maxLength: 30
+          minLength: 3
+        first_name:
+          type: string
+          maxLength: 150
+        school:
+          allOf:
+          - $ref: '#/components/schemas/School'
+          readOnly: true
+      required:
+      - id
+      - school
+      - username
+    PatchedCurrentUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+        first_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+        school:
+          allOf:
+          - $ref: '#/components/schemas/School'
+          readOnly: true
+        instagram_handle:
+          type: string
+          nullable: true
+        profile_description:
+          type: string
+          maxLength: 300
+        follower_count:
+          type: integer
+          readOnly: true
+        following_count:
+          type: integer
+          readOnly: true
+    PublicUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          pattern: ^[A-Za-z0-9._]+$
+          maxLength: 30
+          minLength: 3
+        first_name:
+          type: string
+          maxLength: 150
+        school:
+          allOf:
+          - $ref: '#/components/schemas/School'
+          readOnly: true
+        instagram_handle:
+          type: string
+          maxLength: 30
+        profile_description:
+          type: string
+          maxLength: 300
+        follower_count:
+          type: integer
+          readOnly: true
+        following_count:
+          type: integer
+          readOnly: true
+        is_following:
+          type: boolean
+          readOnly: true
+        is_self:
+          type: boolean
+          readOnly: true
+      required:
+      - follower_count
+      - following_count
+      - id
+      - is_following
+      - is_self
+      - school
+      - username
+    School:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        short_name:
+          type: string
+          maxLength: 50
+        slug:
+          type: string
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        signup_is_open:
+          type: boolean
+        marketplace_status:
+          $ref: '#/components/schemas/MarketplaceStatusEnum'
+        city:
+          type: string
+          maxLength: 100
+        state:
+          type: string
+          maxLength: 100
+        country_code:
+          type: string
+          maxLength: 2
+        timezone:
+          type: string
+          maxLength: 64
+        domains:
+          type: array
+          items:
+            type: string
+          readOnly: true
+      required:
+      - domains
+      - name
+      - short_name
+      - slug
+    SendMessage:
+      type: object
+      properties:
+        body:
+          type: string
+          maxLength: 2000
+      required:
+      - body
+    StartConversation:
+      type: object
+      properties:
+        username:
+          type: string
+          maxLength: 30
+      required:
+      - username
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid

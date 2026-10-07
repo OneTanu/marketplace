@@ -1,0 +1,110 @@
+from drf_spectacular.utils import extend_schema_field
+from rest_framework import serializers
+
+from apps.accounts.models import User
+from apps.schools.serializers import SchoolSerializer
+
+from .models import Conversation, Message
+
+
+class MessagingUserSerializer(serializers.ModelSerializer):
+    school = SchoolSerializer(read_only=True)
+
+    class Meta:
+        model = User
+        fields = ["id", "username", "first_name", "school"]
+
+
+class MessageSerializer(serializers.ModelSerializer):
+    sender = MessagingUserSerializer(read_only=True)
+    is_mine = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Message
+        fields = ["id", "conversation", "sender", "body", "created_at", "is_mine"]
+        read_only_fields = fields
+
+    def get_is_mine(self, message) -> bool:
+        request = self.context.get("request")
+        return bool(request and message.sender_id == request.user.pk)
+
+
+class MessagePageSerializer(serializers.Serializer):
+    messages = MessageSerializer(many=True, read_only=True)
+    has_more = serializers.BooleanField(read_only=True)
+
+
+class MessageQuerySerializer(serializers.Serializer):
+    before_id = serializers.IntegerField(required=False, min_value=1)
+    after_id = serializers.IntegerField(required=False, min_value=1)
+
+    def validate(self, attrs):
+        if "before_id" in attrs and "after_id" in attrs:
+            raise serializers.ValidationError("Use either before_id or after_id, not both.")
+        return attrs
+
+
+class ConversationSerializer(serializers.ModelSerializer):
+    other_user = serializers.SerializerMethodField()
+    latest_message = serializers.SerializerMethodField()
+    unread_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Conversation
+        fields = [
+            "id",
+            "other_user",
+            "latest_message",
+            "unread_count",
+            "created_at",
+            "last_message_at",
+        ]
+
+    def _membership(self, conversation):
+        request = self.context["request"]
+        return next(
+            (
+                record
+                for record in conversation.participant_records.all()
+                if record.user_id == request.user.pk
+            ),
+            None,
+        )
+
+    @extend_schema_field(MessagingUserSerializer)
+    def get_other_user(self, conversation):
+        request = self.context["request"]
+        other = next(
+            (
+                record.user
+                for record in conversation.participant_records.all()
+                if record.user_id != request.user.pk
+            ),
+            None,
+        )
+        return MessagingUserSerializer(other).data if other else None
+
+    @extend_schema_field(MessageSerializer)
+    def get_latest_message(self, conversation):
+        message = conversation.messages.order_by("-id").first()
+        return MessageSerializer(message, context=self.context).data if message else None
+
+    def get_unread_count(self, conversation) -> int:
+        request = self.context["request"]
+        membership = self._membership(conversation)
+        messages = conversation.messages.exclude(sender=request.user)
+        if membership and membership.last_read_message_id:
+            messages = messages.filter(id__gt=membership.last_read_message_id)
+        return messages.count()
+
+
+class StartConversationSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=30)
+
+
+class SendMessageSerializer(serializers.Serializer):
+    body = serializers.CharField(max_length=2000, trim_whitespace=True)
+
+
+class MarkReadSerializer(serializers.Serializer):
+    message_id = serializers.IntegerField(required=False, min_value=1)

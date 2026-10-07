@@ -106,12 +106,13 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 # --- Accounts (django-allauth, headless) ---
-# Signup is limited to verified emails on a domain registered to an active School
+# Signup is limited to verified emails on a domain registered to a signup-enabled School
 # (see apps.schools). Adding a school is a database row, not a settings change.
 ACCOUNT_ADAPTER = "apps.accounts.adapter.AccountAdapter"
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_SIGNUP_FORM_CLASS = "apps.accounts.forms.ProfileSignupForm"
+ACCOUNT_USER_MODEL_USERNAME_FIELD = "username"
 ACCOUNT_LOGIN_METHODS = {"email"}
-ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*"]
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*"]
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 # Caution: enabling ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED lets a pending signup change its
 # email through a form that skips AccountAdapter.clean_email. Re-check the school check first.
