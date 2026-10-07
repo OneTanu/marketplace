@@ -4,6 +4,175 @@ info:
   version: 0.1.0
   description: Marketplace API shared by the Tanu web and mobile apps.
 paths:
+  /api/conversations/:
+    get:
+      operationId: conversations_list
+      tags:
+      - conversations
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Conversation'
+          description: ''
+    post:
+      operationId: conversations_create
+      tags:
+      - conversations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartConversation'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StartConversation'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StartConversation'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+          description: ''
+  /api/conversations/{id}/:
+    get:
+      operationId: conversations_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - conversations
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+          description: ''
+  /api/conversations/{id}/messages/:
+    get:
+      operationId: conversations_messages_list
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - conversations
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+          description: ''
+    post:
+      operationId: conversations_messages_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - conversations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessage'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SendMessage'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SendMessage'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/conversations/{id}/read/:
+    post:
+      operationId: conversations_read_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - conversations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkRead'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MarkRead'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MarkRead'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/conversations/unread-count/:
+    get:
+      operationId: conversations_unread_count_retrieve
+      tags:
+      - conversations
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/me/:
     get:
       operationId: me_retrieve
@@ -202,6 +371,37 @@ paths:
           description: No response body
 components:
   schemas:
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        other_user:
+          allOf:
+          - $ref: '#/components/schemas/MessagingUser'
+          readOnly: true
+        latest_message:
+          allOf:
+          - $ref: '#/components/schemas/Message'
+          readOnly: true
+        unread_count:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_message_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - created_at
+      - id
+      - latest_message
+      - other_user
+      - unread_count
     CurrentUser:
       type: object
       properties:
@@ -246,6 +446,12 @@ components:
       - last_name
       - school
       - username
+    MarkRead:
+      type: object
+      properties:
+        message_id:
+          type: integer
+          minimum: 1
     MarketplaceStatusEnum:
       enum:
       - planned
@@ -258,6 +464,58 @@ components:
         * `waitlist` - Waitlist
         * `open` - Open
         * `paused` - Paused
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        conversation:
+          type: integer
+          readOnly: true
+        sender:
+          allOf:
+          - $ref: '#/components/schemas/MessagingUser'
+          readOnly: true
+        body:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_mine:
+          type: boolean
+          readOnly: true
+      required:
+      - body
+      - conversation
+      - created_at
+      - id
+      - is_mine
+      - sender
+    MessagingUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          pattern: ^[A-Za-z0-9._]+$
+          maxLength: 30
+          minLength: 3
+        first_name:
+          type: string
+          maxLength: 150
+        school:
+          allOf:
+          - $ref: '#/components/schemas/School'
+          readOnly: true
+      required:
+      - id
+      - school
+      - username
     PatchedCurrentUser:
       type: object
       properties:
@@ -376,6 +634,22 @@ components:
       - name
       - short_name
       - slug
+    SendMessage:
+      type: object
+      properties:
+        body:
+          type: string
+          maxLength: 2000
+      required:
+      - body
+    StartConversation:
+      type: object
+      properties:
+        username:
+          type: string
+          maxLength: 30
+      required:
+      - username
   securitySchemes:
     basicAuth:
       type: http

@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { getPublicUser, setFollowing, type PublicUser } from "@/lib/platform";
+import { startConversation } from "@/lib/messaging";
 
 export function PublicProfile({ username }: { username: string }) {
+  const router = useRouter();
   const [user, setUser] = useState<PublicUser | null>();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -34,6 +37,19 @@ export function PublicProfile({ username }: { username: string }) {
     }
   }
 
+  async function messageUser() {
+    if (!user || user.is_self) return;
+    setPending(true);
+    setError("");
+    try {
+      const conversation = await startConversation(user.username);
+      router.push(`/inbox/${conversation.id}`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "We couldn’t start this conversation.");
+      setPending(false);
+    }
+  }
+
   if (user === undefined) {
     return <main className="mx-auto min-h-[70vh] max-w-6xl animate-pulse px-4 py-10 sm:px-6"><div className="h-72 rounded-3xl bg-foreground/5" /></main>;
   }
@@ -52,7 +68,7 @@ export function PublicProfile({ username }: { username: string }) {
             <div className="pb-1"><div className="flex items-center gap-2"><h1 className="text-3xl font-black tracking-[-.04em]">{user.first_name || `@${user.username}`}</h1><span className="rounded-full bg-[var(--forest-soft)] px-2.5 py-1 text-xs font-bold text-forest">Verified</span></div><p className="mt-1 text-muted">@{user.username}</p></div>
           </div>
           <div className="flex gap-2">
-            {user.is_self ? <Link href="/profile" className="rounded-full border border-line bg-white px-5 py-2.5 text-sm font-bold">Edit your profile</Link> : <><button onClick={toggleFollow} disabled={pending} className={`rounded-full px-5 py-2.5 text-sm font-bold transition disabled:opacity-60 ${user.is_following ? "border border-line bg-white" : "bg-foreground text-white hover:bg-forest"}`}>{pending ? "Saving…" : user.is_following ? "Following" : "Follow"}</button><button disabled title="Messaging is the next feature" className="rounded-full border border-line bg-white px-5 py-2.5 text-sm font-bold opacity-60">Message</button></>}
+            {user.is_self ? <Link href="/profile" className="rounded-full border border-line bg-white px-5 py-2.5 text-sm font-bold">Edit your profile</Link> : <><button onClick={toggleFollow} disabled={pending} className={`rounded-full px-5 py-2.5 text-sm font-bold transition disabled:opacity-60 ${user.is_following ? "border border-line bg-white" : "bg-foreground text-white hover:bg-forest"}`}>{pending ? "Saving…" : user.is_following ? "Following" : "Follow"}</button><button onClick={messageUser} disabled={pending} className="rounded-full border border-line bg-white px-5 py-2.5 text-sm font-bold transition hover:border-forest disabled:opacity-60">Message</button></>}
           </div>
         </div>
         <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">

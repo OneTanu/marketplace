@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Suspense } from "react";
 import { AuthActions } from "./auth/auth-actions";
 import { MarketplaceDepartmentNav } from "./discovery/marketplace-department-nav";
+import { UnreadBadge } from "./messaging/unread-badge";
 import { NAV_ITEMS } from "./nav-items";
 import { SchoolSwitcher } from "./school-switcher";
 
@@ -39,14 +40,14 @@ export function SiteNav() {
           </div>
         </form>}
         {!schoolSlug && <nav className="hidden items-center gap-1 desktop:flex" aria-label="Main">
-          {NAV_ITEMS.slice(0, 4).map((item) => <Link key={item.href} href={item.href} aria-current={isActive(pathname, item.href) ? "page" : undefined} className="rounded-full px-4 py-2 text-sm font-semibold text-foreground/65 transition hover:bg-white/70 hover:text-foreground aria-[current=page]:bg-white aria-[current=page]:text-foreground aria-[current=page]:shadow-sm">{item.label}</Link>)}
+          {NAV_ITEMS.slice(0, 4).map((item) => <Link key={item.href} href={item.href} aria-current={isActive(pathname, item.href) ? "page" : undefined} className="rounded-full px-4 py-2 text-sm font-semibold text-foreground/65 transition hover:bg-white/70 hover:text-foreground aria-[current=page]:bg-white aria-[current=page]:text-foreground aria-[current=page]:shadow-sm">{item.label}{item.href === "/inbox" && <UnreadBadge />}</Link>)}
         </nav>}
         <AuthActions />
       </div>
       {schoolSlug && <div className="border-t border-line/70 bg-surface/80"><Suspense fallback={<div className="h-14" />}><MarketplaceDepartmentNav schoolSlug={schoolSlug} /></Suspense></div>}
     </header>
     {!isAccountPage && <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-[#fffdf8]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl desktop:hidden">
-      <ul className="grid grid-cols-5">{NAV_ITEMS.map((item) => <li key={item.href}><Link href={item.href} aria-current={isActive(pathname, item.href) ? "page" : undefined} className="flex min-h-16 flex-col items-center justify-center gap-1 text-[11px] font-semibold text-muted transition aria-[current=page]:text-brand">{item.icon}{item.label}</Link></li>)}</ul>
+      <ul className="grid grid-cols-5">{NAV_ITEMS.map((item) => <li key={item.href}><Link href={item.href} aria-current={isActive(pathname, item.href) ? "page" : undefined} className="flex min-h-16 flex-col items-center justify-center gap-1 text-[11px] font-semibold text-muted transition aria-[current=page]:text-brand">{item.icon}<span>{item.label}{item.href === "/inbox" && <UnreadBadge />}</span></Link></li>)}</ul>
     </nav>}
   </>;
 }

@@ -17,6 +17,7 @@ urlpatterns = [
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="api-docs"),
     path("api/", include("apps.schools.urls")),
     path("api/", include("apps.accounts.urls")),
+    path("api/", include("apps.messaging.urls")),
     # Signup, login, email verification (django-allauth headless).
     path("api/auth/", include("allauth.headless.urls")),
 ]

@@ -4,6 +4,86 @@
  */
 
 export interface paths {
+    "/api/conversations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["conversations_list"];
+        put?: never;
+        post: operations["conversations_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/conversations/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["conversations_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/conversations/{id}/messages/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["conversations_messages_list"];
+        put?: never;
+        post: operations["conversations_messages_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/conversations/{id}/read/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["conversations_read_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/conversations/unread-count/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["conversations_unread_count_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/": {
         parameters: {
             query?: never;
@@ -106,6 +186,16 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        Conversation: {
+            readonly id: number;
+            readonly other_user: components["schemas"]["MessagingUser"];
+            readonly latest_message: components["schemas"]["Message"];
+            readonly unread_count: number;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            last_message_at?: string | null;
+        };
         CurrentUser: {
             readonly id: number;
             /** Format: email */
@@ -119,6 +209,9 @@ export interface components {
             readonly follower_count: number;
             readonly following_count: number;
         };
+        MarkRead: {
+            message_id?: number;
+        };
         /**
          * @description * `planned` - Planned
          *     * `waitlist` - Waitlist
@@ -127,6 +220,21 @@ export interface components {
          * @enum {string}
          */
         MarketplaceStatusEnum: "planned" | "waitlist" | "open" | "paused";
+        Message: {
+            readonly id: number;
+            readonly conversation: number;
+            readonly sender: components["schemas"]["MessagingUser"];
+            readonly body: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            readonly is_mine: boolean;
+        };
+        MessagingUser: {
+            readonly id: number;
+            username: string;
+            first_name?: string;
+            readonly school: components["schemas"]["School"];
+        };
         PatchedCurrentUser: {
             readonly id?: number;
             /** Format: email */
@@ -164,6 +272,12 @@ export interface components {
             timezone?: string;
             readonly domains: string[];
         };
+        SendMessage: {
+            body: string;
+        };
+        StartConversation: {
+            username: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -173,6 +287,174 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    conversations_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conversation"][];
+                };
+            };
+        };
+    };
+    conversations_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartConversation"];
+                "application/x-www-form-urlencoded": components["schemas"]["StartConversation"];
+                "multipart/form-data": components["schemas"]["StartConversation"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conversation"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conversation"];
+                };
+            };
+        };
+    };
+    conversations_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conversation"];
+                };
+            };
+        };
+    };
+    conversations_messages_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"][];
+                };
+            };
+        };
+    };
+    conversations_messages_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendMessage"];
+                "application/x-www-form-urlencoded": components["schemas"]["SendMessage"];
+                "multipart/form-data": components["schemas"]["SendMessage"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+        };
+    };
+    conversations_read_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["MarkRead"];
+                "application/x-www-form-urlencoded": components["schemas"]["MarkRead"];
+                "multipart/form-data": components["schemas"]["MarkRead"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    conversations_unread_count_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     me_retrieve: {
         parameters: {
             query?: never;
