@@ -28,12 +28,8 @@ def test_current_user_includes_home_school(client):
 @pytest.mark.django_db
 def test_current_user_includes_real_follow_counts(client):
     user = User.objects.create_user("student@umd.edu", "pw-123456789", username="student")
-    follower = User.objects.create_user(
-        "follower@umd.edu", "pw-123456789", username="follower"
-    )
-    followed = User.objects.create_user(
-        "followed@umd.edu", "pw-123456789", username="followed"
-    )
+    follower = User.objects.create_user("follower@umd.edu", "pw-123456789", username="follower")
+    followed = User.objects.create_user("followed@umd.edu", "pw-123456789", username="followed")
     Follow.objects.create(follower=follower, following=user)
     Follow.objects.create(follower=user, following=followed)
     client.force_login(user)

@@ -9,9 +9,7 @@ from .models import Follow, User
 class CurrentUserSerializer(serializers.ModelSerializer):
     school = SchoolSerializer(read_only=True)
     instagram_handle = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    follower_count = serializers.IntegerField(
-        source="follower_relationships.count", read_only=True
-    )
+    follower_count = serializers.IntegerField(source="follower_relationships.count", read_only=True)
     following_count = serializers.IntegerField(
         source="following_relationships.count", read_only=True
     )
