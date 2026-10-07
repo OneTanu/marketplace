@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/api/categories/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Active categories, optionally for one listing kind. */
+        get: operations["categories_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/conversations/": {
         parameters: {
             query?: never;
@@ -76,6 +93,43 @@ export interface paths {
             cookie?: never;
         };
         get: operations["conversations_unread_count_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/listings/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Post an item listing at the seller's school. Photos are sent as repeated `photos`
+         *     files, in order.
+         */
+        post: operations["listings_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/listings/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Any signed-in student can fetch a listing, whatever its school. */
+        get: operations["listings_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -186,6 +240,41 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @enum {unknown} */
+        BlankEnum: "";
+        Category: {
+            readonly id: number;
+            readonly name: string;
+            readonly slug: string;
+        };
+        /**
+         * @description * `black` - Black
+         *     * `white` - White
+         *     * `gray` - Gray
+         *     * `brown` - Brown
+         *     * `beige` - Beige
+         *     * `red` - Red
+         *     * `pink` - Pink
+         *     * `orange` - Orange
+         *     * `yellow` - Yellow
+         *     * `green` - Green
+         *     * `blue` - Blue
+         *     * `purple` - Purple
+         *     * `gold` - Gold
+         *     * `silver` - Silver
+         *     * `multi` - Multicolor
+         * @enum {string}
+         */
+        ColorEnum: "black" | "white" | "gray" | "brown" | "beige" | "red" | "pink" | "orange" | "yellow" | "green" | "blue" | "purple" | "gold" | "silver" | "multi";
+        /**
+         * @description * `new_with_tags` - New with tags
+         *     * `like_new` - Like new
+         *     * `good` - Good
+         *     * `fair` - Fair
+         *     * `poor` - Poor
+         * @enum {string}
+         */
+        ConditionEnum: "new_with_tags" | "like_new" | "good" | "fair" | "poor";
         Conversation: {
             readonly id: number;
             readonly other_user: components["schemas"]["MessagingUser"];
@@ -209,7 +298,67 @@ export interface components {
             readonly follower_count: number;
             readonly following_count: number;
         };
-        MarkRead: {
+        CurrentUserRequest: {
+            instagram_handle?: string | null;
+            profile_description?: string;
+        };
+        ItemDetails: {
+            readonly condition: components["schemas"]["ConditionEnum"];
+            readonly size: string;
+            readonly brand: string;
+            readonly color: components["schemas"]["ColorEnum"] | components["schemas"]["BlankEnum"];
+        };
+        /**
+         * @description * `item` - Item
+         *     * `service` - Service
+         * @enum {string}
+         */
+        KindEnum: "item" | "service";
+        /** @description A listing as returned by the API. */
+        Listing: {
+            readonly id: number;
+            readonly kind: components["schemas"]["KindEnum"];
+            readonly status: components["schemas"]["StatusEnum"];
+            readonly title: string;
+            readonly description: string;
+            readonly price_cents: number;
+            readonly currency: string;
+            readonly category: components["schemas"]["Category"];
+            readonly school: components["schemas"]["SchoolSummary"];
+            readonly seller: components["schemas"]["SellerSummary"];
+            readonly item_details: components["schemas"]["ItemDetails"] | null;
+            readonly photos: components["schemas"]["ListingPhoto"][];
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        /**
+         * @description Multipart input for creating an item listing. Kind, school, currency and status are set
+         *     by the server, so they aren't fields here and are ignored if sent.
+         */
+        ListingCreateRequest: {
+            category: number;
+            title: string;
+            /** @default  */
+            description: string;
+            price_cents: number;
+            condition: components["schemas"]["ConditionEnum"];
+            /** @default  */
+            size: string;
+            /** @default  */
+            brand: string;
+            /** @default  */
+            color: components["schemas"]["ColorEnum"] | components["schemas"]["BlankEnum"];
+            /** @description 1 to 10 JPEG, PNG or WebP files of up to 10 MB each, in order. The first is the cover. */
+            photos: string[];
+        };
+        ListingPhoto: {
+            readonly id: number;
+            readonly position: number;
+            readonly image_url: string;
+        };
+        MarkReadRequest: {
             message_id?: number;
         };
         /**
@@ -239,18 +388,9 @@ export interface components {
             first_name?: string;
             readonly school: components["schemas"]["School"];
         };
-        PatchedCurrentUser: {
-            readonly id?: number;
-            /** Format: email */
-            readonly email?: string;
-            readonly username?: string;
-            readonly first_name?: string;
-            readonly last_name?: string;
-            readonly school?: components["schemas"]["School"];
+        PatchedCurrentUserRequest: {
             instagram_handle?: string | null;
             profile_description?: string;
-            readonly follower_count?: number;
-            readonly following_count?: number;
         };
         PublicUser: {
             readonly id: number;
@@ -264,6 +404,12 @@ export interface components {
             readonly is_following: boolean;
             readonly is_self: boolean;
         };
+        PublicUserRequest: {
+            username: string;
+            first_name?: string;
+            instagram_handle?: string;
+            profile_description?: string;
+        };
         School: {
             name: string;
             short_name: string;
@@ -276,12 +422,38 @@ export interface components {
             timezone?: string;
             readonly domains: string[];
         };
-        SendMessage: {
+        SchoolRequest: {
+            name: string;
+            short_name: string;
+            slug: string;
+            signup_is_open?: boolean;
+            marketplace_status?: components["schemas"]["MarketplaceStatusEnum"];
+            city?: string;
+            state?: string;
+            country_code?: string;
+            timezone?: string;
+        };
+        SchoolSummary: {
+            readonly id: number;
+            readonly short_name: string;
+        };
+        SellerSummary: {
+            readonly id: number;
+        };
+        SendMessageRequest: {
             body: string;
         };
-        StartConversation: {
+        StartConversationRequest: {
             username: string;
         };
+        /**
+         * @description * `available` - Available
+         *     * `pending` - Pending
+         *     * `sold` - Sold
+         *     * `removed` - Removed
+         * @enum {string}
+         */
+        StatusEnum: "available" | "pending" | "sold" | "removed";
     };
     responses: never;
     parameters: never;
@@ -291,6 +463,28 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    categories_list: {
+        parameters: {
+            query?: {
+                /** @description Only this listing kind. */
+                kind?: "item" | "service";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Category"][];
+                };
+            };
+        };
+    };
     conversations_list: {
         parameters: {
             query?: never;
@@ -319,9 +513,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["StartConversation"];
-                "application/x-www-form-urlencoded": components["schemas"]["StartConversation"];
-                "multipart/form-data": components["schemas"]["StartConversation"];
+                "application/json": components["schemas"]["StartConversationRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["StartConversationRequest"];
+                "multipart/form-data": components["schemas"]["StartConversationRequest"];
             };
         };
         responses: {
@@ -399,9 +593,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SendMessage"];
-                "application/x-www-form-urlencoded": components["schemas"]["SendMessage"];
-                "multipart/form-data": components["schemas"]["SendMessage"];
+                "application/json": components["schemas"]["SendMessageRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SendMessageRequest"];
+                "multipart/form-data": components["schemas"]["SendMessageRequest"];
             };
         };
         responses: {
@@ -426,9 +620,9 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["MarkRead"];
-                "application/x-www-form-urlencoded": components["schemas"]["MarkRead"];
-                "multipart/form-data": components["schemas"]["MarkRead"];
+                "application/json": components["schemas"]["MarkReadRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MarkReadRequest"];
+                "multipart/form-data": components["schemas"]["MarkReadRequest"];
             };
         };
         responses: {
@@ -462,6 +656,50 @@ export interface operations {
             };
         };
     };
+    listings_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ListingCreateRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listing"];
+                };
+            };
+        };
+    };
+    listings_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listing"];
+                };
+            };
+        };
+    };
     me_retrieve: {
         parameters: {
             query?: never;
@@ -490,9 +728,9 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["CurrentUser"];
-                "application/x-www-form-urlencoded": components["schemas"]["CurrentUser"];
-                "multipart/form-data": components["schemas"]["CurrentUser"];
+                "application/json": components["schemas"]["CurrentUserRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CurrentUserRequest"];
+                "multipart/form-data": components["schemas"]["CurrentUserRequest"];
             };
         };
         responses: {
@@ -515,9 +753,9 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["PatchedCurrentUser"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedCurrentUser"];
-                "multipart/form-data": components["schemas"]["PatchedCurrentUser"];
+                "application/json": components["schemas"]["PatchedCurrentUserRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedCurrentUserRequest"];
+                "multipart/form-data": components["schemas"]["PatchedCurrentUserRequest"];
             };
         };
         responses: {
@@ -622,9 +860,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PublicUser"];
-                "application/x-www-form-urlencoded": components["schemas"]["PublicUser"];
-                "multipart/form-data": components["schemas"]["PublicUser"];
+                "application/json": components["schemas"]["PublicUserRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PublicUserRequest"];
+                "multipart/form-data": components["schemas"]["PublicUserRequest"];
             };
         };
         responses: {

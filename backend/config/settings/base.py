@@ -132,10 +132,16 @@ HEADLESS_FRONTEND_URLS = {
 # --- API ---
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # Session auth only: users sign in through allauth, which enforces email verification.
+    # (DRF's default HTTP Basic auth would let an unverified account in with its password.)
+    "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
 }
 SPECTACULAR_SETTINGS = {
     "TITLE": "Tanu API",
     "DESCRIPTION": "Marketplace API shared by the Tanu web and mobile apps.",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    # Separate request and response components, so file uploads are typed as binary.
+    "COMPONENT_SPLIT_REQUEST": True,
 }

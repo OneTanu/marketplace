@@ -4,6 +4,32 @@ info:
   version: 0.1.0
   description: Marketplace API shared by the Tanu web and mobile apps.
 paths:
+  /api/categories/:
+    get:
+      operationId: categories_list
+      description: Active categories, optionally for one listing kind.
+      parameters:
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - item
+          - service
+        description: Only this listing kind.
+      tags:
+      - categories
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+          description: ''
   /api/conversations/:
     get:
       operationId: conversations_list
@@ -11,7 +37,6 @@ paths:
       - conversations
       security:
       - cookieAuth: []
-      - basicAuth: []
       responses:
         '200':
           content:
@@ -29,17 +54,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/StartConversation'
+              $ref: '#/components/schemas/StartConversationRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/StartConversation'
+              $ref: '#/components/schemas/StartConversationRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/StartConversation'
+              $ref: '#/components/schemas/StartConversationRequest'
         required: true
       security:
       - cookieAuth: []
-      - basicAuth: []
       responses:
         '200':
           content:
@@ -66,7 +90,6 @@ paths:
       - conversations
       security:
       - cookieAuth: []
-      - basicAuth: []
       responses:
         '200':
           content:
@@ -97,7 +120,6 @@ paths:
       - conversations
       security:
       - cookieAuth: []
-      - basicAuth: []
       responses:
         '200':
           content:
@@ -119,17 +141,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SendMessage'
+              $ref: '#/components/schemas/SendMessageRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/SendMessage'
+              $ref: '#/components/schemas/SendMessageRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/SendMessage'
+              $ref: '#/components/schemas/SendMessageRequest'
         required: true
       security:
       - cookieAuth: []
-      - basicAuth: []
       responses:
         '201':
           content:
@@ -152,16 +173,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MarkRead'
+              $ref: '#/components/schemas/MarkReadRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/MarkRead'
+              $ref: '#/components/schemas/MarkReadRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/MarkRead'
+              $ref: '#/components/schemas/MarkReadRequest'
       security:
       - cookieAuth: []
-      - basicAuth: []
       responses:
         '204':
           description: No response body
@@ -172,7 +192,6 @@ paths:
       - conversations
       security:
       - cookieAuth: []
-      - basicAuth: []
       responses:
         '200':
           content:
@@ -181,6 +200,50 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/listings/:
+    post:
+      operationId: listings_create
+      description: |-
+        Post an item listing at the seller's school. Photos are sent as repeated `photos`
+        files, in order.
+      tags:
+      - listings
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ListingCreateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+          description: ''
+  /api/listings/{id}/:
+    get:
+      operationId: listings_retrieve
+      description: Any signed-in student can fetch a listing, whatever its school.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - listings
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+          description: ''
   /api/me/:
     get:
       operationId: me_retrieve
@@ -188,7 +251,6 @@ paths:
       - me
       security:
       - cookieAuth: []
-      - basicAuth: []
       responses:
         '200':
           content:
@@ -204,16 +266,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CurrentUser'
+              $ref: '#/components/schemas/CurrentUserRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CurrentUser'
+              $ref: '#/components/schemas/CurrentUserRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CurrentUser'
+              $ref: '#/components/schemas/CurrentUserRequest'
       security:
       - cookieAuth: []
-      - basicAuth: []
       responses:
         '200':
           content:
@@ -229,16 +290,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedCurrentUser'
+              $ref: '#/components/schemas/PatchedCurrentUserRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedCurrentUser'
+              $ref: '#/components/schemas/PatchedCurrentUserRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedCurrentUser'
+              $ref: '#/components/schemas/PatchedCurrentUserRequest'
       security:
       - cookieAuth: []
-      - basicAuth: []
       responses:
         '200':
           content:
@@ -255,7 +315,6 @@ paths:
       - schools
       security:
       - cookieAuth: []
-      - basicAuth: []
       - {}
       responses:
         '200':
@@ -281,7 +340,6 @@ paths:
       - schools
       security:
       - cookieAuth: []
-      - basicAuth: []
       - {}
       responses:
         '200':
@@ -297,7 +355,6 @@ paths:
       - users
       security:
       - cookieAuth: []
-      - basicAuth: []
       responses:
         '200':
           content:
@@ -320,7 +377,6 @@ paths:
       - users
       security:
       - cookieAuth: []
-      - basicAuth: []
       responses:
         '200':
           content:
@@ -343,17 +399,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PublicUser'
+              $ref: '#/components/schemas/PublicUserRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PublicUser'
+              $ref: '#/components/schemas/PublicUserRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PublicUser'
+              $ref: '#/components/schemas/PublicUserRequest'
         required: true
       security:
       - cookieAuth: []
-      - basicAuth: []
       responses:
         '200':
           content:
@@ -373,12 +428,79 @@ paths:
       - users
       security:
       - cookieAuth: []
-      - basicAuth: []
       responses:
         '204':
           description: No response body
 components:
   schemas:
+    BlankEnum:
+      enum:
+      - ''
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - id
+      - name
+      - slug
+    ColorEnum:
+      enum:
+      - black
+      - white
+      - gray
+      - brown
+      - beige
+      - red
+      - pink
+      - orange
+      - yellow
+      - green
+      - blue
+      - purple
+      - gold
+      - silver
+      - multi
+      type: string
+      description: |-
+        * `black` - Black
+        * `white` - White
+        * `gray` - Gray
+        * `brown` - Brown
+        * `beige` - Beige
+        * `red` - Red
+        * `pink` - Pink
+        * `orange` - Orange
+        * `yellow` - Yellow
+        * `green` - Green
+        * `blue` - Blue
+        * `purple` - Purple
+        * `gold` - Gold
+        * `silver` - Silver
+        * `multi` - Multicolor
+    ConditionEnum:
+      enum:
+      - new_with_tags
+      - like_new
+      - good
+      - fair
+      - poor
+      type: string
+      description: |-
+        * `new_with_tags` - New with tags
+        * `like_new` - Like new
+        * `good` - Good
+        * `fair` - Fair
+        * `poor` - Poor
     Conversation:
       type: object
       properties:
@@ -454,7 +576,183 @@ components:
       - last_name
       - school
       - username
-    MarkRead:
+    CurrentUserRequest:
+      type: object
+      properties:
+        instagram_handle:
+          type: string
+          nullable: true
+        profile_description:
+          type: string
+          maxLength: 300
+    ItemDetails:
+      type: object
+      properties:
+        condition:
+          allOf:
+          - $ref: '#/components/schemas/ConditionEnum'
+          readOnly: true
+        size:
+          type: string
+          readOnly: true
+        brand:
+          type: string
+          readOnly: true
+        color:
+          readOnly: true
+          oneOf:
+          - $ref: '#/components/schemas/ColorEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+      required:
+      - brand
+      - color
+      - condition
+      - size
+    KindEnum:
+      enum:
+      - item
+      - service
+      type: string
+      description: |-
+        * `item` - Item
+        * `service` - Service
+    Listing:
+      type: object
+      description: A listing as returned by the API.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/KindEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        price_cents:
+          type: integer
+          readOnly: true
+        currency:
+          type: string
+          readOnly: true
+        category:
+          allOf:
+          - $ref: '#/components/schemas/Category'
+          readOnly: true
+        school:
+          allOf:
+          - $ref: '#/components/schemas/SchoolSummary'
+          readOnly: true
+        seller:
+          allOf:
+          - $ref: '#/components/schemas/SellerSummary'
+          readOnly: true
+        item_details:
+          allOf:
+          - $ref: '#/components/schemas/ItemDetails'
+          readOnly: true
+          nullable: true
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/ListingPhoto'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - category
+      - created_at
+      - currency
+      - description
+      - id
+      - item_details
+      - kind
+      - photos
+      - price_cents
+      - school
+      - seller
+      - status
+      - title
+      - updated_at
+    ListingCreateRequest:
+      type: object
+      description: |-
+        Multipart input for creating an item listing. Kind, school, currency and status are set
+        by the server, so they aren't fields here and are ignored if sent.
+      properties:
+        category:
+          type: integer
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          default: ''
+          maxLength: 5000
+        price_cents:
+          type: integer
+          maximum: 1000000
+          minimum: 0
+        condition:
+          $ref: '#/components/schemas/ConditionEnum'
+        size:
+          type: string
+          default: ''
+          maxLength: 30
+        brand:
+          type: string
+          default: ''
+          maxLength: 100
+        color:
+          default: ''
+          oneOf:
+          - $ref: '#/components/schemas/ColorEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        photos:
+          type: array
+          items:
+            type: string
+            format: binary
+          description: 1 to 10 JPEG, PNG or WebP files of up to 10 MB each, in order.
+            The first is the cover.
+      required:
+      - category
+      - condition
+      - photos
+      - price_cents
+      - title
+    ListingPhoto:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        position:
+          type: integer
+          readOnly: true
+        image_url:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - image_url
+      - position
+    MarkReadRequest:
       type: object
       properties:
         message_id:
@@ -538,41 +836,15 @@ components:
       - id
       - school
       - username
-    PatchedCurrentUser:
+    PatchedCurrentUserRequest:
       type: object
       properties:
-        id:
-          type: integer
-          readOnly: true
-        email:
-          type: string
-          format: email
-          readOnly: true
-        username:
-          type: string
-          readOnly: true
-        first_name:
-          type: string
-          readOnly: true
-        last_name:
-          type: string
-          readOnly: true
-        school:
-          allOf:
-          - $ref: '#/components/schemas/School'
-          readOnly: true
         instagram_handle:
           type: string
           nullable: true
         profile_description:
           type: string
           maxLength: 300
-        follower_count:
-          type: integer
-          readOnly: true
-        following_count:
-          type: integer
-          readOnly: true
     PublicUser:
       type: object
       properties:
@@ -617,6 +889,25 @@ components:
       - is_self
       - school
       - username
+    PublicUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          pattern: ^[A-Za-z0-9._]+$
+          maxLength: 30
+        first_name:
+          type: string
+          maxLength: 150
+        instagram_handle:
+          type: string
+          maxLength: 30
+        profile_description:
+          type: string
+          maxLength: 300
+      required:
+      - username
     School:
       type: object
       properties:
@@ -656,26 +947,95 @@ components:
       - name
       - short_name
       - slug
-    SendMessage:
+    SchoolRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        short_name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        signup_is_open:
+          type: boolean
+        marketplace_status:
+          $ref: '#/components/schemas/MarketplaceStatusEnum'
+        city:
+          type: string
+          maxLength: 100
+        state:
+          type: string
+          maxLength: 100
+        country_code:
+          type: string
+          minLength: 1
+          maxLength: 2
+        timezone:
+          type: string
+          minLength: 1
+          maxLength: 64
+      required:
+      - name
+      - short_name
+      - slug
+    SchoolSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        short_name:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - short_name
+    SellerSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+      required:
+      - id
+    SendMessageRequest:
       type: object
       properties:
         body:
           type: string
+          minLength: 1
           maxLength: 2000
       required:
       - body
-    StartConversation:
+    StartConversationRequest:
       type: object
       properties:
         username:
           type: string
+          minLength: 1
           maxLength: 30
       required:
       - username
+    StatusEnum:
+      enum:
+      - available
+      - pending
+      - sold
+      - removed
+      type: string
+      description: |-
+        * `available` - Available
+        * `pending` - Pending
+        * `sold` - Sold
+        * `removed` - Removed
   securitySchemes:
-    basicAuth:
-      type: http
-      scheme: basic
     cookieAuth:
       type: apiKey
       in: cookie

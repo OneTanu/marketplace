@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
   // Django URLs end in "/". Without this, Next strips the slash and Django redirects
   // back to add it, which loops.
   skipTrailingSlashRedirect: true,
+  experimental: {
+    // Next buffers proxied request bodies and silently cuts them off at this size (default
+    // 10 MB), so Django would receive a truncated upload. A listing can carry 10 photos of up
+    // to 10 MB each (backend MAX_PHOTOS / MAX_PHOTO_BYTES), plus form fields.
+    proxyClientMaxBodySize: "105mb",
+  },
   async rewrites() {
     return [
       // ":path*" drops a trailing slash, so match the slash form first and keep it.
