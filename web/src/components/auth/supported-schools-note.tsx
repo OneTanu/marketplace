@@ -20,8 +20,8 @@ export function SupportedSchoolsNote() {
   }, []);
 
   if (schools.length === 0) {
-    return <div className="rounded-xl bg-[var(--forest-soft)] px-4 py-3 text-sm leading-6 text-forest"><strong>School email required.</strong> Use an email from a university currently supported by Tanu.</div>;
+    return <div className="rounded-xl bg-surface px-4 py-3 text-sm leading-6 text-ink"><strong>School email required.</strong> Use an email from a university currently supported by Tanu.</div>;
   }
 
-  return <div className="rounded-xl bg-[var(--forest-soft)] px-4 py-3 text-sm leading-6 text-forest"><strong>Open for signup:</strong> {schools.map((school) => school.short_name).join(", ")}. Accepted domains: {schools.flatMap((school) => school.domains.map((domain) => `@${domain}`)).join(", ")}.</div>;
+  return <div className="rounded-xl bg-surface px-4 py-3 text-sm leading-6 text-ink"><strong>Open for signup:</strong> {schools.map((school) => school.short_name).join(", ")}. Accepted domains: {schools.flatMap((school) => school.domains.map((domain) => `@${domain}`)).join(", ")}.</div>;
 }

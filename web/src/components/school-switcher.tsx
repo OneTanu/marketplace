@@ -43,16 +43,16 @@ export function SchoolSwitcher() {
         aria-label="School marketplace"
         value={selected}
         onChange={(event) => router.push(event.target.value === "all" ? "/search" : `/schools/${event.target.value}`)}
-        className="h-10 max-w-40 appearance-none truncate rounded-full border border-line bg-white/70 py-2 pl-3 pr-8 text-[13px] font-semibold text-foreground outline-none transition hover:bg-white focus:border-forest focus:ring-4 focus:ring-forest/10 sm:max-w-48 sm:pl-4 sm:pr-9 sm:text-sm"
+        className="chip h-9 max-w-36 appearance-none truncate pr-8 text-ink outline-none sm:max-w-48"
       >
-        <option value="all">All Marketplaces</option>
+        <option value="all">All schools</option>
         {schools.map((school) => (
           <option key={school.slug} value={school.slug}>
-            {school.short_name} Marketplace
+            {school.short_name}
           </option>
         ))}
       </select>
-      <span aria-hidden="true" className="pointer-events-none absolute right-3 top-2.5 text-xs text-muted">⌄</span>
+      <svg aria-hidden="true" viewBox="0 0 12 12" className="pointer-events-none absolute right-3 top-1/2 size-2.5 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="m2 4 4 4 4-4" /></svg>
     </label>
   );
 }

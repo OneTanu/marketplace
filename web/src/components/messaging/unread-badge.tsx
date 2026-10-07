@@ -16,5 +16,5 @@ export function UnreadBadge() {
   }, []);
 
   if (!count) return null;
-  return <span className="ml-1 inline-grid min-w-5 place-items-center rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-black text-white" aria-label={`${count} unread messages`}>{count > 99 ? "99+" : count}</span>;
+  return <span className="ml-1 inline-grid min-w-5 place-items-center rounded-full bg-signal px-1.5 py-0.5 text-[10px] font-black text-white" aria-label={`${count} unread messages`}>{count > 99 ? "99+" : count}</span>;
 }

@@ -24,7 +24,7 @@ export function AuthActions() {
     if (response.ok) { setAuthenticated(false); router.push("/"); router.refresh(); }
   }
 
-  if (!ready) return <div className="h-10 w-28 animate-pulse rounded-full bg-foreground/5" aria-hidden="true" />;
-  if (authenticated) return <div className="flex items-center gap-2"><Link href="/profile" className="hidden rounded-full px-4 py-2 text-sm font-semibold text-foreground/70 hover:text-foreground sm:block">Profile</Link><button onClick={logout} className="rounded-full bg-foreground px-4 py-2.5 text-sm font-bold text-white transition hover:bg-forest">Log out</button></div>;
-  return <div className="flex items-center gap-2"><Link href="/account/login" className="hidden rounded-full px-4 py-2 text-sm font-semibold text-foreground/70 transition hover:text-foreground sm:block">Log in</Link><Link href="/account/signup" className="rounded-full bg-foreground px-3 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-forest sm:px-4"><span className="sm:hidden">Join</span><span className="hidden sm:inline">Join Tanu</span></Link></div>;
+  if (!ready) return <div className="h-9 w-28 animate-pulse rounded-[0.625rem] bg-surface" aria-hidden="true" />;
+  if (authenticated) return <div className="flex items-center gap-1"><button onClick={logout} className="btn btn-quiet btn-sm">Log out</button><Link href="/sell" className="btn btn-primary btn-sm hidden desktop:inline-flex">Sell an item</Link></div>;
+  return <div className="flex items-center gap-1"><Link href="/account/login" className="btn btn-quiet btn-sm hidden sm:inline-flex">Log in</Link><Link href="/account/signup" className="btn btn-primary btn-sm">Join Tanu</Link></div>;
 }

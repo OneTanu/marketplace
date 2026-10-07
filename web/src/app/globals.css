@@ -3,17 +3,19 @@
 @custom-variant desktop (@media (hover: hover) and (pointer: fine));
 
 :root {
-  --background: #f7f5ef;
-  --foreground: #14231d;
-  --surface: #fffdf8;
-  --muted: #66736c;
-  --line: #dfe3dc;
-  --brand: #ed5b2b;
-  --brand-soft: #fff0e8;
-  --forest: #174b37;
-  --forest-soft: #e3eee7;
-  --danger: #b42318;
-  --danger-soft: #fef3f2;
+  --background: #ffffff;
+  --foreground: #17162b;
+  --surface: #f3f2f7;
+  --muted: #6b6a7b;
+  --line: #e4e3eb;
+  --brand: #3426e8;
+  --brand-strong: #2519c4;
+  --brand-soft: #ecebfd;
+  --ink: #17162b;
+  --ink-soft: #efeef5;
+  --signal: #e8336f;
+  --danger: #c0262d;
+  --danger-soft: #fdf0f0;
 }
 
 @theme inline {
@@ -23,23 +25,88 @@
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-brand: var(--brand);
-  --color-forest: var(--forest);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-brand-strong: var(--brand-strong);
+  --color-ink: var(--ink);
+  --color-signal: var(--signal);
+  --font-sans: var(--font-archivo);
 }
 
-* { box-sizing: border-box; }
-html { background: var(--background); scroll-behavior: smooth; }
-body {
-  background: radial-gradient(circle at 10% 0%, rgb(237 91 43 / 8%), transparent 32rem), var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+@layer base {
+  * { box-sizing: border-box; }
+  html { background: var(--background); scroll-behavior: smooth; }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-archivo), Arial, Helvetica, sans-serif;
+  }
+  /* In the base layer so Tailwind font utilities on buttons still apply. */
+  button, input, select, textarea { font: inherit; }
+  ::selection { background: var(--brand-soft); }
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 }
-button, input { font: inherit; }
-::selection { background: #ffd3c2; }
+
+@layer components {
+  /* Stretched Archivo for headings and prices: reads like a garment label. */
+  .type-wide { font-stretch: 125%; letter-spacing: -0.02em; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0 1.25rem;
+    border-radius: 0.625rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    white-space: nowrap;
+    transition: background-color 150ms, border-color 150ms, color 150ms;
+  }
+  .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+  .btn-sm { min-height: 2.25rem; padding: 0 0.875rem; font-size: 0.8125rem; }
+  .btn-primary { background: var(--brand); color: #fff; }
+  .btn-primary:not(:disabled):hover { background: var(--brand-strong); }
+  .btn-secondary { border: 1.5px solid var(--ink); color: var(--ink); background: var(--background); }
+  .btn-secondary:not(:disabled):hover { background: var(--ink); color: #fff; }
+  .btn-quiet { color: var(--ink); padding: 0 0.75rem; }
+  .btn-quiet:hover { background: var(--surface); }
+
+  /* Filter and category chips are the only pill-shaped controls. */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 2.25rem;
+    padding: 0 0.875rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--background);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    transition: border-color 150ms, background-color 150ms;
+  }
+  .chip:hover { border-color: var(--ink); }
+  .chip[aria-pressed="true"], .chip[aria-expanded="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+  .field {
+    height: 3rem;
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 0.625rem;
+    background: var(--background);
+    padding: 0 1rem;
+    outline: none;
+    transition: border-color 150ms, box-shadow 150ms;
+  }
+  .field:focus, .field:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+}
 
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 .animate-in { animation: fade-up 500ms ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-in { animation: none; }
+  html { scroll-behavior: auto; }
+}

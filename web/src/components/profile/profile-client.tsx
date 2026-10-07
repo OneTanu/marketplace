@@ -19,7 +19,7 @@ function initials(user: CurrentUser) {
 function InstagramLink({ handle }: { handle: string }) {
   return (
     <a
-      className="inline-flex items-center gap-2 font-semibold text-forest underline decoration-forest/25 underline-offset-4 transition hover:decoration-forest"
+      className="inline-flex items-center gap-2 font-semibold text-ink underline decoration-ink/25 underline-offset-4 transition hover:decoration-ink"
       href={`https://www.instagram.com/${encodeURIComponent(handle)}/`}
       target="_blank"
       rel="noreferrer"
@@ -34,7 +34,7 @@ function EmptyCollection({ tab }: { tab: ProfileTab }) {
     selling: {
       title: "Nothing for sale yet",
       note: "When you publish a listing, it will appear here for other students to find.",
-      action: <Link href="/sell" className="rounded-full bg-foreground px-5 py-2.5 text-sm font-bold text-white transition hover:bg-forest">Create a listing</Link>,
+      action: <Link href="/sell" className="btn btn-primary">Create a listing</Link>,
     },
     sold: {
       title: "No sold items yet",
@@ -44,14 +44,14 @@ function EmptyCollection({ tab }: { tab: ProfileTab }) {
     bookmarks: {
       title: "No bookmarks yet",
       note: "Save interesting listings while browsing and they will be collected here.",
-      action: <Link href="/search" className="rounded-full border border-line bg-white px-5 py-2.5 text-sm font-bold transition hover:border-forest">Browse listings</Link>,
+      action: <Link href="/search" className="btn btn-secondary">Browse listings</Link>,
     },
   }[tab];
 
   return (
     <div className="grid min-h-64 place-items-center rounded-3xl border border-dashed border-line bg-white/45 px-6 text-center">
       <div className="max-w-sm py-10">
-        <div className="mx-auto mb-4 grid size-12 place-items-center rounded-2xl bg-[var(--forest-soft)] text-xl text-forest" aria-hidden="true">◇</div>
+        <div className="mx-auto mb-4 grid size-12 place-items-center rounded-2xl bg-[var(--ink-soft)] text-xl text-ink" aria-hidden="true">◇</div>
         <h2 className="text-lg font-bold">{content.title}</h2>
         <p className="mt-2 text-sm leading-6 text-muted">{content.note}</p>
         {content.action && <div className="mt-5">{content.action}</div>}
@@ -100,10 +100,10 @@ export function ProfileClient() {
     return (
       <main className="mx-auto grid min-h-[70vh] max-w-xl place-items-center px-4 py-12 text-center">
         <div className="rounded-3xl border border-line bg-surface p-8 shadow-sm">
-          <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-[var(--forest-soft)] text-2xl font-black text-forest">T</div>
+          <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-[var(--ink-soft)] text-2xl font-black text-ink">T</div>
           <h1 className="mt-5 text-2xl font-bold tracking-tight">Sign in to view your profile</h1>
           <p className="mt-3 leading-7 text-muted">Your profile, school identity, and marketplace activity are connected to your verified student account.</p>
-          <Link href="/account/login" className="mt-6 inline-flex rounded-full bg-foreground px-6 py-3 text-sm font-bold text-white transition hover:bg-forest">Log in</Link>
+          <Link href="/account/login" className="mt-6 inline-flex btn btn-primary">Log in</Link>
         </div>
       </main>
     );
@@ -112,32 +112,32 @@ export function ProfileClient() {
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 pb-28 sm:px-6 sm:py-12 desktop:pb-12">
       <section className="animate-in overflow-hidden rounded-[2rem] border border-line bg-surface shadow-[0_18px_60px_rgb(20_35_29/8%)]">
-        <div className="h-28 bg-[linear-gradient(120deg,#174b37,#2d7154_58%,#ed5b2b)] sm:h-36" />
+        <div className="h-28 bg-ink sm:h-36" />
         <div className="px-5 pb-7 sm:px-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div className="-mt-12 flex flex-col items-start gap-4 sm:-mt-14 sm:flex-row sm:items-end">
               <div className="grid size-24 shrink-0 place-items-center rounded-[1.75rem] border-4 border-surface bg-[var(--brand-soft)] text-4xl font-black text-brand shadow-sm sm:size-28">{initials(user)}</div>
               <div className="pb-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-3xl font-black tracking-[-0.04em]">{user.first_name || `@${user.username}`}</h1>
-                  <span className="rounded-full bg-[var(--forest-soft)] px-2.5 py-1 text-xs font-bold text-forest">Verified student</span>
+                  <h1 className="type-wide text-3xl font-black">{user.first_name || `@${user.username}`}</h1>
+                  <span className="rounded bg-[var(--brand-soft)] px-2 py-0.5 text-xs font-bold text-brand">Verified student</span>
                 </div>
                 <p className="mt-1 font-medium text-muted">@{user.username}</p>
               </div>
             </div>
-            <button onClick={() => { setEditing((value) => !value); setSaved(false); setErrors({}); }} className="rounded-full border border-line bg-white px-5 py-2.5 text-sm font-bold shadow-sm transition hover:border-forest">{editing ? "Cancel" : "Edit profile"}</button>
+            <button onClick={() => { setEditing((value) => !value); setSaved(false); setErrors({}); }} className="btn btn-secondary">{editing ? "Cancel" : "Edit profile"}</button>
           </div>
 
           {editing ? (
             <form onSubmit={saveProfile} className="mt-7 max-w-2xl space-y-5 rounded-2xl border border-line bg-white/65 p-5">
               <label className="block">
                 <span className="flex justify-between text-sm font-bold">Description <span className="font-normal text-muted">Optional · 300 characters</span></span>
-                <textarea name="profile_description" defaultValue={user.profile_description} maxLength={300} rows={4} className="mt-2 w-full resize-none rounded-xl border border-line bg-white px-4 py-3 text-[15px] outline-none transition focus:border-forest focus:ring-4 focus:ring-forest/10" placeholder="Tell other students a little about you and what you sell." />
+                <textarea name="profile_description" defaultValue={user.profile_description} maxLength={300} rows={4} className="mt-2 w-full resize-none rounded-xl border border-line bg-white px-4 py-3 text-[15px] outline-none transition focus:border-brand focus:ring-4 focus:ring-[var(--brand-soft)]" placeholder="Tell other students a little about you and what you sell." />
                 {errors.profile_description && <span className="mt-1.5 block text-sm text-[var(--danger)]">{errors.profile_description}</span>}
               </label>
               <label className="block">
                 <span className="flex justify-between text-sm font-bold">Instagram <span className="font-normal text-muted">Optional and public</span></span>
-                <div className="mt-2 flex h-12 items-center rounded-xl border border-line bg-white px-4 focus-within:border-forest focus-within:ring-4 focus-within:ring-forest/10">
+                <div className="mt-2 flex h-12 items-center rounded-xl border border-line bg-white px-4 focus-within:border-brand focus-within:ring-4 focus-within:ring-[var(--brand-soft)]">
                   <span className="text-muted">@</span>
                   <input name="instagram_handle" defaultValue={user.instagram_handle ?? ""} maxLength={100} className="h-full min-w-0 flex-1 bg-transparent pl-1 outline-none" placeholder="yourhandle" />
                 </div>
@@ -145,7 +145,7 @@ export function ProfileClient() {
                 {errors.instagram_handle && <span className="mt-1.5 block text-sm text-[var(--danger)]">{errors.instagram_handle}</span>}
               </label>
               {errors.detail && <p role="alert" className="text-sm text-[var(--danger)]">{errors.detail}</p>}
-              <div className="flex justify-end"><button disabled={pending} className="rounded-full bg-foreground px-6 py-3 text-sm font-bold text-white transition hover:bg-forest disabled:opacity-60">{pending ? "Saving…" : "Save profile"}</button></div>
+              <div className="flex justify-end"><button disabled={pending} className="btn btn-primary">{pending ? "Saving…" : "Save profile"}</button></div>
             </form>
           ) : (
             <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
@@ -155,7 +155,7 @@ export function ProfileClient() {
                   {user.school && <span className="font-semibold text-foreground">{user.school.name}</span>}
                   {user.instagram_handle && <InstagramLink handle={user.instagram_handle} />}
                 </div>
-                {saved && <p className="mt-3 text-sm font-semibold text-forest">Profile saved.</p>}
+                {saved && <p className="mt-3 text-sm font-semibold text-ink">Profile saved.</p>}
               </div>
               <div className="flex gap-6 text-sm">
                 <div><strong className="block text-lg text-foreground">{user.follower_count}</strong><span className="text-muted">Followers</span></div>
