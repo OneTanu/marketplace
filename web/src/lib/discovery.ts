@@ -53,6 +53,37 @@ export const FASHION_DEPARTMENTS = {
   ],
 } as const;
 
+export const ACCESSORY_DEPARTMENTS = [
+  { slug: "bags", name: "Bags" },
+  { slug: "jewelry", name: "Jewelry" },
+  { slug: "hats", name: "Hats" },
+  { slug: "sunglasses", name: "Sunglasses" },
+  { slug: "belts", name: "Belts" },
+  { slug: "watches", name: "Watches" },
+  { slug: "wallets", name: "Wallets" },
+  { slug: "scarves", name: "Scarves" },
+  { slug: "hair-accessories", name: "Hair Accessories" },
+] as const;
+
+export const POPULAR_BRANDS = [
+  { slug: "nike", name: "Nike" },
+  { slug: "adidas", name: "Adidas" },
+  { slug: "aritzia", name: "Aritzia" },
+  { slug: "levis", name: "Levi's" },
+  { slug: "lululemon", name: "Lululemon" },
+  { slug: "abercrombie", name: "Abercrombie" },
+  { slug: "carhartt", name: "Carhartt" },
+  { slug: "the-north-face", name: "The North Face" },
+  { slug: "new-balance", name: "New Balance" },
+  { slug: "coach", name: "Coach" },
+  { slug: "zara", name: "Zara" },
+  { slug: "urban-outfitters", name: "Urban Outfitters" },
+] as const;
+
+export function brandSlug(brand: string) {
+  return brand.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
 export const CONDITION_LABELS: Record<ListingCondition, string> = {
   new_with_tags: "New with tags",
   like_new: "Like new",

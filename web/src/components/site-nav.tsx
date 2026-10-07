@@ -23,6 +23,7 @@ export function SiteNav() {
   const schoolMatch = pathname.match(/^\/schools\/([^/]+)/);
   const schoolSlug = schoolMatch?.[1];
   const showMarketplaceSearch = Boolean(schoolSlug) || pathname === "/search";
+  const showDepartments = Boolean(schoolSlug) || pathname === "/search";
 
   return <>
     <header className="sticky top-0 z-20 border-b border-line/80 bg-[#f7f5ef]/90 backdrop-blur-xl">
@@ -44,7 +45,7 @@ export function SiteNav() {
         </nav>}
         <AuthActions />
       </div>
-      {schoolSlug && <div className="border-t border-line/70 bg-surface/80"><Suspense fallback={<div className="h-14" />}><MarketplaceDepartmentNav schoolSlug={schoolSlug} /></Suspense></div>}
+      {showDepartments && <div className="border-t border-line/70 bg-surface/80"><Suspense fallback={<div className="h-14" />}><MarketplaceDepartmentNav schoolSlug={schoolSlug} /></Suspense></div>}
     </header>
     {!isAccountPage && <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-[#fffdf8]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl desktop:hidden">
       <ul className="grid grid-cols-5">{NAV_ITEMS.map((item) => <li key={item.href}><Link href={item.href} aria-current={isActive(pathname, item.href) ? "page" : undefined} className="flex min-h-16 flex-col items-center justify-center gap-1 text-[11px] font-semibold text-muted transition aria-[current=page]:text-brand">{item.icon}<span>{item.label}{item.href === "/inbox" && <UnreadBadge />}</span></Link></li>)}</ul>
