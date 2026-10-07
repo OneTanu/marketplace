@@ -34,7 +34,7 @@ export function SignupForm() {
     finally { setPending(false); }
   }
   const fieldError = (name: string) => errors.find((error) => error.field === name)?.message;
-  return <form onSubmit={submit} className="space-y-5" noValidate>
+  return <form method="post" onSubmit={submit} className="space-y-5" noValidate>
     {errors.filter((error) => !error.field).map((error) => <FormAlert key={error.message}>{error.message}</FormAlert>)}
     <div className="grid gap-5 sm:grid-cols-2">
       <Field label="First name" name="first_name" autoComplete="given-name" required error={fieldError("first_name")} />
