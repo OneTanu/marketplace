@@ -38,9 +38,18 @@ class UserSearchView(ListAPIView):
         query = self.request.query_params.get("q", "").strip()
         if not query:
             return User.objects.none()
+        school_scope = self.request.query_params.get("school")
+        users = public_users()
+        if school_scope == "all":
+            pass
+        elif school_scope:
+            users = users.filter(school__slug=school_scope)
+        elif self.request.user.school_id:
+            users = users.filter(school_id=self.request.user.school_id)
+        else:
+            return User.objects.none()
         return (
-            public_users()
-            .filter(Q(username__icontains=query) | Q(first_name__icontains=query))
+            users.filter(Q(username__icontains=query) | Q(first_name__icontains=query))
             .annotate(
                 exact_username=Case(
                     When(username__iexact=query, then=Value(0)),

@@ -7,8 +7,8 @@ from apps.schools.models import School
 PASSWORD = "pw-123456789"
 
 
-def verified_user(username, first_name, email=None):
-    school = School.objects.get(slug="umd")
+def verified_user(username, first_name, email=None, school=None):
+    school = school or School.objects.get(slug="umd")
     email = email or f"{username}@umd.edu"
     user = User.objects.create_user(
         email,
@@ -59,6 +59,33 @@ def test_exact_username_search_ranks_first(client):
     response = client.get("/api/users/?q=maya")
 
     assert response.json()[0]["username"] == "maya"
+
+
+@pytest.mark.django_db
+def test_user_search_defaults_to_viewers_school_and_can_explicitly_search_all(client):
+    umd = School.objects.get(slug="umd")
+    towson = School.objects.create(
+        name="Towson University",
+        short_name="Towson",
+        slug="towson",
+        signup_is_open=True,
+        marketplace_status="open",
+    )
+    viewer = verified_user("viewer", "Viewer", school=umd)
+    verified_user("umd.seller", "Jordan", school=umd)
+    verified_user("towson.seller", "Jordan", email="towson@example.edu", school=towson)
+    client.force_login(viewer)
+
+    home_results = client.get("/api/users/?q=jordan")
+    all_results = client.get("/api/users/?q=jordan&school=all")
+    towson_results = client.get("/api/users/?q=jordan&school=towson")
+
+    assert [user["username"] for user in home_results.json()] == ["umd.seller"]
+    assert {user["username"] for user in all_results.json()} == {
+        "umd.seller",
+        "towson.seller",
+    }
+    assert [user["username"] for user in towson_results.json()] == ["towson.seller"]
 
 
 @pytest.mark.django_db

@@ -30,7 +30,7 @@ export function SiteNav() {
       <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-x-4 px-4 sm:px-6">
         <div className="flex items-center gap-3 sm:gap-5">
           <Link href="/" aria-label="Tanu home"><Wordmark /></Link>
-          <SchoolSwitcher />
+          <Suspense fallback={null}><SchoolSwitcher /></Suspense>
         </div>
         {showMarketplaceSearch && <form action="/search" role="search" className="order-3 flex w-full items-center pb-3 desktop:order-none desktop:max-w-xl desktop:flex-1 desktop:pb-0">
           {schoolSlug && <input type="hidden" name="school" value={schoolSlug} />}

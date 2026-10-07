@@ -14,6 +14,11 @@ export type ChatMessage = {
   is_mine: boolean;
 };
 
+export type MessagePage = {
+  messages: ChatMessage[];
+  has_more: boolean;
+};
+
 export type Conversation = {
   id: number;
   other_user: MessagingUser;
@@ -68,8 +73,12 @@ export function startConversation(username: string) {
   });
 }
 
-export function listMessages(id: number) {
-  return api<ChatMessage[]>(`/api/conversations/${id}/messages/`);
+export function listMessages(id: number, cursor: { beforeId?: number; afterId?: number } = {}) {
+  const params = new URLSearchParams();
+  if (cursor.beforeId) params.set("before_id", String(cursor.beforeId));
+  if (cursor.afterId) params.set("after_id", String(cursor.afterId));
+  const query = params.toString();
+  return api<MessagePage>(`/api/conversations/${id}/messages/${query ? `?${query}` : ""}`);
 }
 
 export function sendMessage(id: number, body: string) {

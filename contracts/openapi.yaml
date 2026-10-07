@@ -76,8 +76,18 @@ paths:
           description: ''
   /api/conversations/{id}/messages/:
     get:
-      operationId: conversations_messages_list
+      operationId: conversations_messages_retrieve
       parameters:
+      - in: query
+        name: after_id
+        schema:
+          type: integer
+          minimum: 1
+      - in: query
+        name: before_id
+        schema:
+          type: integer
+          minimum: 1
       - in: path
         name: id
         schema:
@@ -93,9 +103,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Message'
+                $ref: '#/components/schemas/MessagePage'
           description: ''
     post:
       operationId: conversations_messages_create
@@ -494,6 +502,20 @@ components:
       - id
       - is_mine
       - sender
+    MessagePage:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+          readOnly: true
+        has_more:
+          type: boolean
+          readOnly: true
+      required:
+      - has_more
+      - messages
     MessagingUser:
       type: object
       properties:

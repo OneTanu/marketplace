@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { getCurrentUser, getSchools, type SchoolMarketplace } from "@/lib/platform";
@@ -8,6 +8,7 @@ import { getCurrentUser, getSchools, type SchoolMarketplace } from "@/lib/platfo
 export function SchoolSwitcher() {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [schools, setSchools] = useState<SchoolMarketplace[]>([]);
   const [homeSlug, setHomeSlug] = useState("");
   const [ready, setReady] = useState(false);
@@ -30,11 +31,16 @@ export function SchoolSwitcher() {
 
   if (!ready || schools.length === 0) return null;
 
+  const requestedSchool = searchParams.get("school");
   const selected = pathname === "/search"
-    ? "all"
+    ? requestedSchool === "all"
+      ? "all"
+      : requestedSchool && schools.some((school) => school.slug === requestedSchool)
+        ? requestedSchool
+        : homeSlug || "all"
     : routeSlug && schools.some((school) => school.slug === routeSlug)
       ? routeSlug
-      : homeSlug || schools[0]?.slug;
+      : homeSlug || "all";
 
   return (
     <label className="relative block">
@@ -42,7 +48,7 @@ export function SchoolSwitcher() {
       <select
         aria-label="School marketplace"
         value={selected}
-        onChange={(event) => router.push(event.target.value === "all" ? "/search" : `/schools/${event.target.value}`)}
+        onChange={(event) => router.push(event.target.value === "all" ? "/search?school=all" : `/schools/${event.target.value}`)}
         className="chip h-9 max-w-36 appearance-none truncate pr-8 text-ink outline-none sm:max-w-48"
       >
         <option value="all">All schools</option>

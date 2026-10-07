@@ -14,6 +14,8 @@ from .models import Conversation, ConversationParticipant, Message
 from .serializers import (
     ConversationSerializer,
     MarkReadSerializer,
+    MessagePageSerializer,
+    MessageQuerySerializer,
     MessageSerializer,
     SendMessageSerializer,
     StartConversationSerializer,
@@ -72,16 +74,35 @@ class ConversationDetailView(RetrieveAPIView):
 
 class ConversationMessageView(GenericAPIView):
     permission_classes = [IsAuthenticated]
+    PAGE_SIZE = 50
 
     def get_conversation(self):
         return get_object_or_404(conversation_queryset(self.request.user), pk=self.kwargs["pk"])
 
-    @extend_schema(responses=MessageSerializer(many=True))
+    @extend_schema(parameters=[MessageQuerySerializer], responses=MessagePageSerializer)
     def get(self, request, pk):
         conversation = self.get_conversation()
-        messages = conversation.messages.select_related("sender__school").order_by("-id")[:50]
+        query = MessageQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        messages = conversation.messages.select_related("sender__school")
+        before_id = query.validated_data.get("before_id")
+        after_id = query.validated_data.get("after_id")
+
+        if after_id:
+            page = list(messages.filter(id__gt=after_id).order_by("id"))
+            has_more = False
+        else:
+            if before_id:
+                messages = messages.filter(id__lt=before_id)
+            descending = list(messages.order_by("-id")[: self.PAGE_SIZE + 1])
+            has_more = len(descending) > self.PAGE_SIZE
+            page = list(reversed(descending[: self.PAGE_SIZE]))
+
         return Response(
-            MessageSerializer(reversed(messages), many=True, context={"request": request}).data
+            {
+                "messages": MessageSerializer(page, many=True, context={"request": request}).data,
+                "has_more": has_more,
+            }
         )
 
     @extend_schema(request=SendMessageSerializer, responses={201: MessageSerializer})

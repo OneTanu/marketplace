@@ -89,8 +89,9 @@ def test_send_list_and_read_messages(client):
     assert client.get("/api/conversations/unread-count/").json() == {"unread_count": 1}
     listed = client.get(f"/api/conversations/{conversation_id}/messages/")
     assert listed.status_code == 200
-    assert listed.json()[0]["body"] == "Is this available?"
-    assert listed.json()[0]["is_mine"] is False
+    assert listed.json()["messages"][0]["body"] == "Is this available?"
+    assert listed.json()["messages"][0]["is_mine"] is False
+    assert listed.json()["has_more"] is False
 
     read = client.post(
         f"/api/conversations/{conversation_id}/read/",
@@ -126,3 +127,47 @@ def test_empty_message_is_rejected(client):
 
     assert response.status_code == 400
     assert not Message.objects.exists()
+
+
+@pytest.mark.django_db
+def test_message_history_can_load_pages_older_than_fifty(client):
+    alex = verified_user("alex")
+    maya = verified_user("maya")
+    client.force_login(alex)
+    conversation_id = client.post("/api/conversations/", {"username": maya.username}).json()["id"]
+    conversation = Conversation.objects.get(pk=conversation_id)
+    Message.objects.bulk_create(
+        [
+            Message(conversation=conversation, sender=alex, body=f"Message {number}")
+            for number in range(55)
+        ]
+    )
+
+    newest = client.get(f"/api/conversations/{conversation_id}/messages/").json()
+    older = client.get(
+        f"/api/conversations/{conversation_id}/messages/",
+        {"before_id": newest["messages"][0]["id"]},
+    ).json()
+
+    assert len(newest["messages"]) == 50
+    assert newest["has_more"] is True
+    assert [message["body"] for message in older["messages"]] == [
+        f"Message {number}" for number in range(5)
+    ]
+    assert older["has_more"] is False
+
+
+@pytest.mark.django_db
+def test_message_poll_can_request_only_messages_after_known_id(client):
+    alex = verified_user("alex")
+    maya = verified_user("maya")
+    client.force_login(alex)
+    conversation_id = client.post("/api/conversations/", {"username": maya.username}).json()["id"]
+    first = client.post(f"/api/conversations/{conversation_id}/messages/", {"body": "First"}).json()
+    client.post(f"/api/conversations/{conversation_id}/messages/", {"body": "Second"})
+
+    response = client.get(
+        f"/api/conversations/{conversation_id}/messages/", {"after_id": first["id"]}
+    )
+
+    assert [message["body"] for message in response.json()["messages"]] == ["Second"]

@@ -29,6 +29,21 @@ class MessageSerializer(serializers.ModelSerializer):
         return bool(request and message.sender_id == request.user.pk)
 
 
+class MessagePageSerializer(serializers.Serializer):
+    messages = MessageSerializer(many=True, read_only=True)
+    has_more = serializers.BooleanField(read_only=True)
+
+
+class MessageQuerySerializer(serializers.Serializer):
+    before_id = serializers.IntegerField(required=False, min_value=1)
+    after_id = serializers.IntegerField(required=False, min_value=1)
+
+    def validate(self, attrs):
+        if "before_id" in attrs and "after_id" in attrs:
+            raise serializers.ValidationError("Use either before_id or after_id, not both.")
+        return attrs
+
+
 class ConversationSerializer(serializers.ModelSerializer):
     other_user = serializers.SerializerMethodField()
     latest_message = serializers.SerializerMethodField()

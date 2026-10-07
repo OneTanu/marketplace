@@ -15,7 +15,7 @@ import {
   type ListingColor,
   type ListingCondition,
 } from "@/lib/discovery";
-import { getSchools, searchUsers, type PublicUser, type SchoolMarketplace } from "@/lib/platform";
+import { getCurrentUser, getSchools, searchUsers, type PublicUser, type SchoolMarketplace } from "@/lib/platform";
 import { ListingCard } from "./listing-card";
 import { MarketplaceFilterBar, type SortOption } from "./marketplace-filter-bar";
 
@@ -29,8 +29,12 @@ function UserResult({ user }: { user: PublicUser }) {
 
 export function MarketplaceFeed({ school }: { school?: SchoolMarketplace }) {
   const searchParams = useSearchParams();
+  const requestedSchool = searchParams.get("school");
   const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
-  const [schoolFilter, setSchoolFilter] = useState(() => school?.slug ?? searchParams.get("school") ?? "");
+  const [schoolFilter, setSchoolFilter] = useState(() => school?.slug ?? (requestedSchool === "all" ? "" : requestedSchool) ?? "");
+  const [homeSchoolSlug, setHomeSchoolSlug] = useState("");
+  const [allSchoolsExplicit, setAllSchoolsExplicit] = useState(requestedSchool === "all");
+  const [schoolScopeReady, setSchoolScopeReady] = useState(Boolean(school || requestedSchool));
   const [category, setCategory] = useState(() => searchParams.get("category") ?? "trending");
   const [subcategory, setSubcategory] = useState(() => searchParams.get("subcategory") ?? "");
   const [brand, setBrand] = useState(() => searchParams.get("brand") ?? "");
@@ -51,20 +55,36 @@ export function MarketplaceFeed({ school }: { school?: SchoolMarketplace }) {
   }, [school]);
 
   useEffect(() => {
-    if (school || !search.trim()) return;
+    if (school) return;
+    let active = true;
+    getCurrentUser().then((user) => {
+      if (!active) return;
+      const homeSchool = user?.school?.slug ?? "";
+      setHomeSchoolSlug(homeSchool);
+      if (!requestedSchool) setSchoolFilter(homeSchool);
+      setSchoolScopeReady(true);
+    }).catch(() => active && setSchoolScopeReady(true));
+    return () => { active = false; };
+  }, [requestedSchool, school]);
+
+  useEffect(() => {
+    if (school || !schoolScopeReady || !search.trim()) return;
     let active = true;
     const query = search.trim();
-    searchUsers(query).then((people) => active && setPeopleResult({ query, people, state: "ready" })).catch((error: Error) => {
+    const schoolScope = schoolFilter || (allSchoolsExplicit ? "all" : undefined);
+    searchUsers(query, schoolScope).then((people) => active && setPeopleResult({ query, people, state: "ready" })).catch((error: Error) => {
       if (!active) return;
       setPeopleResult({ query, people: [], state: error.message.includes("401") || error.message.includes("403") ? "signed-out" : "error" });
     });
     return () => { active = false; };
-  }, [school, search]);
+  }, [allSchoolsExplicit, school, schoolFilter, schoolScopeReady, search]);
 
   useEffect(() => {
+    if (!school && !schoolScopeReady) return;
     const params = new URLSearchParams();
     if (search) params.set("search", search);
-    if (!school && schoolFilter) params.set("school", schoolFilter);
+    if (!school && schoolFilter && schoolFilter !== homeSchoolSlug) params.set("school", schoolFilter);
+    if (!school && !schoolFilter && allSchoolsExplicit) params.set("school", "all");
     if (category !== "trending") params.set("category", category);
     if (subcategory) params.set("subcategory", subcategory);
     if (brand) params.set("brand", brand);
@@ -78,7 +98,7 @@ export function MarketplaceFeed({ school }: { school?: SchoolMarketplace }) {
     if (sort !== "relevance") params.set("ordering", sort);
     const query = params.toString();
     window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
-  }, [brand, category, color, condition, inseam, maxPrice, minPrice, school, schoolFilter, search, size, sort, subcategory, waist]);
+  }, [allSchoolsExplicit, brand, category, color, condition, homeSchoolSlug, inseam, maxPrice, minPrice, school, schoolFilter, schoolScopeReady, search, size, sort, subcategory, waist]);
 
   const listings = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -114,6 +134,8 @@ export function MarketplaceFeed({ school }: { school?: SchoolMarketplace }) {
 
   const peopleState = peopleResult.query === search.trim() ? peopleResult.state : "loading";
   const people = peopleResult.query === search.trim() ? peopleResult.people : [];
+  const selectedSchool = schools.find((item) => item.slug === schoolFilter);
+  const activeSchool = school ?? selectedSchool;
 
   function clearFilters() {
     setCondition("");
@@ -127,7 +149,15 @@ export function MarketplaceFeed({ school }: { school?: SchoolMarketplace }) {
     setInseam("");
     setColor("");
     setSort("relevance");
-    if (!school) setSchoolFilter("");
+    if (!school) {
+      setSchoolFilter(homeSchoolSlug);
+      setAllSchoolsExplicit(false);
+    }
+  }
+
+  function selectSchool(value: string) {
+    setSchoolFilter(value);
+    setAllSchoolsExplicit(!value);
   }
 
   return (
@@ -141,13 +171,13 @@ export function MarketplaceFeed({ school }: { school?: SchoolMarketplace }) {
 
       <div className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         <div>
-          <p className="text-sm font-semibold text-muted">{school ? school.name : "All schools"}</p>
-          <h1 className="type-wide mt-1 text-2xl font-black sm:text-[2rem]">{search ? `Results for “${search}”` : brand ? POPULAR_BRANDS.find((item) => item.slug === brand)?.name : subcategory ? (category === "accessories" ? ACCESSORY_DEPARTMENTS : FASHION_DEPARTMENTS[category as "women" | "men"] ?? []).find((item) => item.slug === subcategory)?.name : category === "trending" ? school ? `Trending at ${school.short_name}` : "Trending across Tanu" : DISCOVERY_CATEGORIES.find((item) => item.slug === category)?.name}</h1>
+          <p className="text-sm font-semibold text-muted">{school?.name ?? selectedSchool?.name ?? "All schools"}</p>
+          <h1 className="type-wide mt-1 text-2xl font-black sm:text-[2rem]">{search ? `Results for “${search}”` : brand ? POPULAR_BRANDS.find((item) => item.slug === brand)?.name : subcategory ? (category === "accessories" ? ACCESSORY_DEPARTMENTS : FASHION_DEPARTMENTS[category as "women" | "men"] ?? []).find((item) => item.slug === subcategory)?.name : category === "trending" ? activeSchool ? `Trending at ${activeSchool.short_name}` : "Trending across Tanu" : DISCOVERY_CATEGORIES.find((item) => item.slug === category)?.name}</h1>
           <p className="mt-1.5 text-sm text-muted">{listings.length} {listings.length === 1 ? "item" : "items"}. Sample listings shown while selling is being built.</p>
         </div>
       </div>
 
-      <MarketplaceFilterBar listings={DISCOVERY_PREVIEW_LISTINGS} schools={schools} showSchool={!school} school={schoolFilter} category={category} subcategory={subcategory} brand={brand} minPrice={minPrice} maxPrice={maxPrice} size={size} waist={waist} inseam={inseam} color={color} condition={condition} sort={sort} setSchool={setSchoolFilter} setCategory={setCategory} setSubcategory={setSubcategory} setBrand={setBrand} setMinPrice={setMinPrice} setMaxPrice={setMaxPrice} setSize={setSize} setWaist={setWaist} setInseam={setInseam} setColor={setColor} setCondition={setCondition} setSort={setSort} clearAll={clearFilters} />
+      <MarketplaceFilterBar listings={DISCOVERY_PREVIEW_LISTINGS} schools={schools} showSchool={!school} school={schoolFilter} category={category} subcategory={subcategory} brand={brand} minPrice={minPrice} maxPrice={maxPrice} size={size} waist={waist} inseam={inseam} color={color} condition={condition} sort={sort} setSchool={selectSchool} setCategory={setCategory} setSubcategory={setSubcategory} setBrand={setBrand} setMinPrice={setMinPrice} setMaxPrice={setMaxPrice} setSize={setSize} setWaist={setWaist} setInseam={setInseam} setColor={setColor} setCondition={setCondition} setSort={setSort} clearAll={clearFilters} />
 
       <div>
         {listings.length ? <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-8 lg:grid-cols-4">{listings.map((listing: DiscoveryListing) => <ListingCard key={listing.id} listing={listing} showSchool={!school} />)}</div> : <div className="grid min-h-80 place-items-center rounded-xl bg-surface px-6 text-center"><div><h2 className="type-wide text-xl font-extrabold">Nothing matches yet</h2><p className="mt-2 max-w-sm text-sm leading-6 text-muted">Try a broader search, another category, or fewer filters.</p><button onClick={() => { clearFilters(); setSearch(""); }} className="btn btn-secondary mt-5">Clear search and filters</button></div></div>}

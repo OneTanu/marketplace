@@ -58,14 +58,16 @@ export function getSchool(slug: string) {
 }
 
 export async function getCurrentUser() {
-  const response = await fetch("/api/me/", { credentials: "same-origin" });
+  const response = await fetch("/api/me/", { credentials: "same-origin", cache: "no-store" });
   if (response.status === 401 || response.status === 403) return null;
   if (!response.ok) throw new Error(`Request failed with ${response.status}`);
   return response.json() as Promise<CurrentUser>;
 }
 
-export function searchUsers(query: string) {
-  return getJson<PublicUser[]>(`/api/users/?q=${encodeURIComponent(query)}`);
+export function searchUsers(query: string, school?: string) {
+  const params = new URLSearchParams({ q: query });
+  if (school) params.set("school", school);
+  return getJson<PublicUser[]>(`/api/users/?${params.toString()}`);
 }
 
 export function getPublicUser(username: string) {

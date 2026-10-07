@@ -62,6 +62,7 @@ function EmptyCollection({ tab }: { tab: ProfileTab }) {
 
 export function ProfileClient() {
   const [user, setUser] = useState<CurrentUser | null>();
+  const [loadError, setLoadError] = useState(false);
   const [editing, setEditing] = useState(false);
   const [pending, setPending] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -69,8 +70,22 @@ export function ProfileClient() {
   const [tab, setTab] = useState<ProfileTab>("selling");
 
   useEffect(() => {
-    getCurrentUser().then(setUser).catch(() => setUser(null));
+    let active = true;
+    getCurrentUser()
+      .then((currentUser) => active && setUser(currentUser))
+      .catch(() => active && setLoadError(true));
+    return () => { active = false; };
   }, []);
+
+  async function retryProfile() {
+    setLoadError(false);
+    setUser(undefined);
+    try {
+      setUser(await getCurrentUser());
+    } catch {
+      setLoadError(true);
+    }
+  }
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -93,6 +108,9 @@ export function ProfileClient() {
   }
 
   if (user === undefined) {
+    if (loadError) {
+      return <main className="mx-auto grid min-h-[70vh] max-w-xl place-items-center px-4 py-12 text-center"><div className="rounded-2xl bg-surface p-8"><h1 className="type-wide text-2xl font-black">We couldn’t load your profile</h1><p className="mt-3 leading-7 text-muted">Your session may still be active. Check the connection and try loading your account again.</p><button type="button" onClick={retryProfile} className="btn btn-primary mt-6">Try again</button></div></main>;
+    }
     return <main className="mx-auto min-h-[70vh] max-w-6xl animate-pulse px-4 py-10 sm:px-6"><div className="h-72 rounded-3xl border border-line bg-white/60" /></main>;
   }
 

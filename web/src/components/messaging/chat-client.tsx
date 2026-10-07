@@ -21,35 +21,105 @@ function startsNewBlock(messages: ChatMessage[], index: number) {
   return Date.parse(messages[index].created_at) - Date.parse(messages[index - 1].created_at) > GAP_MS;
 }
 
+function mergeMessages(current: ChatMessage[], incoming: ChatMessage[]) {
+  const byId = new Map(current.map((message) => [message.id, message]));
+  incoming.forEach((message) => byId.set(message.id, message));
+  return [...byId.values()].sort((left, right) => left.id - right.id);
+}
+
 export function ChatClient({ conversationId }: { conversationId: number }) {
   const [conversation, setConversation] = useState<Conversation | null>();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [body, setBody] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
+  const latestMessageIdRef = useRef(0);
+  const lastMarkedReadIdRef = useRef(0);
+  const refreshingRef = useRef(false);
+  const loadingOlderRef = useRef(false);
+  const stickToBottomRef = useRef(true);
+  const prependAnchorRef = useRef<{ height: number; top: number } | null>(null);
 
   useEffect(() => {
     let active = true;
-    async function refresh() {
+    async function refresh(initial = false) {
+      if (refreshingRef.current) return;
+      refreshingRef.current = true;
       try {
-        const [thread, items] = await Promise.all([getConversation(conversationId), listMessages(conversationId)]);
+        const [thread, page] = await Promise.all([
+          getConversation(conversationId),
+          listMessages(conversationId, initial || !latestMessageIdRef.current ? {} : { afterId: latestMessageIdRef.current }),
+        ]);
         if (!active) return;
-        setConversation(thread); setMessages(items);
-        const latest = items.at(-1);
-        if (latest) await markConversationRead(conversationId, latest.id);
-      } catch { if (active) setConversation(null); }
+        setConversation(thread);
+        if (initial) {
+          setMessages(page.messages);
+          setHasMore(page.has_more);
+        } else if (page.messages.length) {
+          setMessages((current) => mergeMessages(current, page.messages));
+        }
+        const latest = page.messages.at(-1);
+        if (latest) latestMessageIdRef.current = Math.max(latestMessageIdRef.current, latest.id);
+        if (latest && !latest.is_mine && latest.id > lastMarkedReadIdRef.current) {
+          try {
+            await markConversationRead(conversationId, latest.id);
+            lastMarkedReadIdRef.current = latest.id;
+          } catch {
+            // Reading messages should still succeed if the read-receipt request is interrupted.
+          }
+        }
+      } catch {
+        if (active && initial) setConversation(null);
+      } finally {
+        refreshingRef.current = false;
+      }
     }
-    refresh();
-    const timer = window.setInterval(refresh, 4_000);
+    refresh(true);
+    const timer = window.setInterval(() => refresh(false), 4_000);
     return () => { active = false; window.clearInterval(timer); };
   }, [conversationId]);
 
   // Scroll the thread itself, not the page, so the header stays in view.
   useEffect(() => {
     const thread = threadRef.current;
-    if (thread) thread.scrollTop = thread.scrollHeight;
+    if (!thread) return;
+    const anchor = prependAnchorRef.current;
+    if (anchor) {
+      thread.scrollTop = thread.scrollHeight - anchor.height + anchor.top;
+      prependAnchorRef.current = null;
+    } else if (stickToBottomRef.current) {
+      thread.scrollTop = thread.scrollHeight;
+    }
   }, [messages.length, conversation]);
+
+  async function loadOlder() {
+    const thread = threadRef.current;
+    const oldest = messages[0];
+    if (!thread || !oldest || !hasMore || loadingOlderRef.current) return;
+    loadingOlderRef.current = true;
+    setLoadingOlder(true);
+    try {
+      const page = await listMessages(conversationId, { beforeId: oldest.id });
+      prependAnchorRef.current = { height: thread.scrollHeight, top: thread.scrollTop };
+      setMessages((current) => mergeMessages(current, page.messages));
+      setHasMore(page.has_more);
+    } catch {
+      setError("Older messages could not be loaded. Try again.");
+    } finally {
+      loadingOlderRef.current = false;
+      setLoadingOlder(false);
+    }
+  }
+
+  function onThreadScroll() {
+    const thread = threadRef.current;
+    if (!thread) return;
+    stickToBottomRef.current = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 80;
+    if (thread.scrollTop < 64) void loadOlder();
+  }
 
   async function submit(event?: FormEvent) {
     event?.preventDefault();
@@ -58,7 +128,10 @@ export function ChatClient({ conversationId }: { conversationId: number }) {
     setPending(true); setError("");
     try {
       const message = await sendMessage(conversationId, text);
-      setMessages((current) => [...current, message]); setBody("");
+      latestMessageIdRef.current = Math.max(latestMessageIdRef.current, message.id);
+      lastMarkedReadIdRef.current = Math.max(lastMarkedReadIdRef.current, message.id);
+      stickToBottomRef.current = true;
+      setMessages((current) => mergeMessages(current, [message])); setBody("");
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Message not sent. Try again."); }
     finally { setPending(false); }
   }
@@ -85,7 +158,8 @@ export function ChatClient({ conversationId }: { conversationId: number }) {
       </Link>
     </header>
 
-    <div ref={threadRef} className="flex flex-1 flex-col overflow-y-auto px-4 py-5 sm:px-6" aria-live="polite">
+    <div ref={threadRef} onScroll={onThreadScroll} className="flex flex-1 flex-col overflow-y-auto px-4 py-5 sm:px-6" aria-live="polite">
+      {hasMore && <button type="button" onClick={loadOlder} disabled={loadingOlder} className="mx-auto mb-4 text-xs font-semibold text-brand hover:underline disabled:text-muted">{loadingOlder ? "Loading older messages…" : "Load older messages"}</button>}
       {messages.length ? messages.map((message, index) => {
         const newBlock = startsNewBlock(messages, index);
         const next = messages[index + 1];

@@ -43,7 +43,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["conversations_messages_list"];
+        get: operations["conversations_messages_retrieve"];
         put?: never;
         post: operations["conversations_messages_create"];
         delete?: never;
@@ -229,6 +229,10 @@ export interface components {
             readonly created_at: string;
             readonly is_mine: boolean;
         };
+        MessagePage: {
+            readonly messages: components["schemas"]["Message"][];
+            readonly has_more: boolean;
+        };
         MessagingUser: {
             readonly id: number;
             username: string;
@@ -360,9 +364,12 @@ export interface operations {
             };
         };
     };
-    conversations_messages_list: {
+    conversations_messages_retrieve: {
         parameters: {
-            query?: never;
+            query?: {
+                after_id?: number;
+                before_id?: number;
+            };
             header?: never;
             path: {
                 id: number;
@@ -376,7 +383,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Message"][];
+                    "application/json": components["schemas"]["MessagePage"];
                 };
             };
         };
