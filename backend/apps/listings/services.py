@@ -14,13 +14,16 @@ Any other move raises ListingStatusError and leaves the listing unchanged.
 """
 
 from collections.abc import Sequence
+from io import BytesIO
+from typing import NamedTuple
 from uuid import uuid4
 
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from django.utils import timezone
-from PIL import Image
+from PIL import Image, ImageOps
 
 from .models import Category, ItemDetails, Listing, ListingKind, ListingPhoto
 
@@ -33,6 +36,16 @@ MAX_PHOTO_BYTES = 10 * 1024 * 1024  # 10 MB
 # Accepted Pillow formats and the extension each is stored with. Pillow reports JPEGs that
 # hold more than one picture (iPhone HDR, many Android cameras) as MPO.
 PHOTO_EXTENSIONS = {"JPEG": "jpg", "MPO": "jpg", "PNG": "png", "WEBP": "webp"}
+# Stored photos are re-encoded in the format they arrived in (a multi-picture JPEG keeps only
+# its primary picture), in a pixel mode that format can hold. PNG holds any mode.
+PHOTO_SAVE_FORMATS = {"JPEG": "JPEG", "MPO": "JPEG", "PNG": "PNG", "WEBP": "WEBP"}
+PHOTO_SAVE_MODES = {"JPEG": {"L", "RGB", "CMYK"}, "WEBP": {"RGB", "RGBA"}}
+MAX_PHOTO_EDGE = 2048  # px. Longer edges are scaled down; smaller photos are never upscaled.
+PHOTO_QUALITY = 85  # JPEG and WebP
+# Photo errors, each following "Photo <number> ".
+NOT_A_PHOTO = "isn't a JPEG, PNG or WebP image"
+DAMAGED_PHOTO = "couldn't be read. It may be damaged; try another photo"
+TOO_MANY_PIXELS = "has too many pixels"
 FREE_CATEGORY_SLUG = "free"  # seeded by migration 0004_seed_item_categories
 
 
@@ -62,24 +75,41 @@ def validate_photos(photos: Sequence[UploadedFile]) -> None:
     for number, photo in enumerate(photos, start=1):
         if photo.size > MAX_PHOTO_BYTES:
             errors.append(f"Photo {number} is larger than {MAX_PHOTO_BYTES // (1024 * 1024)} MB.")
-        elif _image_format(photo) not in PHOTO_EXTENSIONS:
-            errors.append(f"Photo {number} isn't a JPEG, PNG or WebP image.")
+        elif problem := _photo_problem(photo):
+            errors.append(f"Photo {number} {problem}.")
     if errors:
         raise ValidationError(errors)
 
 
-def _image_format(photo: UploadedFile) -> str | None:
-    """The Pillow format name from the file's contents (never its name or content type)."""
+def _photo_problem(photo: UploadedFile) -> str | None:
+    """Why the file can't be a listing photo, judged from its contents (never its name or
+    content type), or None. A quick structural check; some damage only shows when the photo is
+    decoded and re-encoded (_clean_photo)."""
+    image_format = decoded_pixels = None
     try:
         photo.seek(0)
         with Image.open(photo) as image:
             image_format = image.format
+            if image_format in {"JPEG", "MPO"} and not image.info.get("progressive"):
+                # The size _clean_photo will actually decode at (see draft() there).
+                image.draft(None, (MAX_PHOTO_EDGE, MAX_PHOTO_EDGE))
+            decoded_pixels = image.width * image.height
             image.verify()
+    except Image.DecompressionBombError:
+        return TOO_MANY_PIXELS
     except Exception:  # Pillow raises many types for corrupt or non-image data.
-        image_format = None
+        return DAMAGED_PHOTO if image_format in PHOTO_EXTENSIONS else NOT_A_PHOTO
     finally:
         photo.seek(0)
-    return image_format
+    if image_format not in PHOTO_EXTENSIONS:
+        return NOT_A_PHOTO
+    # A small file mustn't expand into gigabytes of memory (a decompression bomb). Pillow only
+    # warns between its limit (~89 MP) and twice that, so refuse anything that would decode past
+    # the limit. Baseline JPEGs decode at reduced scale, so a 108 MP phone photo is fine; a very
+    # wide or tall one, or a progressive JPEG, still decodes at full size and is refused.
+    if Image.MAX_IMAGE_PIXELS is not None and decoded_pixels > Image.MAX_IMAGE_PIXELS:
+        return TOO_MANY_PIXELS
+    return None
 
 
 def create_item_listing(
@@ -110,6 +140,9 @@ def create_item_listing(
         )
     try:
         validate_photos(photos)
+        # Clean every photo before storing any: a file written to storage isn't removed when
+        # the transaction rolls back, so a bad photo 2 mustn't fail after photo 1 is stored.
+        cleaned = _clean_photos(photos)
     except ValidationError as exc:
         raise ValidationError({"photos": exc.messages}) from exc
 
@@ -132,26 +165,98 @@ def create_item_listing(
         )
         details.full_clean()
         details.save()
-        for position, photo in enumerate(photos):
+        for position, photo in enumerate(cleaned):
             _store_photo(listing, photo, position=position)
     return listing
 
 
-def _store_photo(listing: Listing, photo: UploadedFile, *, position: int) -> ListingPhoto:
+class CleanedPhoto(NamedTuple):
+    """A re-encoded photo ready for storage. Only _clean_photo makes these."""
+
+    content: bytes
+    extension: str
+
+
+def _clean_photos(photos: Sequence[UploadedFile]) -> list[CleanedPhoto]:
+    """Clean each photo, or raise one ValidationError listing every photo that failed."""
+    cleaned, errors = [], []
+    for number, photo in enumerate(photos, start=1):
+        try:
+            cleaned.append(_clean_photo(photo))
+        except ValidationError as exc:
+            errors.append(f"Photo {number} {exc.message}.")
+    if errors:
+        raise ValidationError(errors)
+    return cleaned
+
+
+def _store_photo(listing: Listing, photo: CleanedPhoto, *, position: int) -> ListingPhoto:
     """The one place a listing photo is written to storage. Every upload path (create, and
-    later add-photo) goes through here.
+    later add-photo) goes through here, and it only takes a CleanedPhoto, so every stored
+    photo has been cleaned.
 
     The stored name is random, with the extension of the detected format: the uploader's
     filename can't leak or choose how the file is served (e.g. a valid image named x.html).
-    Stores the contents as uploaded for now; re-encoding and EXIF/GPS stripping (#8) go here.
     """
-    extension = PHOTO_EXTENSIONS.get(_image_format(photo) or "")
-    if extension is None:
-        raise ValidationError({"photos": "Photos must be JPEG, PNG or WebP images."})
     listing_photo = ListingPhoto(listing=listing, position=position)
-    listing_photo.image.save(f"{uuid4().hex}.{extension}", photo, save=False)
+    listing_photo.image.save(
+        f"{uuid4().hex}.{photo.extension}", ContentFile(photo.content), save=False
+    )
     listing_photo.save()
     return listing_photo
+
+
+def _clean_photo(photo: UploadedFile) -> CleanedPhoto:
+    """Re-encode an uploaded photo for storage and return (contents, extension).
+
+    Rotates it upright from the camera's EXIF orientation, scales the long edge down to
+    MAX_PHOTO_EDGE, and writes a fresh file in the same format with no EXIF (GPS), XMP or
+    comment metadata; only the ICC colour profile is carried over. Multi-picture JPEGs and
+    animated PNG/WebP keep their first picture. Raises ValidationError (message only, no
+    field) for anything that isn't a decodable photo.
+    """
+    if problem := _photo_problem(photo):
+        raise ValidationError(problem)
+    try:
+        with Image.open(photo) as original:
+            image_format = original.format
+            icc_profile = original.info.get("icc_profile")
+            # Lets a large JPEG decode at 1/2, 1/4 or 1/8 scale (never below the cap), which
+            # is faster and uses far less memory. A no-op for other formats.
+            original.draft(None, (MAX_PHOTO_EDGE, MAX_PHOTO_EDGE))
+            image = ImageOps.exif_transpose(original)  # a decoded copy of the first picture
+        save_format = PHOTO_SAVE_FORMATS[image_format]
+        image = _photo_mode(image, save_format)
+        image.thumbnail((MAX_PHOTO_EDGE, MAX_PHOTO_EDGE), Image.Resampling.LANCZOS)
+        # Drop everything Pillow might write back from the original (e.g. a JPEG comment);
+        # PNG transparency is image data, not metadata.
+        image.info = {k: v for k, v in image.info.items() if k == "transparency"}
+        options = {"icc_profile": icc_profile} if icc_profile else {}
+        if save_format != "PNG":
+            options["quality"] = PHOTO_QUALITY
+        buffer = BytesIO()
+        image.save(buffer, save_format, **options)
+    except Exception as exc:  # truncated or otherwise damaged image data
+        raise ValidationError(DAMAGED_PHOTO) from exc
+    finally:
+        photo.seek(0)
+    return CleanedPhoto(buffer.getvalue(), PHOTO_EXTENSIONS[image_format])
+
+
+def _photo_mode(image: Image.Image, save_format: str) -> Image.Image:
+    """The image in a pixel mode the output format can hold and that resizes smoothly (1-bit
+    and palette images would otherwise be scaled down with nearest-neighbour)."""
+    allowed = PHOTO_SAVE_MODES.get(save_format)
+    if allowed is None:  # PNG
+        if image.mode not in {"1", "P", "PA"} or max(image.size) <= MAX_PHOTO_EDGE:
+            return image
+    elif image.mode in allowed:
+        return image
+    if image.mode == "1":
+        return image.convert("L")
+    if image.has_transparency_data and (allowed is None or "RGBA" in allowed):
+        return image.convert("RGBA")
+    return image.convert("RGB")
 
 
 # --- Status ---

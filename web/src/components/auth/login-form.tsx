@@ -18,7 +18,7 @@ export function LoginForm() {
     } catch { setErrors([{ message: "Tanu couldn’t reach the server. Check your connection and try again." }]); }
     finally { setPending(false); }
   }
-  return <form onSubmit={submit} className="space-y-5" noValidate>
+  return <form method="post" onSubmit={submit} className="space-y-5" noValidate>
     {errors.map((error) => <FormAlert key={`${error.field}-${error.message}`}>{error.message}</FormAlert>)}
     <Field label="School email" name="email" type="email" autoComplete="email" placeholder="you@umd.edu" required />
     <Field label="Password" name="password" type="password" autoComplete="current-password" required />
