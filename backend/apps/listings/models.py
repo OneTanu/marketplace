@@ -38,6 +38,10 @@ class Listing(models.Model):
         SOLD = "sold", "Sold"
         REMOVED = "removed", "Removed"  # by the seller or by moderation
 
+    class RemovedBy(models.TextChoices):
+        SELLER = "seller", "Seller"
+        MODERATION = "moderation", "Moderation"
+
     school = models.ForeignKey("schools.School", on_delete=models.PROTECT, related_name="listings")
     seller = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="listings"
@@ -49,6 +53,9 @@ class Listing(models.Model):
     price_cents = models.PositiveIntegerField()
     currency = models.CharField(max_length=3, default="USD")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.AVAILABLE)
+    # Blank unless status is REMOVED. Removal is a soft delete: the row is never deleted.
+    removed_by = models.CharField(max_length=20, choices=RemovedBy.choices, blank=True)
+    removed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
