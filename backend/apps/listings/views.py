@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
@@ -29,6 +30,12 @@ def listing_queryset():
     return Listing.objects.select_related(
         "category", "school", "seller", "item_details"
     ).prefetch_related("photos")
+
+
+def visible_to(user, listings):
+    """The listings the user can see: all except other sellers' Removed listings, which look
+    as if they don't exist."""
+    return listings.exclude(Q(status=Listing.Status.REMOVED) & ~Q(seller=user))
 
 
 @extend_schema(
@@ -67,10 +74,7 @@ class ListingCreateView(APIView):
             listing = services.create_item_listing(request.user, **serializer.validated_data)
         except DjangoValidationError as exc:
             raise serializers.ValidationError(serializers.as_serializer_error(exc)) from exc
-        return Response(
-            ListingSerializer(listing_queryset().get(pk=listing.pk)).data,
-            status=status.HTTP_201_CREATED,
-        )
+        return listing_response(request, listing, status.HTTP_201_CREATED)
 
 
 @extend_schema(
@@ -81,17 +85,18 @@ class ListingCreateView(APIView):
     ]
 )
 class MyListingsView(generics.ListAPIView):
-    """The signed-in seller's own listings, newest first."""
+    """The signed-in seller's own listings, newest first. Listings they removed are left
+    out; listings moderation removed are included, with `removed_by` set."""
 
     serializer_class = ListingSerializer
 
     def get_queryset(self):
-        # Removed listings are left out for now. #11 adds removed_by and changes this to:
-        # exclude seller-removed listings, include moderation-removed ones (with a notice).
+        # Listings the seller removed are gone from their point of view. Ones moderation
+        # removed stay, so the seller can see what happened to them.
         listings = (
             listing_queryset()
             .filter(seller=self.request.user)
-            .exclude(status=Listing.Status.REMOVED)
+            .exclude(status=Listing.Status.REMOVED, removed_by=Listing.RemovedBy.SELLER)
             .order_by("-created_at", "-id")
         )
         listing_status = self.request.query_params.get("status")
@@ -114,16 +119,19 @@ NOT_AVAILABLE = OpenApiResponse(description="The listing isn't Available, so it 
 
 
 @contextmanager
-def service_errors():
+def service_errors(done_to_it="edited"):
     """Turn Listings services' errors into API errors: field errors are 400 and status
-    conflicts are 409. (DRF already makes PermissionDenied a 403 and Http404 a 404.)"""
+    conflicts are 409, worded "Only Available listings can be <done_to_it>." (DRF already
+    makes PermissionDenied a 403 and Http404 a 404.)"""
     try:
         yield
     except DjangoValidationError as exc:
         raise serializers.ValidationError(nested(serializers.as_serializer_error(exc))) from exc
     except services.ListingStatusError as exc:
         label = Listing.Status(exc.status).label
-        raise Conflict(f"This listing is {label}. Only Available listings can be edited.") from exc
+        raise Conflict(
+            f"This listing is {label}. Only Available listings can be {done_to_it}."
+        ) from exc
 
 
 def nested(errors: dict) -> dict:
@@ -143,26 +151,28 @@ def listing_to_edit(request, pk) -> Listing:
     """The listing a write request is for, checked for seller (403) and Available (409) before
     any field errors are reported. A Removed listing looks missing to everyone but its seller.
     The services check again on the locked row."""
-    listing = get_object_or_404(Listing, pk=pk)
-    if listing.status == Listing.Status.REMOVED and listing.seller_id != request.user.pk:
-        raise Http404
+    listing = get_object_or_404(visible_to(request.user, Listing.objects), pk=pk)
     with service_errors():
         services.check_can_edit(listing, request.user)
     return listing
 
 
-def listing_response(listing: Listing, status_code=status.HTTP_200_OK) -> Response:
-    return Response(ListingSerializer(listing_queryset().get(pk=listing.pk)).data, status_code)
+def listing_response(request, listing: Listing, status_code=status.HTTP_200_OK) -> Response:
+    serializer = ListingSerializer(
+        listing_queryset().get(pk=listing.pk), context={"request": request}
+    )
+    return Response(serializer.data, status_code)
 
 
 class ListingDetailView(generics.RetrieveAPIView):
-    """Any signed-in student can fetch a listing, whatever its school."""
+    """Any signed-in student can fetch a listing, whatever its school. A Removed listing is a
+    404 for everyone but its seller."""
 
     serializer_class = ListingSerializer
     parser_classes = [JSONParser]
 
     def get_queryset(self):
-        return listing_queryset()
+        return visible_to(self.request.user, listing_queryset())
 
     @extend_schema(
         request=ListingUpdateSerializer,
@@ -176,7 +186,23 @@ class ListingDetailView(generics.RetrieveAPIView):
         serializer.is_valid(raise_exception=True)
         with service_errors():
             services.update_item_listing(listing, request.user, **serializer.validated_data)
-        return listing_response(listing)
+        return listing_response(request, listing)
+
+    @extend_schema(
+        responses={
+            204: None,
+            409: OpenApiResponse(
+                description="The listing isn't Available, so it can't be removed."
+            ),
+        }
+    )
+    def delete(self, request, pk):
+        """Remove an Available listing (seller only). It's a soft delete: the listing stays
+        for its seller's records but is a 404 for everyone else."""
+        listing = get_object_or_404(visible_to(request.user, Listing.objects), pk=pk)
+        with service_errors("removed"):
+            services.remove_by_seller(listing, request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ListingPhotosView(APIView):
@@ -194,7 +220,7 @@ class ListingPhotosView(APIView):
         serializer.is_valid(raise_exception=True)
         with service_errors():
             services.add_photo(listing, request.user, serializer.validated_data["photo"])
-        return listing_response(listing, status.HTTP_201_CREATED)
+        return listing_response(request, listing, status.HTTP_201_CREATED)
 
 
 class ListingPhotoDetailView(APIView):
@@ -208,7 +234,7 @@ class ListingPhotoDetailView(APIView):
                 services.delete_photo(listing, request.user, photo_id)
             except ListingPhoto.DoesNotExist as exc:
                 raise Http404 from exc
-        return listing_response(listing)
+        return listing_response(request, listing)
 
 
 class ListingPhotoOrderView(APIView):
@@ -225,4 +251,4 @@ class ListingPhotoOrderView(APIView):
         serializer.is_valid(raise_exception=True)
         with service_errors():
             services.reorder_photos(listing, request.user, serializer.validated_data["photo_ids"])
-        return listing_response(listing)
+        return listing_response(request, listing)

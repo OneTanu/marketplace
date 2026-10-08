@@ -128,11 +128,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Any signed-in student can fetch a listing, whatever its school. */
+        /**
+         * @description Any signed-in student can fetch a listing, whatever its school. A Removed listing is a
+         *     404 for everyone but its seller.
+         */
         get: operations["listings_retrieve"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * @description Remove an Available listing (seller only). It's a soft delete: the listing stays
+         *     for its seller's records but is a 404 for everyone else.
+         */
+        delete: operations["listings_destroy"];
         options?: never;
         head?: never;
         /**
@@ -206,7 +213,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description The signed-in seller's own listings, newest first. */
+        /**
+         * @description The signed-in seller's own listings, newest first. Listings they removed are left
+         *     out; listings moderation removed are included, with `removed_by` set.
+         */
         get: operations["listings_mine_list"];
         put?: never;
         post?: never;
@@ -403,6 +413,8 @@ export interface components {
             readonly id: number;
             readonly kind: components["schemas"]["KindEnum"];
             readonly status: components["schemas"]["StatusEnum"];
+            /** @description Who removed a Removed listing, shown only to its seller: blank unless the listing is Removed, and null for everyone else. */
+            readonly removed_by: (components["schemas"]["RemovedByEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
             readonly title: string;
             readonly description: string;
             readonly price_cents: number;
@@ -485,6 +497,8 @@ export interface components {
             first_name?: string;
             readonly school: components["schemas"]["School"];
         };
+        /** @enum {unknown} */
+        NullEnum: null;
         PatchedCurrentUserRequest: {
             instagram_handle?: string | null;
             profile_description?: string;
@@ -520,6 +534,8 @@ export interface components {
             instagram_handle?: string;
             profile_description?: string;
         };
+        /** @enum {string} */
+        RemovedByEnum: "seller" | "moderation";
         School: {
             name: string;
             short_name: string;
@@ -807,6 +823,33 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Listing"];
                 };
+            };
+        };
+    };
+    listings_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The listing isn't Available, so it can't be removed. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

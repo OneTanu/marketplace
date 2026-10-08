@@ -115,6 +115,7 @@ def test_categories_rejects_unknown_kind(seller_client):
         ("get", f"{LISTINGS_URL}1/"),
         ("get", MY_LISTINGS_URL),
         ("patch", f"{LISTINGS_URL}1/"),
+        ("delete", f"{LISTINGS_URL}1/"),
         ("post", f"{LISTINGS_URL}1/photos/"),
         ("delete", f"{LISTINGS_URL}1/photos/1/"),
         ("put", f"{LISTINGS_URL}1/photos/order/"),
@@ -541,6 +542,14 @@ def test_any_signed_in_student_can_fetch_a_listing(seller_client, gw):
     assert body["school"]["short_name"] == "UMD"
     assert body["item_details"]["condition"] == "like_new"
     assert [set(p) for p in body["photos"]] == [{"id", "position", "image_url", "thumbnail_url"}]
+    assert body["removed_by"] is None  # only the seller sees it
+
+
+@pytest.mark.django_db
+def test_seller_sees_removed_by(seller_client):
+    body = posted(seller_client)
+    assert body["removed_by"] == ""
+    assert seller_client.get(listing_url(body["id"])).json()["removed_by"] == ""
 
 
 @pytest.mark.django_db
@@ -628,12 +637,16 @@ def test_my_listings_rejects_unknown_status(seller_client):
 
 
 @pytest.mark.django_db
-def test_my_listings_leaves_out_removed_listings(seller_client, seller):
-    make_listing(seller, "Still for sale")
-    make_listing(seller, "Taken down", status=Listing.Status.REMOVED)
+def test_my_listings_hides_seller_removed_and_shows_moderation_removed(seller_client, seller):
+    make_listing(seller, "Still for sale", days_ago=2)
+    services.remove_by_seller(make_listing(seller, "Taken down", days_ago=1), seller)
+    services.remove_by_moderation(make_listing(seller, "Prohibited"))
 
-    assert titles(seller_client.get(MY_LISTINGS_URL)) == ["Still for sale"]
-    assert seller_client.get(MY_LISTINGS_URL, {"status": "removed"}).json() == []
+    response = seller_client.get(MY_LISTINGS_URL)
+
+    assert titles(response) == ["Prohibited", "Still for sale"]
+    assert [listing["removed_by"] for listing in response.json()] == ["moderation", ""]
+    assert titles(seller_client.get(MY_LISTINGS_URL, {"status": "removed"})) == ["Prohibited"]
 
 
 # --- Editing ---
@@ -1106,6 +1119,84 @@ def test_reorder_must_list_exactly_the_current_photos(seller_client, order):
     assert response.status_code == 400
     assert "photo_ids" in response.json()
     assert stored_positions(body["id"]) == before
+
+
+# --- Removing ---
+
+
+def removal_fields(listing_id):
+    return Listing.objects.values("status", "removed_by", "removed_at").get(pk=listing_id)
+
+
+@pytest.mark.django_db
+def test_seller_removes_a_listing(seller_client, classmate_client):
+    body = posted(seller_client)
+    before = timezone.now()
+
+    response = seller_client.delete(listing_url(body["id"]))
+
+    assert response.status_code == 204
+    fields = removal_fields(body["id"])
+    assert (fields["status"], fields["removed_by"]) == ("removed", "seller")
+    assert before <= fields["removed_at"] <= timezone.now()
+    assert seller_client.get(MY_LISTINGS_URL).json() == []
+    # Soft delete: the seller can still fetch it; to everyone else it doesn't exist.
+    seller_view = seller_client.get(listing_url(body["id"]))
+    assert seller_view.status_code == 200
+    assert seller_view.json()["removed_by"] == "seller"
+    assert classmate_client.get(listing_url(body["id"])).status_code == 404
+
+
+@pytest.mark.django_db
+def test_only_the_seller_can_remove(seller_client, classmate_client):
+    body = posted(seller_client)
+    before = removal_fields(body["id"])
+
+    response = classmate_client.delete(listing_url(body["id"]))
+
+    assert response.status_code == 403
+    assert removal_fields(body["id"]) == before
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("listing_status", ["pending", "sold"])
+def test_only_available_listings_can_be_removed(seller_client, listing_status):
+    body = posted(seller_client)
+    set_status(body["id"], listing_status)
+    before = removal_fields(body["id"])
+
+    response = seller_client.delete(listing_url(body["id"]))
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == (
+        f"This listing is {listing_status.title()}. Only Available listings can be removed."
+    )
+    assert removal_fields(body["id"]) == before
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("remove", ["seller", "moderation"])
+def test_removed_listing_is_404_to_others_and_a_409_to_its_seller(
+    seller_client, classmate_client, seller, remove
+):
+    body = posted(seller_client)
+    listing = Listing.objects.get(pk=body["id"])
+    if remove == "seller":
+        services.remove_by_seller(listing, seller)
+    else:
+        services.remove_by_moderation(listing)
+    before = removal_fields(body["id"])
+
+    assert classmate_client.get(listing_url(body["id"])).status_code == 404
+    assert classmate_client.delete(listing_url(body["id"])).status_code == 404
+    assert seller_client.get(listing_url(body["id"])).json()["removed_by"] == remove
+    assert seller_client.delete(listing_url(body["id"])).status_code == 409
+    assert removal_fields(body["id"]) == before
+
+
+@pytest.mark.django_db
+def test_removing_a_missing_listing_is_404(seller_client):
+    assert seller_client.delete(listing_url(999_999)).status_code == 404
 
 
 # --- CSRF through the web app proxy ---

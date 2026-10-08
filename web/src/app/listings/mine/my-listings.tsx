@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { refusalMessage, toFieldErrors } from "@/components/listings/listing-form";
 import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
 import { STATUS_LABELS } from "@/lib/listing-options";
@@ -40,28 +41,144 @@ function coverPhoto(photos: Photo[]): Photo | undefined {
   );
 }
 
-function ListingRow({ listing }: { listing: Listing }) {
+/** One listing. Available listings get Edit and Remove; Remove asks for confirmation inside
+ * the row, then calls onRemoved once the API has removed the listing. */
+function ListingRow({ listing, onRemoved }: { listing: Listing; onRemoved: (listing: Listing) => void }) {
   const cover = coverPhoto(listing.photos);
+  const [confirming, setConfirming] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const removeButton = useRef<HTMLButtonElement>(null);
+  const cancelButton = useRef<HTMLButtonElement>(null);
+
+  // Focus follows the confirm step: onto Cancel when it opens, back to Remove when it closes.
+  const opened = useRef(false);
+  useEffect(() => {
+    if (confirming) cancelButton.current?.focus();
+    else if (opened.current) removeButton.current?.focus();
+    opened.current = confirming;
+  }, [confirming]);
+
+  function cancel() {
+    setConfirming(false);
+    setError(null);
+  }
+
+  async function remove() {
+    if (removing) return;
+    setRemoving(true);
+    setError(null);
+    try {
+      const { error: body, response } = await api.DELETE("/api/listings/{id}/", {
+        params: { path: { id: listing.id } },
+      });
+      if (response.ok) {
+        onRemoved(listing);
+        return;
+      }
+      setError(
+        refusalMessage(response.status, toFieldErrors(body).detail?.[0], {
+          failed: "Couldn't remove this listing. Try again.",
+          signIn: "Sign in to remove your listing.",
+        }),
+      );
+    } catch {
+      setError("Couldn't reach Tanu. Check your connection and try again.");
+    }
+    setRemoving(false);
+  }
+
   return (
-    <li className="flex gap-3 rounded-xl border border-black/10 p-2 dark:border-white/10">
-      <div className="relative size-20 shrink-0 overflow-hidden rounded-lg bg-foreground/5 sm:size-24">
-        {cover && (
-          // The full image until the thumbnail job has run. unoptimized: Django serves /media
-          // directly, so Next's image optimizer isn't in the path.
-          <Image src={cover.thumbnail_url ?? cover.image_url} alt="" fill unoptimized className="object-cover" />
-        )}
+    <li
+      className={`rounded-xl border p-2 ${
+        confirming
+          ? "border-[var(--danger)] bg-[var(--danger-soft)]"
+          : "border-black/10 dark:border-white/10"
+      }`}
+    >
+      <div className="flex gap-3">
+        <div className="relative size-20 shrink-0 overflow-hidden rounded-lg bg-foreground/5 sm:size-24">
+          {cover && (
+            // The full image until the thumbnail job has run. unoptimized: Django serves /media
+            // directly, so Next's image optimizer isn't in the path.
+            <Image src={cover.thumbnail_url ?? cover.image_url} alt="" fill unoptimized className="object-cover" />
+          )}
+        </div>
+        <div className="min-w-0 flex-1 py-0.5">
+          <p className="truncate font-medium">{listing.title}</p>
+          <p className="mt-0.5 text-sm text-foreground/80">
+            {listing.price_cents === 0 ? "Free" : centsToDollars(listing.price_cents)}
+          </p>
+          <span
+            className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[listing.status]}`}
+          >
+            {STATUS_LABELS[listing.status]}
+          </span>
+        </div>
       </div>
-      <div className="min-w-0 flex-1 py-0.5">
-        <p className="truncate font-medium">{listing.title}</p>
-        <p className="mt-0.5 text-sm text-foreground/80">
-          {listing.price_cents === 0 ? "Free" : centsToDollars(listing.price_cents)}
+      {listing.removed_by === "moderation" && (
+        <p className="mt-2 text-sm text-foreground/60">
+          Removed by moderation. Buyers can&apos;t see this listing.
         </p>
-        <span
-          className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[listing.status]}`}
+      )}
+      {listing.status === "available" && !confirming && (
+        <div className="mt-2 flex justify-end gap-1.5">
+          <Link href={`/listings/${listing.id}/edit`} className="btn btn-sm btn-quiet">
+            Edit
+          </Link>
+          <button
+            ref={removeButton}
+            type="button"
+            onClick={() => setConfirming(true)}
+            className="btn btn-sm text-[var(--danger)] hover:bg-[var(--danger-soft)]"
+          >
+            Remove
+          </button>
+        </div>
+      )}
+      {confirming && (
+        <div
+          role="group"
+          aria-label={`Remove ${listing.title}`}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && !removing) cancel();
+          }}
+          className="mt-2 border-t border-[var(--danger)]/20 pt-2"
         >
-          {STATUS_LABELS[listing.status]}
-        </span>
-      </div>
+          <p className="text-sm">
+            <span className="block font-semibold">Remove this listing?</span>
+            Buyers won&apos;t see it anymore. This can&apos;t be undone.
+          </p>
+          {error && (
+            <p role="alert" className="mt-1.5 text-sm text-[var(--danger)]">
+              {error}
+            </p>
+          )}
+          {/* aria-disabled rather than disabled: disabling the focused button would drop focus
+              out of the row. */}
+          <div className="mt-2 flex justify-end gap-1.5">
+            <button
+              ref={cancelButton}
+              type="button"
+              onClick={() => {
+                if (!removing) cancel();
+              }}
+              aria-disabled={removing}
+              className="btn btn-sm btn-quiet aria-disabled:cursor-not-allowed aria-disabled:opacity-55"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={remove}
+              aria-disabled={removing}
+              className="btn btn-sm bg-[var(--danger)] text-white aria-disabled:cursor-not-allowed aria-disabled:opacity-55"
+            >
+              {removing ? "Removing…" : "Remove listing"}
+            </button>
+          </div>
+        </div>
+      )}
     </li>
   );
 }
@@ -69,6 +186,11 @@ function ListingRow({ listing }: { listing: Listing }) {
 export function MyListings() {
   const [filter, setFilter] = useState<Filter>("all");
   const [result, setResult] = useState<Result | null>(null);
+  const [announcement, setAnnouncement] = useState("");
+  // Listings removed on this page. A list request already in flight when one was removed
+  // would otherwise bring it back.
+  const removedIds = useRef(new Set<number>());
+  const results = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -78,7 +200,8 @@ export function MyListings() {
       })
       .then(({ data, response }) => {
         if (cancelled) return;
-        if (data) setResult({ filter, listings: data });
+        if (data)
+          setResult({ filter, listings: data.filter((l) => !removedIds.current.has(l.id)) });
         else if (response.status === 403)
           setResult({ filter, error: "Sign in with your school email to see your listings." });
         else setResult({ filter, error: "Couldn't load your listings. Refresh to try again." });
@@ -93,6 +216,19 @@ export function MyListings() {
   }, [filter]);
 
   const loading = result?.filter !== filter;
+
+  function dropListing(removed: Listing) {
+    removedIds.current.add(removed.id);
+    setResult((current) =>
+      current && "listings" in current
+        ? { ...current, listings: current.listings.filter((listing) => listing.id !== removed.id) }
+        : current,
+    );
+    // The focused button goes with the row. Keep focus at the list (Tab continues from there)
+    // and tell screen readers what happened.
+    results.current?.focus();
+    setAnnouncement(`Removed ${removed.title}.`);
+  }
 
   let body;
   if (!result) {
@@ -120,9 +256,9 @@ export function MyListings() {
     );
   } else {
     body = (
-      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {result.listings.map((listing) => (
-          <ListingRow key={listing.id} listing={listing} />
+          <ListingRow key={listing.id} listing={listing} onRemoved={dropListing} />
         ))}
       </ul>
     );
@@ -143,9 +279,17 @@ export function MyListings() {
           </button>
         ))}
       </div>
-      <div aria-busy={loading} className={`mt-4 ${result && loading ? "opacity-60" : ""}`}>
+      <div
+        ref={results}
+        tabIndex={-1}
+        aria-busy={loading}
+        className={`mt-4 outline-none ${result && loading ? "opacity-60" : ""}`}
+      >
         {body}
       </div>
+      <p role="status" className="sr-only">
+        {announcement}
+      </p>
     </>
   );
 }

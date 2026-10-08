@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.schools.models import School
@@ -62,6 +63,10 @@ class ListingSerializer(serializers.ModelSerializer):
     seller = SellerSummarySerializer(read_only=True)
     item_details = ItemDetailsSerializer(read_only=True, allow_null=True)
     photos = ListingPhotoSerializer(many=True, read_only=True)
+    removed_by = serializers.SerializerMethodField(
+        help_text="Who removed a Removed listing, shown only to its seller: blank unless the "
+        "listing is Removed, and null for everyone else."
+    )
 
     class Meta:
         model = Listing
@@ -69,6 +74,7 @@ class ListingSerializer(serializers.ModelSerializer):
             "id",
             "kind",
             "status",
+            "removed_by",
             "title",
             "description",
             "price_cents",
@@ -82,6 +88,19 @@ class ListingSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = fields
+
+    @extend_schema_field(
+        serializers.ChoiceField(
+            choices=Listing.RemovedBy.choices, allow_blank=True, allow_null=True
+        )
+    )
+    def get_removed_by(self, listing) -> str | None:
+        # Reads the viewer from the request in the serializer context; with no request,
+        # nobody counts as the seller.
+        request = self.context.get("request")
+        if request is None or request.user.pk != listing.seller_id:
+            return None
+        return listing.removed_by
 
 
 class MultilineCharField(serializers.CharField):
