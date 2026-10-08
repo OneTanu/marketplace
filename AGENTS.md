@@ -26,11 +26,15 @@ docker compose up --build                       # Postgres (host port 5433) + AP
 docker compose exec backend pytest              # backend tests
 docker compose exec backend python manage.py makemigrations
 docker compose exec backend python manage.py createsuperuser   # then use /admin
+docker compose exec backend python manage.py create_verified_user terp@umd.edu --password <pw>   # dev student account, skips the verification email (DEBUG only)
 cd backend && uv run python manage.py spectacular --file ../contracts/openapi.yaml   # regenerate contract
 cd web && pnpm install                          # web dependencies (pnpm, not npm; one-time: npm install -g pnpm@12.8.1)
 cd web && pnpm dev                              # web app at http://localhost:3000 (run natively, not in Docker)
 cd web && pnpm api:types                        # regenerate TS types after the contract changes
 cd web && pnpm typecheck                        # Next.js route types + tsc
+cd web && pnpm exec playwright install chromium # one-time: browser for E2E tests
+cd web && pnpm e2e                              # Playwright E2E (needs `docker compose up -d db`): web :3100 -> API :8100, fresh `tanu_e2e` DB
+cd web && pnpm exec playwright show-report      # open the last E2E report
 ```
 
 API docs: http://localhost:8000/api/docs/. Health: `/api/health/`. Auth (django-allauth headless): `/api/auth/`. Admin: `/admin/`.
