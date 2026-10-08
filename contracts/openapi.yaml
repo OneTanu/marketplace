@@ -911,10 +911,17 @@ components:
         image_url:
           type: string
           readOnly: true
+        thumbnail_url:
+          type: string
+          nullable: true
+          readOnly: true
+          description: A 400 px (long edge) copy for lists. Null until the background
+            job has made it; show image_url until then.
       required:
       - id
       - image_url
       - position
+      - thumbnail_url
     ListingPhotoOrderRequest:
       type: object
       properties:

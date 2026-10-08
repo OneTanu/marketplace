@@ -37,14 +37,21 @@ class ItemDetailsSerializer(serializers.ModelSerializer):
 
 class ListingPhotoSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
+    thumbnail_url = serializers.SerializerMethodField(
+        help_text="A 400 px (long edge) copy for lists. Null until the background job has made "
+        "it; show image_url until then."
+    )
 
     class Meta:
         model = ListingPhoto
-        fields = ["id", "position", "image_url"]
+        fields = ["id", "position", "image_url", "thumbnail_url"]
         read_only_fields = fields
 
     def get_image_url(self, photo) -> str:
         return photo.image.url
+
+    def get_thumbnail_url(self, photo) -> str | None:
+        return photo.thumbnail.url if photo.thumbnail else None
 
 
 class ListingSerializer(serializers.ModelSerializer):

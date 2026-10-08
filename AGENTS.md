@@ -17,12 +17,13 @@ Full architecture rationale and trade-offs: @docs/architecture-decisions.md (loc
   - `apps/bookings`, `apps/payments` – V2 (services), empty for now.
 - `web/` – Next.js + TypeScript, responsive (mobile-first) and installable as a PWA. Proxies `/api` and `/media` to Django.
 - `contracts/openapi.yaml` – generated from the backend. Never edit by hand. `web/src/lib/api/schema.d.ts` is generated from it.
-- `docker-compose.yml` – local Postgres + backend.
+- `docker-compose.yml` – local Postgres, backend and background-job worker.
 
 ## Commands
 
 ```bash
-docker compose up --build                       # Postgres (host port 5433) + API at http://localhost:8000
+docker compose up --build                       # Postgres (host port 5433) + API at http://localhost:8000 + job worker
+docker compose restart worker                   # after editing a background task (the worker doesn't auto-reload)
 docker compose exec backend pytest              # backend tests
 docker compose exec backend python manage.py makemigrations
 docker compose exec backend python manage.py createsuperuser   # then use /admin

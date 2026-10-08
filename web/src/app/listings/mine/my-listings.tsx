@@ -46,9 +46,9 @@ function ListingRow({ listing }: { listing: Listing }) {
     <li className="flex gap-3 rounded-xl border border-black/10 p-2 dark:border-white/10">
       <div className="relative size-20 shrink-0 overflow-hidden rounded-lg bg-foreground/5 sm:size-24">
         {cover && (
-          // Full-size image until thumbnails exist (#12). unoptimized: Django serves /media
+          // The full image until the thumbnail job has run. unoptimized: Django serves /media
           // directly, so Next's image optimizer isn't in the path.
-          <Image src={cover.image_url} alt="" fill unoptimized className="object-cover" />
+          <Image src={cover.thumbnail_url ?? cover.image_url} alt="" fill unoptimized className="object-cover" />
         )}
       </div>
       <div className="min-w-0 flex-1 py-0.5">

@@ -540,7 +540,7 @@ def test_any_signed_in_student_can_fetch_a_listing(seller_client, gw):
     assert body["id"] == listing_id
     assert body["school"]["short_name"] == "UMD"
     assert body["item_details"]["condition"] == "like_new"
-    assert [set(p) for p in body["photos"]] == [{"id", "position", "image_url"}]
+    assert [set(p) for p in body["photos"]] == [{"id", "position", "image_url", "thumbnail_url"}]
 
 
 @pytest.mark.django_db

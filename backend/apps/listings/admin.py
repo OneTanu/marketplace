@@ -13,7 +13,8 @@ class CategoryAdmin(admin.ModelAdmin):
 
 class ListingPhotoInline(admin.TabularInline):
     # View only: uploads go through listings services, which strip location data, resize,
-    # and keep positions 0..n-1. A file added here would skip all of that.
+    # queue the thumbnail job and keep positions 0..n-1. A file added here would skip all
+    # of that.
     model = ListingPhoto
     extra = 0
 
