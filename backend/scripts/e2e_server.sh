@@ -4,6 +4,7 @@
 #
 # Env: POSTGRES_DB (must end in "_e2e"), PORT, E2E_USER_EMAIL, E2E_BUYER_EMAIL, E2E_USER_PASSWORD,
 # WEB_APP_URL (the E2E web app's origin, trusted for CSRF), plus the usual POSTGRES_* settings.
+# E2E_DISABLE_RATE_LIMITS=1 turns off allauth login limits (see config/settings/dev.py).
 set -eu
 
 case "${POSTGRES_DB:-}" in

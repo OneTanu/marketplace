@@ -86,7 +86,7 @@
     transition: border-color 150ms, background-color 150ms;
   }
   .chip:hover { border-color: var(--ink); }
-  .chip[aria-pressed="true"], .chip[aria-expanded="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .chip[aria-pressed="true"], .chip[aria-expanded="true"], .chip[aria-current="page"] { background: var(--ink); border-color: var(--ink); color: #fff; }
 
   .field {
     height: 3rem;

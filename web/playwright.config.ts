@@ -18,6 +18,8 @@ const backendEnv = {
   WEB_APP_URL: WEB_URL,
   E2E_USER_EMAIL: TEST_USER.email,
   E2E_BUYER_EMAIL: TEST_BUYER.email,
+  // Parallel tests sign the same students in at once; allauth would refuse after five.
+  E2E_DISABLE_RATE_LIMITS: "1",
   E2E_USER_PASSWORD: TEST_USER.password,
   // So runserver's startup line reaches Playwright through the pipe right away.
   PYTHONUNBUFFERED: "1",

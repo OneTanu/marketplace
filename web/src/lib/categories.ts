@@ -1,3 +1,4 @@
+import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
 
 export type Category = components["schemas"]["Category"];
@@ -21,3 +22,27 @@ export function categoryTree(categories: Category[]) {
 }
 
 export type CategoryTree = ReturnType<typeof categoryTree>;
+
+// Shoes is its own department, but Women and Men link across to their shoes with a pill.
+// These are UI shortcuts, not categories.
+export const SHOE_SHORTCUTS: Record<string, { slug: string; name: string }> = {
+  women: { slug: "shoes-women", name: "Shoes" },
+  men: { slug: "shoes-men", name: "Shoes" },
+};
+
+let itemCategories: Promise<Category[] | null> | null = null;
+
+/** The active item categories, shared by the header nav and the feed. Null when signed out
+ * (the API is for verified students only) or the request failed; only a successful answer is
+ * kept, so signing in later in the same tab loads them. */
+export function loadItemCategories(): Promise<Category[] | null> {
+  itemCategories ??= api
+    .GET("/api/categories/", { params: { query: { kind: "item" } } })
+    .then(({ data }) => data ?? null)
+    .catch(() => null)
+    .then((categories) => {
+      if (!categories) itemCategories = null;
+      return categories;
+    });
+  return itemCategories;
+}

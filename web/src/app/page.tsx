@@ -1,9 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { DISCOVERY_PREVIEW_LISTINGS, formatPrice } from "@/lib/discovery";
-
-const heroListings = DISCOVERY_PREVIEW_LISTINGS.filter((listing) => listing.id.startsWith("photo-")).slice(0, 4);
+// Photos of the kind of thing students sell, for signed-out visitors. Not listings.
+const heroPhotos = [
+  { src: "/demo-listings/real/tan-washed-chore-jacket.jpg", alt: "A tan canvas chore jacket" },
+  { src: "/demo-listings/real/coach-signature-crossbody.jpg", alt: "A black crossbody bag" },
+  { src: "/demo-listings/real/black-washed-wide-jeans.jpg", alt: "Black wide-leg jeans" },
+  { src: "/demo-listings/real/timberland-wheat-boots.jpg", alt: "Wheat work boots" },
+];
 
 const departments = [
   { href: "/search?category=women", name: "Women", image: "/demo-listings/jacket.svg" },
@@ -31,10 +35,9 @@ export default function HomePage() {
         <p className="mt-5 text-sm text-muted">Free to join. Requires a supported school email.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4" aria-label="Recently listed">
-        {heroListings.map((listing, index) => <Link key={listing.id} href="/search" className={`group relative block overflow-hidden rounded-md bg-surface ${index % 2 === 1 ? "translate-y-8" : ""}`}>
-          <div className="relative aspect-[4/5]"><Image src={listing.image_url} alt={listing.title} fill priority={index < 2} sizes="(max-width: 1024px) 50vw, 28vw" className="object-cover transition duration-500 desktop:group-hover:scale-[1.03]" /></div>
-          <span className="type-wide absolute bottom-2.5 left-2.5 rounded bg-background px-2 py-1 text-sm font-extrabold text-ink">{formatPrice(listing.price_cents, listing.currency)}</span>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        {heroPhotos.map((photo, index) => <Link key={photo.src} href="/search" className={`group relative block overflow-hidden rounded-md bg-surface ${index % 2 === 1 ? "translate-y-8" : ""}`}>
+          <div className="relative aspect-[4/5]"><Image src={photo.src} alt={photo.alt} fill priority={index < 2} sizes="(max-width: 1024px) 50vw, 28vw" className="object-cover transition duration-500 desktop:group-hover:scale-[1.03]" /></div>
         </Link>)}
       </div>
     </section>
@@ -50,7 +53,7 @@ export default function HomePage() {
             <div className="relative aspect-square overflow-hidden rounded-md bg-surface"><Image src={department.image} alt="" fill sizes="(max-width: 1024px) 50vw, 20vw" className="object-cover transition duration-500 desktop:group-hover:scale-[1.03]" /></div>
             <p className="mt-2.5 font-bold">{department.name}</p>
           </Link>)}
-          <Link href="/search?category=campus-items" className="col-span-2 flex flex-col justify-between rounded-md bg-ink p-5 text-white transition hover:bg-brand lg:col-span-1 lg:aspect-square">
+          <Link href="/search?category=dorm-furniture" className="col-span-2 flex flex-col justify-between rounded-md bg-ink p-5 text-white transition hover:bg-brand lg:col-span-1 lg:aspect-square">
             <p className="type-wide text-2xl font-black leading-tight">Campus items</p>
             <p className="mt-6 text-sm leading-6 text-white/75">Calculators, mini fridges, lamps, textbooks, and the rest of your move-in list.</p>
           </Link>
