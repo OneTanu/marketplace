@@ -37,6 +37,29 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Healthy once migrations have run and Django answers, so the worker can start.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/')"]
+      interval: 5s
+      retries: 20
+
+  # Runs every background job (Procrastinate tasks), e.g. photo thumbnails. Unlike runserver
+  # it doesn't reload on code changes: after editing a task, `docker compose restart worker`.
+  worker:
+    build:
+      context: ./backend
+      args:
+        INSTALL_DEV: "true"
+    command: python manage.py procrastinate worker
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      backend:
+        condition: service_healthy
 
 volumes:
   pgdata:

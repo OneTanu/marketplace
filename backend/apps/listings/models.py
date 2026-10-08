@@ -79,6 +79,8 @@ class Listing(models.Model):
 class ListingPhoto(models.Model):
     listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name="photos")
     image = models.ImageField(upload_to="listings/%Y/%m/")
+    # Written by the make_photo_thumbnail job after the photo is stored; empty until then.
+    thumbnail = models.ImageField(upload_to="listings/thumbnails/%Y/%m/", blank=True)
     position = models.PositiveSmallIntegerField(default=0)  # 0 is the cover photo
     created_at = models.DateTimeField(auto_now_add=True)
 

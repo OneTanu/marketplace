@@ -441,6 +441,8 @@ export interface components {
             readonly id: number;
             readonly position: number;
             readonly image_url: string;
+            /** @description A 400 px (long edge) copy for lists. Null until the background job has made it; show image_url until then. */
+            readonly thumbnail_url: string | null;
         };
         ListingPhotoOrderRequest: {
             /** @description Every photo ID of the listing, each once, in the new order. The first is the cover. */

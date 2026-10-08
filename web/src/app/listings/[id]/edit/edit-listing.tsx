@@ -299,7 +299,7 @@ function EditListingForm({ initial }: { initial: Listing }) {
           {photos.map((photo, index) => (
             <PhotoTile
               key={photo.id}
-              src={photo.image_url}
+              src={photo.thumbnail_url ?? photo.image_url}
               index={index}
               count={photos.length}
               onRemove={() => deletePhoto(index)}

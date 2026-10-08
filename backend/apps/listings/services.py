@@ -17,6 +17,7 @@ Sellers edit a listing (fields and photos) only while it is Available; see "Edit
 
 from collections.abc import Mapping, Sequence
 from io import BytesIO
+from pathlib import PurePosixPath
 from typing import NamedTuple
 from uuid import uuid4
 
@@ -27,6 +28,7 @@ from django.db import transaction
 from django.utils import timezone
 from PIL import Image, ImageOps
 
+from . import tasks
 from .models import Category, ItemDetails, Listing, ListingKind, ListingPhoto
 
 MAX_PRICE_CENTS = 1_000_000  # $10,000
@@ -46,6 +48,7 @@ PHOTO_SAVE_FORMATS = {"JPEG": "JPEG", "MPO": "JPEG", "PNG": "PNG", "WEBP": "WEBP
 PHOTO_SAVE_MODES = {"JPEG": {"L", "RGB", "CMYK"}, "WEBP": {"RGB", "RGBA"}}
 MAX_PHOTO_EDGE = 2048  # px. Longer edges are scaled down; smaller photos are never upscaled.
 PHOTO_QUALITY = 85  # JPEG and WebP
+THUMBNAIL_EDGE = 400  # px, long edge. For lists (My listings, later the feed).
 # Photo errors, each following "Photo <number> ".
 NOT_A_PHOTO = "isn't a JPEG, PNG or WebP image"
 DAMAGED_PHOTO = "couldn't be read. It may be damaged; try another photo"
@@ -210,8 +213,47 @@ def _store_photo(listing: Listing, photo: CleanedPhoto, *, position: int) -> Lis
     listing_photo.image.save(
         f"{uuid4().hex}.{photo.extension}", ContentFile(photo.content), save=False
     )
-    listing_photo.save()
+    with transaction.atomic():
+        listing_photo.save()
+        # Procrastinate's Django connector inserts the job row on this same database
+        # connection, so it commits or rolls back with the photo: a rolled-back upload never
+        # leaves a job behind.
+        tasks.make_photo_thumbnail.defer(photo_id=listing_photo.pk)
     return listing_photo
+
+
+def make_photo_thumbnail(photo_id: int) -> None:
+    """Write a THUMBNAIL_EDGE px (long edge) copy of a stored photo, in the same format, and
+    record it on the photo. Run by the make_photo_thumbnail job that _store_photo queues.
+
+    Safe to run again or late: a photo that already has a thumbnail, or that was deleted
+    before the job ran, is left alone.
+    """
+    photo = ListingPhoto.objects.filter(pk=photo_id).first()
+    if photo is None or photo.thumbnail:
+        return
+    # The stored photo is already cleaned (upright, no metadata, a format we accept).
+    with photo.image.open("rb"), Image.open(photo.image) as stored:
+        image_format = stored.format
+        save_format = PHOTO_SAVE_FORMATS[image_format]
+        icc_profile = stored.info.get("icc_profile")
+        image = _photo_mode(stored, save_format, max_edge=THUMBNAIL_EDGE)
+        # reducing_gap=None: resize in one step. Pillow's default shortcut (reduce()) can't
+        # handle 16-bit greyscale PNGs, and stored photos are at most MAX_PHOTO_EDGE anyway.
+        image.thumbnail(
+            (THUMBNAIL_EDGE, THUMBNAIL_EDGE), Image.Resampling.LANCZOS, reducing_gap=None
+        )
+        content = _encode_photo(image, save_format, icc_profile)
+
+    name = f"{PurePosixPath(photo.image.name).stem}.{PHOTO_EXTENSIONS[image_format]}"
+    photo.thumbnail.save(name, ContentFile(content), save=False)
+    # Record it only if the photo still exists without a thumbnail. If, while this run worked,
+    # the photo was deleted or another run got there first, drop the file just written.
+    recorded = ListingPhoto.objects.filter(pk=photo_id, thumbnail="").update(
+        thumbnail=photo.thumbnail.name
+    )
+    if not recorded:
+        photo.thumbnail.delete(save=False)
 
 
 def _clean_photo(photo: UploadedFile) -> CleanedPhoto:
@@ -234,29 +276,35 @@ def _clean_photo(photo: UploadedFile) -> CleanedPhoto:
             original.draft(None, (MAX_PHOTO_EDGE, MAX_PHOTO_EDGE))
             image = ImageOps.exif_transpose(original)  # a decoded copy of the first picture
         save_format = PHOTO_SAVE_FORMATS[image_format]
-        image = _photo_mode(image, save_format)
+        image = _photo_mode(image, save_format, max_edge=MAX_PHOTO_EDGE)
         image.thumbnail((MAX_PHOTO_EDGE, MAX_PHOTO_EDGE), Image.Resampling.LANCZOS)
-        # Drop everything Pillow might write back from the original (e.g. a JPEG comment);
-        # PNG transparency is image data, not metadata.
-        image.info = {k: v for k, v in image.info.items() if k == "transparency"}
-        options = {"icc_profile": icc_profile} if icc_profile else {}
-        if save_format != "PNG":
-            options["quality"] = PHOTO_QUALITY
-        buffer = BytesIO()
-        image.save(buffer, save_format, **options)
+        content = _encode_photo(image, save_format, icc_profile)
     except Exception as exc:  # truncated or otherwise damaged image data
         raise ValidationError(DAMAGED_PHOTO) from exc
     finally:
         photo.seek(0)
-    return CleanedPhoto(buffer.getvalue(), PHOTO_EXTENSIONS[image_format])
+    return CleanedPhoto(content, PHOTO_EXTENSIONS[image_format])
 
 
-def _photo_mode(image: Image.Image, save_format: str) -> Image.Image:
-    """The image in a pixel mode the output format can hold and that resizes smoothly (1-bit
-    and palette images would otherwise be scaled down with nearest-neighbour)."""
+def _encode_photo(image: Image.Image, save_format: str, icc_profile: bytes | None) -> bytes:
+    """Encode an image with no metadata except its ICC colour profile."""
+    # Drop everything Pillow might write back from the original (e.g. a JPEG comment);
+    # PNG transparency is image data, not metadata.
+    image.info = {k: v for k, v in image.info.items() if k == "transparency"}
+    options = {"icc_profile": icc_profile} if icc_profile else {}
+    if save_format != "PNG":
+        options["quality"] = PHOTO_QUALITY
+    buffer = BytesIO()
+    image.save(buffer, save_format, **options)
+    return buffer.getvalue()
+
+
+def _photo_mode(image: Image.Image, save_format: str, *, max_edge: int) -> Image.Image:
+    """The image in a pixel mode the output format can hold and that resizes smoothly to
+    max_edge (1-bit and palette images would otherwise be scaled down with nearest-neighbour)."""
     allowed = PHOTO_SAVE_MODES.get(save_format)
     if allowed is None:  # PNG
-        if image.mode not in {"1", "P", "PA"} or max(image.size) <= MAX_PHOTO_EDGE:
+        if image.mode not in {"1", "P", "PA"} or max(image.size) <= max_edge:
             return image
     elif image.mode in allowed:
         return image
@@ -441,7 +489,9 @@ def delete_photo(listing: Listing, editor, photo_id: int) -> None:
     Raises ListingPhoto.DoesNotExist if the listing has no such photo."""
     with transaction.atomic():
         locked = _lock_for_edit(listing, editor, "delete a photo from")
-        photos = list(locked.photos.all())
+        # Locking the photo rows means a thumbnail recorded by a job that finished just now is
+        # seen here, and one still finishing finds the row gone and drops its own file.
+        photos = list(locked.photos.select_for_update())
         photo = next((p for p in photos if p.pk == photo_id), None)
         if photo is None:
             raise ListingPhoto.DoesNotExist(f"Listing {locked.pk} has no photo {photo_id}.")
@@ -451,9 +501,14 @@ def delete_photo(listing: Listing, editor, photo_id: int) -> None:
         photos.remove(photo)
         _renumber(photos)
         locked.save(update_fields=["updated_at"])
-        # Storage isn't part of the transaction, so the file goes only once the row is gone.
-        storage, name = photo.image.storage, photo.image.name
-        transaction.on_commit(lambda: storage.delete(name))
+        # Storage isn't part of the transaction, so the files go only once the row is gone.
+        files = [(f.storage, f.name) for f in (photo.image, photo.thumbnail) if f]
+
+        def delete_files():
+            for storage, name in files:
+                storage.delete(name)
+
+        transaction.on_commit(delete_files)
 
 
 def reorder_photos(listing: Listing, editor, photo_ids: Sequence[int]) -> None:
