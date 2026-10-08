@@ -10,7 +10,7 @@ from .models import Category, Color, ItemDetails, Listing, ListingPhoto
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ["id", "name", "slug"]
+        fields = ["id", "name", "slug", "parent"]
         read_only_fields = fields
 
 

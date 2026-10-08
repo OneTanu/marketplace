@@ -619,9 +619,14 @@ components:
           type: string
           readOnly: true
           pattern: ^[-a-zA-Z0-9_]+$
+        parent:
+          type: integer
+          readOnly: true
+          nullable: true
       required:
       - id
       - name
+      - parent
       - slug
     ColorEnum:
       enum:

@@ -57,8 +57,12 @@ FREE_CATEGORY_SLUG = "free"  # seeded by migration 0004_seed_item_categories
 
 
 def validate_item_category(category: Category) -> None:
+    """Listings go in active item categories that are leaves: a department with active
+    subcategories (Women, Shoes) is too broad, so its subcategory must be chosen."""
     if category.kind != ListingKind.ITEM or not category.is_active:
         raise ValidationError("Choose an active item category.")
+    if category.children.filter(kind=category.kind, is_active=True).exists():
+        raise ValidationError(f"Choose a subcategory of {category.name}.")
 
 
 def validate_price(category: Category, price_cents: int) -> None:

@@ -45,7 +45,7 @@ def photo(size, image_format="JPEG", name="photo.jpg", mode="RGB", color="red"):
 def create_listing(seller, photos):
     return services.create_item_listing(
         seller,
-        category=Category.objects.get(slug="clothing"),
+        category=Category.objects.get(slug="women-coats-jackets"),
         title="Gray winter jacket",
         price_cents=2500,
         condition=ItemDetails.Condition.LIKE_NEW,
@@ -70,7 +70,7 @@ def test_upload_ends_with_a_thumbnail(client, seller, media_root, in_memory_jobs
     response = client.post(
         "/api/listings/",
         {
-            "category": Category.objects.get(slug="clothing").pk,
+            "category": Category.objects.get(slug="women-coats-jackets").pk,
             "title": "Gray winter jacket",
             "price_cents": 2500,
             "condition": "like_new",

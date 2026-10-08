@@ -17,14 +17,18 @@ from apps.schools.models import School
 CATEGORIES_URL = "/api/categories/"
 LISTINGS_URL = "/api/listings/"
 MY_LISTINGS_URL = "/api/listings/mine/"
-SEEDED_ITEM_CATEGORIES = {
-    "Clothing",
-    "Dorm & furniture",
-    "Electronics",
-    "Textbooks",
-    "Free",
-    "Other",
-}
+# Departments in nav order (0007_seed_category_tree). Clothing (0004) is retired.
+SEEDED_DEPARTMENTS = [
+    "women",
+    "men",
+    "shoes",
+    "accessories",
+    "dorm-furniture",
+    "electronics",
+    "textbooks",
+    "free",
+    "other",
+]
 
 
 @pytest.fixture(autouse=True)
@@ -66,7 +70,7 @@ def image(name="photo.jpg", image_format="JPEG"):
 
 def listing_data(**overrides):
     data = {
-        "category": category("clothing").pk,
+        "category": category("women-coats-jackets").pk,
         "title": "Gray winter jacket",
         "description": "Worn one season.",
         "price_cents": 2500,
@@ -92,8 +96,17 @@ def test_categories_returns_active_item_categories(seller_client):
     Category.objects.create(name="Tutoring", slug="tutoring", kind=ListingKind.SERVICE)
     response = seller_client.get(CATEGORIES_URL, {"kind": "item"})
     assert response.status_code == 200
-    assert {c["name"] for c in response.json()} == SEEDED_ITEM_CATEGORIES
-    assert set(response.json()[0]) == {"id", "name", "slug"}
+    body = response.json()
+    assert set(body[0]) == {"id", "name", "slug", "parent"}
+    slugs = [c["slug"] for c in body]
+    assert "retired" not in slugs and "tutoring" not in slugs and "clothing" not in slugs
+    # Siblings come in display order; `parent` is the parent category id (null at the top).
+    assert [c["slug"] for c in body if c["parent"] is None] == SEEDED_DEPARTMENTS
+    by_id = {c["id"]: c["slug"] for c in body}
+    men = [c["slug"] for c in body if by_id.get(c["parent"]) == "men"]
+    assert men[:3] == ["men-t-shirts", "men-shirts", "men-jeans"]
+    shoes = [c["name"] for c in body if by_id.get(c["parent"]) == "shoes"]
+    assert shoes == ["Women's", "Men's", "Unisex"]
 
 
 @pytest.mark.django_db
@@ -153,9 +166,10 @@ def test_create_listing_with_details_and_photos(seller_client, seller, umd, medi
     assert body["description"] == "Worn one season."
     assert body["price_cents"] == 2500
     assert body["category"] == {
-        "id": category("clothing").pk,
-        "name": "Clothing",
-        "slug": "clothing",
+        "id": category("women-coats-jackets").pk,
+        "name": "Coats & Jackets",
+        "slug": "women-coats-jackets",
+        "parent": category("women").pk,
     }
     assert body["school"] == {"id": umd.pk, "short_name": "UMD"}
     assert body["seller"] == {"id": seller.pk, "username": "seller"}
@@ -253,9 +267,45 @@ def test_listing_belongs_to_the_sellers_school(client, gw):
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("slug", ["women", "shoes", "accessories"])
+def test_listing_cant_go_in_a_department_with_subcategories(seller_client, slug):
+    response = post_listing(seller_client, category=category(slug).pk)
+    assert response.status_code == 400
+    assert response.json()["category"] == [f"Choose a subcategory of {category(slug).name}."]
+    assert not Listing.objects.exists()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("slug", ["shoes-men", "men-jeans", "electronics"])
+def test_listing_goes_in_a_leaf(seller_client, slug):
+    body = posted(seller_client, category=category(slug).pk)
+    assert body["category"]["slug"] == slug
+
+
+@pytest.mark.django_db
+def test_a_department_whose_subcategories_are_all_retired_is_a_leaf(seller_client):
+    Category.objects.filter(parent__slug="shoes").update(is_active=False)
+    assert post_listing(seller_client, category=category("shoes").pk).status_code == 201
+
+
+@pytest.mark.django_db
+def test_editing_into_a_department_is_rejected(seller_client):
+    body = posted(seller_client)
+    response = patch_listing(seller_client, body["id"], {"category": category("men").pk})
+    assert response.status_code == 400
+    assert response.json()["category"] == ["Choose a subcategory of Men."]
+    assert (
+        patch_listing(seller_client, body["id"], {"category": category("men-pants").pk}).json()[
+            "category"
+        ]["slug"]
+        == "men-pants"
+    )
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     ("slug", "price_cents"),
-    [("free", 0), ("clothing", 1), ("clothing", 1_000_000)],
+    [("free", 0), ("women-coats-jackets", 1), ("women-coats-jackets", 1_000_000)],
 )
 def test_valid_prices(seller_client, slug, price_cents):
     response = post_listing(seller_client, category=category(slug).pk, price_cents=price_cents)
@@ -564,7 +614,7 @@ def make_listing(owner, title, *, status=Listing.Status.AVAILABLE, days_ago=0):
     """A listing posted days_ago, already moved to status (status services arrive with #6)."""
     listing = services.create_item_listing(
         owner,
-        category=category("clothing"),
+        category=category("women-coats-jackets"),
         title=title,
         price_cents=2500,
         condition="good",
@@ -807,12 +857,12 @@ def test_patch_ignores_server_set_fields(seller_client, umd, gw):
     ("posted_as", "changes", "accepted"),
     [
         # The Free/$0 rule applies to the resulting category and price.
-        ("clothing", {"category": "free"}, False),  # Free, but still $25
-        ("clothing", {"category": "free", "price_cents": 0}, True),
-        ("clothing", {"price_cents": 0}, False),  # $0 outside Free
+        ("women-coats-jackets", {"category": "free"}, False),  # Free, but still $25
+        ("women-coats-jackets", {"category": "free", "price_cents": 0}, True),
+        ("women-coats-jackets", {"price_cents": 0}, False),  # $0 outside Free
         ("free", {"price_cents": 500}, False),
-        ("free", {"category": "clothing"}, False),  # leaving Free at $0
-        ("free", {"category": "clothing", "price_cents": 500}, True),
+        ("free", {"category": "women-coats-jackets"}, False),  # leaving Free at $0
+        ("free", {"category": "women-coats-jackets", "price_cents": 500}, True),
         ("free", {"title": "Free lamp"}, True),
     ],
 )
@@ -897,9 +947,11 @@ def test_seller_and_status_are_checked_before_fields(seller_client, classmate_cl
 @pytest.mark.django_db
 def test_listing_in_a_retired_category_can_still_be_edited(seller_client):
     body = posted(seller_client)
-    Category.objects.filter(slug="clothing").update(is_active=False)
+    Category.objects.filter(slug="women-coats-jackets").update(is_active=False)
     response = patch_listing(
-        seller_client, body["id"], {"title": "Jacket", "category": category("clothing").pk}
+        seller_client,
+        body["id"],
+        {"title": "Jacket", "category": category("women-coats-jackets").pk},
     )
     assert response.status_code == 200, response.json()
 

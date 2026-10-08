@@ -18,7 +18,7 @@ def seller(umd):
 
 @pytest.fixture
 def clothing():
-    return Category.objects.get(slug="clothing")  # seeded by a data migration
+    return Category.objects.get(slug="women-coats-jackets")  # seeded by a data migration
 
 
 def make_listing(**overrides):
