@@ -24,5 +24,6 @@ node_modules/
 .DS_Store
 Thumbs.db
 
-# Claude Code personal settings
+# Claude Code personal settings and agent worktrees
 .claude/settings.local.json
+.claude/worktrees/
