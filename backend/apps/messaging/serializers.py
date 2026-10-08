@@ -52,7 +52,8 @@ class MessageQuerySerializer(serializers.Serializer):
 class ConversationSerializer(serializers.ModelSerializer):
     other_user = serializers.SerializerMethodField()
     latest_message = serializers.SerializerMethodField()
-    unread_count = serializers.SerializerMethodField()
+    # Annotated by conversation_queryset().
+    unread_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Conversation
@@ -65,17 +66,6 @@ class ConversationSerializer(serializers.ModelSerializer):
             "last_message_at",
         ]
         read_only_fields = fields
-
-    def _membership(self, conversation):
-        request = self.context["request"]
-        return next(
-            (
-                record
-                for record in conversation.participant_records.all()
-                if record.user_id == request.user.pk
-            ),
-            None,
-        )
 
     @extend_schema_field(MessagingUserSerializer)
     def get_other_user(self, conversation):
@@ -92,16 +82,9 @@ class ConversationSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(MessageSerializer(allow_null=True))
     def get_latest_message(self, conversation):
-        message = conversation.messages.order_by("-id").first()
+        # Prefetched by conversation_queryset(): a list holding at most the latest message.
+        message = next(iter(conversation.latest_messages), None)
         return MessageSerializer(message, context=self.context).data if message else None
-
-    def get_unread_count(self, conversation) -> int:
-        request = self.context["request"]
-        membership = self._membership(conversation)
-        messages = conversation.messages.exclude(sender=request.user)
-        if membership and membership.last_read_message_id:
-            messages = messages.filter(id__gt=membership.last_read_message_id)
-        return messages.count()
 
 
 class StartConversationSerializer(serializers.Serializer):

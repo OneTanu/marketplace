@@ -3,6 +3,7 @@ from allauth.account.models import EmailAddress
 
 from apps.accounts.models import User
 from apps.messaging.models import Conversation, ConversationParticipant, Message
+from apps.messaging.services import mark_conversation_read, send_message, start_direct_conversation
 from apps.schools.models import School
 
 PASSWORD = "pw-123456789"
@@ -171,3 +172,45 @@ def test_message_poll_can_request_only_messages_after_known_id(client):
     )
 
     assert [message["body"] for message in response.json()["messages"]] == ["Second"]
+
+
+@pytest.mark.django_db
+def test_unread_counts_skip_own_messages_and_start_after_last_read(client):
+    alex = verified_user("alex")
+    maya = verified_user("maya")
+    sam = verified_user("sam")
+    with_maya = start_direct_conversation(sender=alex, recipient=maya)
+    with_sam = start_direct_conversation(sender=alex, recipient=sam)
+    empty = start_direct_conversation(sender=alex, recipient=verified_user("jo"))
+    first = send_message(conversation=with_maya, sender=maya, body="One")
+    send_message(conversation=with_maya, sender=maya, body="Two")
+    send_message(conversation=with_maya, sender=maya, body="Three")
+    mark_conversation_read(conversation=with_maya, user=alex, message=first)
+    send_message(conversation=with_sam, sender=sam, body="Hi")
+    send_message(conversation=with_sam, sender=sam, body="Still there?")
+    # Created directly so alex has no read position here (last_read is null); alex's own
+    # message still doesn't count as unread.
+    own = Message.objects.create(conversation=with_sam, sender=alex, body="Yes")
+    client.force_login(alex)
+
+    listed = client.get("/api/conversations/").json()
+    inbox = {item["id"]: item for item in listed}
+    detail = client.get(f"/api/conversations/{with_maya.pk}/").json()
+
+    # Newest activity first; a conversation without messages (null last_message_at) sorts first.
+    assert [item["id"] for item in listed] == [empty.pk, with_sam.pk, with_maya.pk]
+    assert inbox[with_maya.pk]["unread_count"] == 2
+    assert inbox[with_sam.pk]["unread_count"] == 2
+    assert inbox[empty.pk]["unread_count"] == 0
+    assert inbox[with_maya.pk]["latest_message"]["body"] == "Three"
+    assert inbox[with_sam.pk]["latest_message"]["id"] == own.pk
+    assert inbox[with_sam.pk]["latest_message"]["is_mine"] is True
+    assert inbox[empty.pk]["latest_message"] is None
+    assert detail["unread_count"] == 2
+    assert detail["other_user"]["username"] == "maya"
+    assert client.get("/api/conversations/unread-count/").json() == {"unread_count": 4}
+
+    client.force_login(maya)
+    assert client.get("/api/conversations/unread-count/").json() == {"unread_count": 0}
+    client.force_login(verified_user("nobody"))
+    assert client.get("/api/conversations/unread-count/").json() == {"unread_count": 0}

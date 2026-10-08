@@ -53,12 +53,14 @@ export function ChatClient({ conversationId }: { conversationId: number }) {
       if (refreshingRef.current) return;
       refreshingRef.current = true;
       try {
+        // Later ticks only ask for messages newer than the latest one; the conversation itself
+        // is re-fetched (below) only when that returns something new.
         const [thread, page] = await Promise.all([
-          getConversation(conversationId),
+          initial ? getConversation(conversationId) : undefined,
           listMessages(conversationId, initial || !latestMessageIdRef.current ? {} : { afterId: latestMessageIdRef.current }),
         ]);
         if (!active) return;
-        setConversation(thread);
+        if (thread) setConversation(thread);
         if (initial) {
           setMessages(page.messages);
           setHasMore(page.has_more);
@@ -73,6 +75,14 @@ export function ChatClient({ conversationId }: { conversationId: number }) {
             lastMarkedReadIdRef.current = latest.id;
           } catch {
             // Reading messages should still succeed if the read-receipt request is interrupted.
+          }
+        }
+        if (!initial && page.messages.length) {
+          try {
+            const updated = await getConversation(conversationId);
+            if (active) setConversation(updated);
+          } catch {
+            // The new messages are already shown; the next new message retries this.
           }
         }
       } catch {
