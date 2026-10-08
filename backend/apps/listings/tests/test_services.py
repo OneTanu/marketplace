@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.listings import services
-from apps.listings.models import Category, Listing, ListingKind
+from apps.listings.models import Category, Listing
 from apps.listings.services import ListingStatusError
 from apps.schools.models import School
 
@@ -41,7 +41,7 @@ def make_listing(status=AVAILABLE, **fields):
     seller = User.objects.create_user(
         "seller@umd.edu", "pw-123456789", username="seller", school=umd
     )
-    category = Category.objects.create(name="Clothing", slug="clothing", kind=ListingKind.ITEM)
+    category = Category.objects.get(slug="clothing")  # seeded
     return Listing.objects.create(
         school=umd,
         seller=seller,

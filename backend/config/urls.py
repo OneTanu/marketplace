@@ -20,6 +20,7 @@ urlpatterns = [
     path("api/", include("apps.messaging.urls")),
     # Signup, login, email verification (django-allauth headless).
     path("api/auth/", include("allauth.headless.urls")),
+    path("api/", include("apps.listings.urls")),
 ]
 
 if settings.DEBUG:

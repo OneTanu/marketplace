@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
 
-import { Placeholder } from "@/components/placeholder";
+import { SellForm } from "./sell-form";
 
 export const metadata: Metadata = { title: "Sell" };
 
 export default function SellPage() {
-  return <Placeholder title="Sell an item" note="Create a listing with photos (workstream 2: Listings)." />;
+  return (
+    <section className="mx-auto w-full max-w-2xl px-4 py-6">
+      <h1 className="text-2xl font-semibold tracking-tight">Sell an item</h1>
+      <SellForm />
+    </section>
+  );
 }
