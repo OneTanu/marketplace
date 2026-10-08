@@ -6,8 +6,9 @@ from .models import Category, ItemDetails, Listing, ListingKind, ListingPhoto, S
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ["name", "kind", "parent", "is_active"]
-    list_filter = ["kind", "is_active"]
+    list_display = ["name", "kind", "parent", "sort_order", "is_active"]
+    list_filter = ["kind", "is_active", "parent"]
+    list_select_related = ["parent"]
     prepopulated_fields = {"slug": ["name"]}
 
 

@@ -334,6 +334,7 @@ export interface components {
             readonly id: number;
             readonly name: string;
             readonly slug: string;
+            readonly parent: number | null;
         };
         /**
          * @description * `black` - Black

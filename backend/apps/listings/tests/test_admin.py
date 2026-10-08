@@ -27,7 +27,7 @@ def listing():
     Image.new("RGB", (8, 8), "red").save(buffer, "JPEG")
     return services.create_item_listing(
         seller,
-        category=Category.objects.get(slug="clothing"),
+        category=Category.objects.get(slug="women-coats-jackets"),
         title="Gray winter jacket",
         description="Worn one season.",
         price_cents=2500,
@@ -94,7 +94,7 @@ def test_admin_edits_wording_but_not_price_category_photos_or_details_row(admin_
     listing.refresh_from_db()
     assert listing.title == "Gray jacket"
     assert listing.price_cents == 2500
-    assert listing.category.slug == "clothing"
+    assert listing.category.slug == "women-coats-jackets"
     assert listing.photos.get() == photo
     assert listing.photos.get().position == 0
     assert ItemDetails.objects.filter(listing=listing).exists()

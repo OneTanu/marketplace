@@ -42,7 +42,7 @@ def make_listing(status=AVAILABLE, **fields):
     seller = User.objects.create_user(
         "seller@umd.edu", "pw-123456789", username="seller", school=umd
     )
-    category = Category.objects.get(slug="clothing")  # seeded
+    category = Category.objects.get(slug="women-coats-jackets")  # seeded
     return Listing.objects.create(
         school=umd,
         seller=seller,

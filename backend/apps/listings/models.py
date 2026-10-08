@@ -10,20 +10,27 @@ class ListingKind(models.TextChoices):
 
 
 class Category(models.Model):
+    """A node in the category tree: a department (Women, Shoes, Electronics) or a subcategory
+    under one (Women › Jeans). Listings go in leaves, categories with no active children.
+    The tree is data: add, move or retire categories in the admin, not in code."""
+
     name = models.CharField(max_length=100)
     slug = models.SlugField(unique=True)
     kind = models.CharField(max_length=20, choices=ListingKind.choices)
     parent = models.ForeignKey(
         "self", on_delete=models.PROTECT, null=True, blank=True, related_name="children"
     )
+    # Display order among siblings (nav tabs, pills, the Sell form). Lower comes first.
+    sort_order = models.PositiveSmallIntegerField(default=0)
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        ordering = ["kind", "name"]
+        ordering = ["kind", "sort_order", "name"]
         verbose_name_plural = "categories"
 
     def __str__(self):
-        return self.name
+        # Several departments have a "Jeans" or "Bags"; name the department too.
+        return f"{self.parent.name} › {self.name}" if self.parent_id else self.name
 
 
 class Listing(models.Model):

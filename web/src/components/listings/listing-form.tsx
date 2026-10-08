@@ -7,7 +7,7 @@ import Image from "next/image";
 import { useEffect, useState, type ChangeEvent } from "react";
 
 import { api } from "@/lib/api/client";
-import type { components } from "@/lib/api/schema";
+import { categoryTree, type Category } from "@/lib/categories";
 import {
   COLORS,
   CONDITIONS,
@@ -18,7 +18,7 @@ import {
 } from "@/lib/listing-options";
 import { dollarsToCents } from "@/lib/money";
 
-export type Category = components["schemas"]["Category"];
+export type { Category };
 export type Errors = Partial<Record<string, string[]>>;
 
 const PROHIBITED =
@@ -109,9 +109,11 @@ export function errorsAfterChange(errors: Errors, field: string | undefined): Er
   const keys =
     field === "price"
       ? ["price_cents"]
-      : field === "category"
+      : field === "category" || field === "department"
         ? ["category", "price_cents"]
-        : [field];
+        : field === "waist" || field === "length"
+          ? ["size"]
+          : [field];
   if (!keys.some((key) => errors[key])) return null;
   return Object.fromEntries(Object.entries(errors).filter(([key]) => !keys.includes(key)));
 }
@@ -140,8 +142,19 @@ export function useItemCategories() {
   return { categories, loadError };
 }
 
+/** The category picked by id (a form value), or undefined. */
+function findCategory(categories: Category[] | null, categoryId: string) {
+  return categories?.find((c) => String(c.id) === categoryId);
+}
+
+// Subcategories sized by waist and length: the size is stored as "<waist>x<length>".
+const PANTS_SLUG = /-(jeans|pants)$/;
+const PANTS_SIZE = /^(\d{2})x(\d{2})$/;
+const WAISTS = Array.from({ length: 21 }, (_, i) => String(24 + i)); // 24-44
+const LENGTHS = Array.from({ length: 11 }, (_, i) => String(26 + i)); // 26-36
+
 export function isFreeCategory(categories: Category[] | null, categoryId: string): boolean {
-  return categories?.find((c) => String(c.id) === categoryId)?.slug === FREE_CATEGORY_SLUG;
+  return findCategory(categories, categoryId)?.slug === FREE_CATEGORY_SLUG;
 }
 
 export type ListingFieldValues = {
@@ -168,6 +181,10 @@ export function readListingFields(
   if (!categoryId) errors.category = ["Choose a category."];
   if (priceCents === null) errors.price_cents = ["Enter a price like 25 or 24.99."];
   if (!text("condition")) errors.condition = ["Choose a condition."];
+  // Jeans and pants: SizeField's waist and length make the size, and only together.
+  if (Boolean(text("waist")) !== Boolean(text("length"))) {
+    errors.size = ["Pick both a waist and a length, or neither."];
+  }
   if (Object.keys(errors).length || priceCents === null) return { errors };
   return {
     values: {
@@ -403,30 +420,15 @@ export function ListingFields({
         <FieldError id={errorId("description")} messages={errors.description} />
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2">
-        <div>
-          <label htmlFor={fieldId("category")} className={labelClass}>
-            Category
-          </label>
-          <select
-            id={fieldId("category")}
-            value={categoryId}
-            onChange={(e) => onCategoryChange(e.target.value)}
-            disabled={!categories}
-            aria-invalid={invalid("category")}
-            aria-describedby={describedBy("category")}
-            className={inputClass}
-          >
-            <option value="">{categories ? "Choose a category" : "Loading…"}</option>
-            {categories?.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <FieldError id={errorId("category")} messages={errors.category} />
-        </div>
+      <CategoryPicker
+        formId={formId}
+        errors={errors}
+        categories={categories}
+        categoryId={categoryId}
+        onCategoryChange={onCategoryChange}
+      />
 
+      <div className="grid gap-6 sm:grid-cols-2">
         <div>
           <label htmlFor={fieldId("price")} className={labelClass}>
             Price
@@ -480,22 +482,12 @@ export function ListingFields({
           Details <span className="font-normal text-foreground/60">(optional)</span>
         </legend>
         <div className="grid gap-4 sm:grid-cols-3">
-          <div>
-            <label htmlFor={fieldId("size")} className="block text-sm text-foreground/70">
-              Size
-            </label>
-            <input
-              id={fieldId("size")}
-              name="size"
-              maxLength={30}
-              defaultValue={initial.size}
-              placeholder="e.g. M, 32x30, Twin XL"
-              aria-invalid={invalid("size")}
-              aria-describedby={describedBy("size")}
-              className={inputClass}
-            />
-            <FieldError id={errorId("size")} messages={errors.size} />
-          </div>
+          <SizeField
+            formId={formId}
+            errors={errors}
+            pants={PANTS_SLUG.test(findCategory(categories, categoryId)?.slug ?? "")}
+            initial={initial.size ?? ""}
+          />
           <div>
             <label htmlFor={fieldId("brand")} className="block text-sm text-foreground/70">
               Brand
@@ -540,5 +532,182 @@ export function ListingFields({
         Listings for these are removed.
       </p>
     </>
+  );
+}
+
+/** Category, then Subcategory when the chosen category has subcategories. `categoryId` is the
+ * leaf the listing goes in ("" until one is chosen). */
+function CategoryPicker({
+  formId,
+  errors,
+  categories,
+  categoryId,
+  onCategoryChange,
+}: {
+  formId: string;
+  errors: Errors;
+  categories: Category[] | null;
+  categoryId: string;
+  onCategoryChange: (categoryId: string) => void;
+}) {
+  const { fieldId, errorId } = formIds(formId);
+  const { departments, children } = categoryTree(categories ?? []);
+  // The department follows the chosen category until the seller picks one with nothing under
+  // it chosen yet (e.g. Men, before picking Jeans).
+  const [pickedDepartment, setPickedDepartment] = useState<string | null>(null);
+  const selected = findCategory(categories, categoryId);
+  const selectedDepartment =
+    selected && departments.some((d) => d.id === selected.id) ? selected.id : selected?.parent;
+  const department = pickedDepartment ?? (selectedDepartment ? String(selectedDepartment) : "");
+  const subcategories = children.get(Number(department)) ?? [];
+  const hasSubcategories = subcategories.length > 0;
+  const hasErrors = Boolean(errors.category?.length);
+
+  function chooseDepartment(value: string) {
+    setPickedDepartment(value);
+    // A department with no subcategories is itself where the listing goes.
+    onCategoryChange(children.has(Number(value)) ? "" : value);
+  }
+
+  // The select that holds the listing's category carries its id, errors and invalid state.
+  const categoryProps = (holds: boolean) => ({
+    id: fieldId(holds ? "category" : "department"),
+    "aria-invalid": holds && hasErrors ? true : undefined,
+    "aria-describedby": holds && hasErrors ? errorId("category") : undefined,
+  });
+
+  return (
+    <div className="grid gap-6 sm:grid-cols-2">
+      <div>
+        <label htmlFor={fieldId(hasSubcategories ? "department" : "category")} className={labelClass}>
+          Category
+        </label>
+        <select
+          {...categoryProps(!hasSubcategories)}
+          value={department}
+          onChange={(e) => chooseDepartment(e.target.value)}
+          disabled={!categories}
+          className={inputClass}
+        >
+          <option value="">{categories ? "Choose a category" : "Loading…"}</option>
+          {departments.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        {!hasSubcategories && <FieldError id={errorId("category")} messages={errors.category} />}
+      </div>
+
+      {hasSubcategories && (
+        <div>
+          <label htmlFor={fieldId("category")} className={labelClass}>
+            Subcategory
+          </label>
+          <select
+            {...categoryProps(true)}
+            value={categoryId}
+            onChange={(e) => onCategoryChange(e.target.value)}
+            className={inputClass}
+          >
+            <option value="">Choose a subcategory</option>
+            {subcategories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <FieldError id={errorId("category")} messages={errors.category} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Free-text size, or for jeans and pants a waist and a length that make the size ("32x30").
+ * A pants listing whose size was typed some other way keeps the text box, so it isn't lost. */
+function SizeField({
+  formId,
+  errors,
+  pants,
+  initial,
+}: {
+  formId: string;
+  errors: Errors;
+  pants: boolean;
+  initial: string;
+}) {
+  const { fieldId, errorId } = formIds(formId);
+  const match = PANTS_SIZE.exec(initial);
+  // A stored size the selects can't show (e.g. "50x40") stays in the text box.
+  const parsed = match && WAISTS.includes(match[1]) && LENGTHS.includes(match[2]) ? match : null;
+  const [waist, setWaist] = useState(parsed?.[1] ?? "");
+  const [length, setLength] = useState(parsed?.[2] ?? "");
+  const invalid = errors.size?.length ? true : undefined;
+  const describedBy = invalid ? errorId("size") : undefined;
+
+  if (!pants || (initial && !parsed)) {
+    return (
+      <div>
+        <label htmlFor={fieldId("size")} className="block text-sm text-foreground/70">
+          Size
+        </label>
+        <input
+          id={fieldId("size")}
+          name="size"
+          maxLength={30}
+          defaultValue={initial}
+          placeholder="e.g. M, 10, Twin XL"
+          aria-invalid={invalid}
+          aria-describedby={describedBy}
+          className={inputClass}
+        />
+        <FieldError id={errorId("size")} messages={errors.size} />
+      </div>
+    );
+  }
+
+  return (
+    <fieldset>
+      <legend className="block text-sm text-foreground/70">Size</legend>
+      <input type="hidden" name="size" value={waist && length ? `${waist}x${length}` : ""} />
+      <div className="grid grid-cols-2 gap-2">
+        <select
+          id={fieldId("waist")}
+          name="waist"
+          aria-label="Waist"
+          value={waist}
+          onChange={(e) => setWaist(e.target.value)}
+          aria-invalid={invalid}
+          aria-describedby={describedBy}
+          className={inputClass}
+        >
+          <option value="">Waist</option>
+          {WAISTS.map((w) => (
+            <option key={w} value={w}>
+              W{w}
+            </option>
+          ))}
+        </select>
+        <select
+          id={fieldId("length")}
+          name="length"
+          aria-label="Length"
+          value={length}
+          onChange={(e) => setLength(e.target.value)}
+          aria-invalid={invalid}
+          aria-describedby={describedBy}
+          className={inputClass}
+        >
+          <option value="">Length</option>
+          {LENGTHS.map((l) => (
+            <option key={l} value={l}>
+              L{l}
+            </option>
+          ))}
+        </select>
+      </div>
+      <FieldError id={errorId("size")} messages={errors.size} />
+    </fieldset>
   );
 }
