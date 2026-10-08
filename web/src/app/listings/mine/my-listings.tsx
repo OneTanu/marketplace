@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { refusalMessage, toFieldErrors } from "@/components/listings/listing-form";
 import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
-import { STATUS_LABELS } from "@/lib/listing-options";
+import { STATUS_BADGE_CLASSES, STATUS_LABELS } from "@/lib/listing-options";
 import { centsToDollars } from "@/lib/money";
 
 type Listing = components["schemas"]["Listing"];
@@ -22,13 +22,6 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: "sold", label: STATUS_LABELS.sold },
 ];
 
-const STATUS_BADGE: Record<Status, string> = {
-  available: "bg-green-600/10 text-green-700 dark:text-green-400",
-  pending: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-  sold: "bg-foreground/10 text-foreground/70",
-  removed: "bg-red-600/10 text-red-700 dark:text-red-400",
-};
-
 // The last response and the filter it was for. While a newer filter loads, the previous
 // result stays on screen (dimmed) instead of flashing an empty list.
 type Result = { filter: Filter } & ({ listings: Listing[] } | { error: string });
@@ -41,8 +34,8 @@ function coverPhoto(photos: Photo[]): Photo | undefined {
   );
 }
 
-/** One listing. Available listings get Edit and Remove; Remove asks for confirmation inside
- * the row, then calls onRemoved once the API has removed the listing. */
+/** One listing, with a View link. Available listings also get Edit and Remove; Remove asks
+ * for confirmation inside the row, then calls onRemoved once the API has removed it. */
 function ListingRow({ listing, onRemoved }: { listing: Listing; onRemoved: (listing: Listing) => void }) {
   const cover = coverPhoto(listing.photos);
   const [confirming, setConfirming] = useState(false);
@@ -110,7 +103,7 @@ function ListingRow({ listing, onRemoved }: { listing: Listing; onRemoved: (list
             {listing.price_cents === 0 ? "Free" : centsToDollars(listing.price_cents)}
           </p>
           <span
-            className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[listing.status]}`}
+            className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE_CLASSES[listing.status]}`}
           >
             {STATUS_LABELS[listing.status]}
           </span>
@@ -121,19 +114,26 @@ function ListingRow({ listing, onRemoved }: { listing: Listing; onRemoved: (list
           Removed by moderation. Buyers can&apos;t see this listing.
         </p>
       )}
-      {listing.status === "available" && !confirming && (
+      {!confirming && (
         <div className="mt-2 flex justify-end gap-1.5">
-          <Link href={`/listings/${listing.id}/edit`} className="btn btn-sm btn-quiet">
-            Edit
+          <Link href={`/listings/${listing.id}`} className="btn btn-sm btn-quiet">
+            View
           </Link>
-          <button
-            ref={removeButton}
-            type="button"
-            onClick={() => setConfirming(true)}
-            className="btn btn-sm text-[var(--danger)] hover:bg-[var(--danger-soft)]"
-          >
-            Remove
-          </button>
+          {listing.status === "available" && (
+            <>
+              <Link href={`/listings/${listing.id}/edit`} className="btn btn-sm btn-quiet">
+                Edit
+              </Link>
+              <button
+                ref={removeButton}
+                type="button"
+                onClick={() => setConfirming(true)}
+                className="btn btn-sm text-[var(--danger)] hover:bg-[var(--danger-soft)]"
+              >
+                Remove
+              </button>
+            </>
+          )}
         </div>
       )}
       {confirming && (

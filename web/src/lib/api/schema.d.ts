@@ -557,6 +557,7 @@ export interface components {
         };
         SellerSummary: {
             readonly id: number;
+            readonly username: string;
         };
         SendMessageRequest: {
             body: string;

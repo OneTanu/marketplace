@@ -1234,8 +1234,12 @@ components:
         id:
           type: integer
           readOnly: true
+        username:
+          type: string
+          readOnly: true
       required:
       - id
+      - username
     SendMessageRequest:
       type: object
       properties:
