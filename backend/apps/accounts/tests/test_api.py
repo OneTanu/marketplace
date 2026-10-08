@@ -59,6 +59,23 @@ def test_profile_normalizes_instagram_handle(client):
 
 
 @pytest.mark.django_db
+def test_profile_blank_instagram_handle_clears_it_and_null_is_rejected(client):
+    user = User.objects.create_user(
+        "student@umd.edu", "pw-123456789", username="student", instagram_handle="old.handle"
+    )
+    client.force_login(user)
+
+    rejected = client.patch("/api/me/", {"instagram_handle": None}, content_type="application/json")
+    cleared = client.patch("/api/me/", {"instagram_handle": ""}, content_type="application/json")
+
+    assert rejected.status_code == 400
+    assert cleared.status_code == 200
+    assert cleared.json()["instagram_handle"] == ""
+    user.refresh_from_db()
+    assert user.instagram_handle == ""
+
+
+@pytest.mark.django_db
 def test_profile_rejects_duplicate_instagram_handle(client):
     User.objects.create_user(
         "first@umd.edu",

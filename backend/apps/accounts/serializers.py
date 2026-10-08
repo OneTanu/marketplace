@@ -8,7 +8,9 @@ from .services import update_profile
 
 class CurrentUserSerializer(serializers.ModelSerializer):
     school = SchoolSerializer(read_only=True, allow_null=True)
-    instagram_handle = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    # Blank means no handle (and clears one). Not nullable: the schema would then type the
+    # response as string | null too, though it's always a string.
+    instagram_handle = serializers.CharField(required=False, allow_blank=True)
     follower_count = serializers.IntegerField(source="follower_relationships.count", read_only=True)
     following_count = serializers.IntegerField(
         source="following_relationships.count", read_only=True
@@ -29,10 +31,6 @@ class CurrentUserSerializer(serializers.ModelSerializer):
             "following_count",
         ]
         read_only_fields = ["id", "email", "username", "first_name", "last_name", "school"]
-
-    def validate_instagram_handle(self, value):
-        # null clears the handle, like a blank one.
-        return value or ""
 
     def update(self, instance, validated_data):
         # Raises Django ValidationErrors; CurrentUserView turns them into 400s.
