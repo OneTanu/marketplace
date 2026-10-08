@@ -1,8 +1,10 @@
 import io
+import threading
+import time
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import transaction
+from django.db import connection, transaction
 from PIL import Image
 from procrastinate import testing
 from procrastinate.contrib.django import app
@@ -148,6 +150,66 @@ def test_thumbnail_job_skips_a_deleted_photo(seller, media_root):
 
     tasks.make_photo_thumbnail(photo_id=listing_photo.pk)  # doesn't raise
 
+    assert thumbnail_files(media_root) == []
+
+
+def run_and_close_connection(target, *args):
+    """Each thread gets its own database connection; close it when the thread ends."""
+    try:
+        target(*args)
+    finally:
+        connection.close()
+
+
+def wait_until(condition, timeout=10):
+    deadline = time.monotonic() + timeout
+    while not condition():
+        assert time.monotonic() < deadline, "timed out"
+        time.sleep(0.05)
+
+
+def waiting_on_a_row_lock():
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT count(*) FROM pg_stat_activity"
+            " WHERE datname = current_database() AND wait_event_type = 'Lock'"
+        )
+        return cursor.fetchone()[0] > 0
+
+
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+def test_thumbnail_finished_during_a_photo_delete_leaves_no_file(seller, media_root, monkeypatch):
+    """delete_photo has read the photo (no thumbnail yet) but not deleted it when the job
+    finishes. The job's write must wait for the delete, find the photo gone and drop its
+    file; without the row lock it would record a thumbnail the delete never removes."""
+    listing = create_listing(seller, [photo((800, 600)), photo((800, 600))])
+    doomed = listing.photos.get(position=0)
+    has_read, may_delete = threading.Event(), threading.Event()
+    delete = ListingPhoto.delete
+
+    def pause_then_delete(self, *args, **kwargs):
+        has_read.set()
+        assert may_delete.wait(timeout=10)
+        return delete(self, *args, **kwargs)
+
+    monkeypatch.setattr(ListingPhoto, "delete", pause_then_delete)
+    deleting = threading.Thread(
+        target=run_and_close_connection,
+        args=(services.delete_photo, listing, seller, doomed.pk),
+    )
+    deleting.start()
+    assert has_read.wait(timeout=10)
+
+    job = threading.Thread(
+        target=run_and_close_connection, args=(tasks.make_photo_thumbnail, doomed.pk)
+    )
+    job.start()
+    wait_until(lambda: waiting_on_a_row_lock() or not job.is_alive())
+    may_delete.set()
+    deleting.join(timeout=10)
+    job.join(timeout=10)
+
+    assert not ListingPhoto.objects.filter(pk=doomed.pk).exists()
     assert thumbnail_files(media_root) == []
 
 
