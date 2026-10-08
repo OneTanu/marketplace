@@ -1,12 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 
-import { API_CONTAINER } from "./e2e/global-teardown";
+import { API_CONTAINER, API_PORT, POSTGRES_DB, WEB_PORT } from "./e2e/slot";
 import { TEST_USER } from "./e2e/test-user";
 
 // E2E runs its own servers on their own ports and database, so it never clashes with
-// `pnpm dev` (3000), the compose API (8000), or the dev database (tanu).
-const WEB_PORT = 3100;
-const API_PORT = 8100;
+// `pnpm dev` (3000), the compose API (8000), or the dev database (tanu). E2E_SLOT picks
+// which ports and database (see e2e/slot.ts).
 const WEB_URL = `http://localhost:${WEB_PORT}`;
 // 127.0.0.1, not localhost: Django listens on IPv4 only.
 const API_URL = `http://127.0.0.1:${API_PORT}`;
@@ -14,7 +13,7 @@ const API_URL = `http://127.0.0.1:${API_PORT}`;
 const isCI = !!process.env.CI;
 
 const backendEnv = {
-  POSTGRES_DB: "tanu_e2e",
+  POSTGRES_DB,
   PORT: String(API_PORT),
   WEB_APP_URL: WEB_URL,
   E2E_USER_EMAIL: TEST_USER.email,
