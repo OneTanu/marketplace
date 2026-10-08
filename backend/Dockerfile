@@ -9,17 +9,18 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 COPY --from=ghcr.io/astral-sh/uv:0.12.21 /uv /usr/local/bin/uv
 
-RUN useradd --create-home app && mkdir /opt/venv && chown app /opt/venv
+RUN useradd --create-home app && mkdir /app && chown app /app
 WORKDIR /app
 
 # Install dependencies first so this layer is cached until pyproject.toml/uv.lock change.
-# Local dev builds pass INSTALL_DEV=true to include pytest and ruff.
+# Local dev builds pass INSTALL_DEV=true to include pytest and ruff. The venv stays owned by
+# root: the app only reads it, and a recursive chown would copy all of it into a new layer
+# on every code change. --no-cache keeps uv's download cache out of the image.
 ARG INSTALL_DEV=false
 COPY pyproject.toml uv.lock ./
-RUN if [ "$INSTALL_DEV" = "true" ]; then uv sync --frozen; else uv sync --frozen --no-dev; fi
+RUN if [ "$INSTALL_DEV" = "true" ]; then uv sync --frozen --no-cache; else uv sync --frozen --no-cache --no-dev; fi
 
-COPY . .
-RUN chown -R app /app /opt/venv
+COPY --chown=app . .
 USER app
 
 EXPOSE 8000
