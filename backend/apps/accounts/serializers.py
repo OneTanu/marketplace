@@ -1,13 +1,13 @@
-from django.db import IntegrityError, transaction
 from rest_framework import serializers
 
 from apps.schools.serializers import SchoolSerializer
 
 from .models import Follow, User
+from .services import update_profile
 
 
 class CurrentUserSerializer(serializers.ModelSerializer):
-    school = SchoolSerializer(read_only=True)
+    school = SchoolSerializer(read_only=True, allow_null=True)
     instagram_handle = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     follower_count = serializers.IntegerField(source="follower_relationships.count", read_only=True)
     following_count = serializers.IntegerField(
@@ -31,41 +31,16 @@ class CurrentUserSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "email", "username", "first_name", "last_name", "school"]
 
     def validate_instagram_handle(self, value):
-        from .models import normalize_instagram_handle
-
-        value = normalize_instagram_handle(value)
-        if (
-            value
-            and User.objects.exclude(pk=self.instance.pk)
-            .filter(instagram_handle__iexact=value)
-            .exists()
-        ):
-            raise serializers.ValidationError(
-                "This Instagram handle is already connected to another Tanu account."
-            )
-        return value
-
-    def validate_profile_description(self, value):
-        return value.strip()
+        # null clears the handle, like a blank one.
+        return value or ""
 
     def update(self, instance, validated_data):
-        try:
-            with transaction.atomic():
-                return super().update(instance, validated_data)
-        except IntegrityError as error:
-            if "accounts_user_instagram_ci_unique" in str(error):
-                raise serializers.ValidationError(
-                    {
-                        "instagram_handle": (
-                            "This Instagram handle is already connected to another Tanu account."
-                        )
-                    }
-                ) from error
-            raise
+        # Raises Django ValidationErrors; CurrentUserView turns them into 400s.
+        return update_profile(instance, **validated_data)
 
 
 class PublicUserSerializer(serializers.ModelSerializer):
-    school = SchoolSerializer(read_only=True)
+    school = SchoolSerializer(read_only=True, allow_null=True)
     follower_count = serializers.SerializerMethodField()
     following_count = serializers.SerializerMethodField()
     is_following = serializers.SerializerMethodField()
@@ -85,6 +60,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
             "is_following",
             "is_self",
         ]
+        read_only_fields = fields
 
     def get_follower_count(self, user) -> int:
         return user.follower_relationships.count()

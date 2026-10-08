@@ -25,7 +25,6 @@ class School(models.Model):
     city = models.CharField(max_length=100, blank=True)
     state = models.CharField(max_length=100, blank=True)
     country_code = models.CharField(max_length=2, default="US")
-    timezone = models.CharField(max_length=64, default="UTC")
     sort_order = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 

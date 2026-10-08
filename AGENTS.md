@@ -58,7 +58,7 @@ API docs: http://localhost:8000/api/docs/. Health: `/api/health/`. Auth (django-
 - Our DRF URLs end in `/`, so call them with the slash (`/api/health/`). allauth's `/api/auth/...` URLs have no trailing slash.
 
 ### Schools and accounts
-- Signup requires a verified email on a domain registered to an active `School` (UMD: `umd.edu`, `terpmail.umd.edu`). Email verification is mandatory before login. Don't weaken this.
+- Signup requires a verified email on a domain registered to a `School` with `signup_is_open` (UMD: `umd.edu`, `terpmail.umd.edu`). Email verification is mandatory before login. Don't weaken this.
 - Adding a school is data (an admin or migration row), never code or settings.
 - A user's school is set once at signup from their verified email; changing it is an admin action.
 - A listing's `school` is always its seller's school. Feeds and searches filter by the viewer's school unless they explicitly widen the scope.

@@ -1,100 +1,54 @@
-export type MessagingUser = {
-  id: number;
-  username: string;
-  first_name: string;
-  school: { name: string; short_name: string; slug: string } | null;
-};
+import { api, errorMessage } from "@/lib/api/client";
 
-export type ChatMessage = {
-  id: number;
-  conversation: number;
-  sender: MessagingUser;
-  body: string;
-  created_at: string;
-  is_mine: boolean;
-};
-
-export type MessagePage = {
-  messages: ChatMessage[];
-  has_more: boolean;
-};
-
-export type Conversation = {
-  id: number;
-  other_user: MessagingUser;
-  latest_message: ChatMessage | null;
-  unread_count: number;
-  created_at: string;
-  last_message_at: string | null;
-};
-
-function cookie(name: string) {
-  return document.cookie.split("; ").find((part) => part.startsWith(`${name}=`))?.split("=").slice(1).join("=");
+// Throws the API's `detail` (e.g. "You cannot message yourself.") when a request fails.
+function failed(error: unknown, response: Response): never {
+  throw new Error(errorMessage(error, "detail") ?? `Request failed with ${response.status}`);
 }
 
-async function csrfToken() {
-  let token = cookie("csrftoken");
-  if (!token) {
-    await fetch("/api/auth/browser/v1/config", { credentials: "same-origin" });
-    token = cookie("csrftoken");
-  }
-  return token;
+export async function listConversations() {
+  const { data, error, response } = await api.GET("/api/conversations/");
+  return data ?? failed(error, response);
 }
 
-async function api<T>(path: string, init: RequestInit = {}) {
-  const method = init.method?.toUpperCase() ?? "GET";
-  const headers = new Headers(init.headers);
-  if (method !== "GET" && method !== "HEAD") {
-    const csrf = await csrfToken();
-    if (csrf) headers.set("X-CSRFToken", decodeURIComponent(csrf));
-  }
-  if (init.body) headers.set("Content-Type", "application/json");
-  const response = await fetch(path, { ...init, headers, credentials: "same-origin" });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const detail = typeof body.detail === "string" ? body.detail : `Request failed with ${response.status}`;
-    throw new Error(detail);
-  }
-  return body as T;
-}
-
-export function listConversations() {
-  return api<Conversation[]>("/api/conversations/");
-}
-
-export function getConversation(id: number) {
-  return api<Conversation>(`/api/conversations/${id}/`);
-}
-
-export function startConversation(username: string) {
-  return api<Conversation>("/api/conversations/", {
-    method: "POST",
-    body: JSON.stringify({ username }),
+export async function getConversation(id: number) {
+  const { data, error, response } = await api.GET("/api/conversations/{id}/", {
+    params: { path: { id } },
   });
+  return data ?? failed(error, response);
 }
 
-export function listMessages(id: number, cursor: { beforeId?: number; afterId?: number } = {}) {
-  const params = new URLSearchParams();
-  if (cursor.beforeId) params.set("before_id", String(cursor.beforeId));
-  if (cursor.afterId) params.set("after_id", String(cursor.afterId));
-  const query = params.toString();
-  return api<MessagePage>(`/api/conversations/${id}/messages/${query ? `?${query}` : ""}`);
+export async function startConversation(username: string) {
+  const { data, error, response } = await api.POST("/api/conversations/", { body: { username } });
+  return data ?? failed(error, response);
 }
 
-export function sendMessage(id: number, body: string) {
-  return api<ChatMessage>(`/api/conversations/${id}/messages/`, {
-    method: "POST",
-    body: JSON.stringify({ body }),
+export async function listMessages(id: number, cursor: { beforeId?: number; afterId?: number } = {}) {
+  const query: { before_id?: number; after_id?: number } = {};
+  if (cursor.beforeId) query.before_id = cursor.beforeId;
+  if (cursor.afterId) query.after_id = cursor.afterId;
+  const { data, error, response } = await api.GET("/api/conversations/{id}/messages/", {
+    params: { path: { id }, query },
   });
+  return data ?? failed(error, response);
+}
+
+export async function sendMessage(id: number, body: string) {
+  const { data, error, response } = await api.POST("/api/conversations/{id}/messages/", {
+    params: { path: { id } },
+    body: { body },
+  });
+  return data ?? failed(error, response);
 }
 
 export async function markConversationRead(id: number, messageId?: number) {
-  await api<Record<string, never>>(`/api/conversations/${id}/read/`, {
-    method: "POST",
-    body: JSON.stringify(messageId ? { message_id: messageId } : {}),
+  const { error, response } = await api.POST("/api/conversations/{id}/read/", {
+    params: { path: { id } },
+    body: messageId ? { message_id: messageId } : {},
   });
+  if (!response.ok) failed(error, response);
 }
 
-export function getUnreadCount() {
-  return api<{ unread_count: number }>("/api/conversations/unread-count/");
+export async function getUnreadCount() {
+  const { data, error, response } = await api.GET("/api/conversations/unread-count/");
+  return data ?? failed(error, response);
 }

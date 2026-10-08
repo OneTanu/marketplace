@@ -1,3 +1,5 @@
+import { csrfToken } from "@/lib/api/client";
+
 export type AuthError = { message: string; field?: string };
 
 type AllauthError = { message?: string; code?: string; param?: string };
@@ -8,25 +10,13 @@ type AllauthResponse = {
   meta?: { is_authenticated?: boolean };
 };
 
-function cookie(name: string) {
-  return document.cookie.split("; ").find((part) => part.startsWith(`${name}=`))?.split("=").slice(1).join("=");
-}
-
-async function csrfToken() {
-  let token = cookie("csrftoken");
-  if (!token) {
-    await fetch("/api/auth/browser/v1/config", { credentials: "same-origin" });
-    token = cookie("csrftoken");
-  }
-  return token;
-}
-
+// allauth's endpoints aren't in our OpenAPI contract, so they're called with plain fetch.
 export async function authRequest(path: string, init: RequestInit = {}) {
   const method = init.method?.toUpperCase() ?? "GET";
   const headers = new Headers(init.headers);
   if (method !== "GET" && method !== "HEAD") {
     const csrf = await csrfToken();
-    if (csrf) headers.set("X-CSRFToken", decodeURIComponent(csrf));
+    if (csrf) headers.set("X-CSRFToken", csrf);
   }
   if (init.body) headers.set("Content-Type", "application/json");
   const response = await fetch(`/api/auth/browser/v1/${path}`, { ...init, headers, credentials: "same-origin" });

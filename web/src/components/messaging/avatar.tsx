@@ -1,4 +1,6 @@
-import type { MessagingUser } from "@/lib/messaging";
+import type { components } from "@/lib/api/schema";
+
+type MessagingUser = components["schemas"]["MessagingUser"];
 
 export function Avatar({ user, size = "md" }: { user: Pick<MessagingUser, "first_name" | "username">; size?: "sm" | "md" }) {
   const initial = (user.first_name[0] || user.username[0]).toUpperCase();

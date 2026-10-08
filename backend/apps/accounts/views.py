@@ -1,8 +1,6 @@
-from allauth.account.models import EmailAddress
-from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Case, IntegerField, Q, Value, When
 from django.shortcuts import get_object_or_404
-from rest_framework.exceptions import ValidationError
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.generics import (
     GenericAPIView,
     ListAPIView,
@@ -12,14 +10,15 @@ from rest_framework.generics import (
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.errors import service_validation_errors
+
 from .models import User
 from .serializers import CurrentUserSerializer, PublicUserSerializer
-from .services import follow_user, unfollow_user
+from .services import follow_user, unfollow_user, verified_users
 
 
 def public_users():
-    verified_ids = EmailAddress.objects.filter(verified=True).values("user_id")
-    return User.objects.filter(is_active=True, id__in=verified_ids).select_related("school")
+    return verified_users().select_related("school")
 
 
 class CurrentUserView(RetrieveUpdateAPIView):
@@ -29,7 +28,20 @@ class CurrentUserView(RetrieveUpdateAPIView):
     def get_object(self):
         return self.request.user
 
+    def perform_update(self, serializer):
+        with service_validation_errors():
+            serializer.save()
 
+
+@extend_schema(
+    parameters=[
+        OpenApiParameter("q", description="Text to match against usernames and first names."),
+        OpenApiParameter(
+            "school",
+            description='A school slug, or "all". Defaults to the signed-in user\'s school.',
+        ),
+    ]
+)
 class UserSearchView(ListAPIView):
     serializer_class = PublicUserSerializer
     permission_classes = [IsAuthenticated]
@@ -76,12 +88,11 @@ class FollowUserView(GenericAPIView):
     def get_target(self, username):
         return get_object_or_404(public_users(), username__iexact=username)
 
+    @extend_schema(request=None)
     def post(self, request, username):
         target = self.get_target(username)
-        try:
+        with service_validation_errors():
             follow_user(follower=request.user, following=target)
-        except DjangoValidationError as error:
-            raise ValidationError({"detail": error.message}) from error
         return Response(self.get_serializer(target).data)
 
     def delete(self, request, username):

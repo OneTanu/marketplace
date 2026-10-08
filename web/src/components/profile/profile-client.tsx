@@ -6,9 +6,11 @@ import { FormEvent, useEffect, useState } from "react";
 import {
   getCurrentUser,
   updateCurrentUser,
-  type CurrentUser,
   type ProfileUpdateErrors,
 } from "@/lib/platform";
+import type { components } from "@/lib/api/schema";
+
+type CurrentUser = components["schemas"]["CurrentUser"];
 
 type ProfileTab = "selling" | "sold" | "bookmarks";
 

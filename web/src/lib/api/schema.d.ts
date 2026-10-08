@@ -366,12 +366,12 @@ export interface components {
         Conversation: {
             readonly id: number;
             readonly other_user: components["schemas"]["MessagingUser"];
-            readonly latest_message: components["schemas"]["Message"];
+            readonly latest_message: components["schemas"]["Message"] | null;
             readonly unread_count: number;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
-            last_message_at?: string | null;
+            readonly last_message_at: string | null;
         };
         CurrentUser: {
             readonly id: number;
@@ -380,7 +380,7 @@ export interface components {
             readonly username: string;
             readonly first_name: string;
             readonly last_name: string;
-            readonly school: components["schemas"]["School"];
+            readonly school: components["schemas"]["School"] | null;
             instagram_handle?: string | null;
             profile_description?: string;
             readonly follower_count: number;
@@ -493,9 +493,9 @@ export interface components {
         };
         MessagingUser: {
             readonly id: number;
-            username: string;
-            first_name?: string;
-            readonly school: components["schemas"]["School"];
+            readonly username: string;
+            readonly first_name: string;
+            readonly school: components["schemas"]["School"] | null;
         };
         /** @enum {unknown} */
         NullEnum: null;
@@ -518,21 +518,15 @@ export interface components {
         };
         PublicUser: {
             readonly id: number;
-            username: string;
-            first_name?: string;
-            readonly school: components["schemas"]["School"];
-            instagram_handle?: string;
-            profile_description?: string;
+            readonly username: string;
+            readonly first_name: string;
+            readonly school: components["schemas"]["School"] | null;
+            readonly instagram_handle: string;
+            readonly profile_description: string;
             readonly follower_count: number;
             readonly following_count: number;
             readonly is_following: boolean;
             readonly is_self: boolean;
-        };
-        PublicUserRequest: {
-            username: string;
-            first_name?: string;
-            instagram_handle?: string;
-            profile_description?: string;
         };
         /** @enum {string} */
         RemovedByEnum: "seller" | "moderation";
@@ -545,7 +539,6 @@ export interface components {
             city?: string;
             state?: string;
             country_code?: string;
-            timezone?: string;
             readonly domains: string[];
         };
         SchoolRequest: {
@@ -557,7 +550,6 @@ export interface components {
             city?: string;
             state?: string;
             country_code?: string;
-            timezone?: string;
         };
         SchoolSummary: {
             readonly id: number;
@@ -580,6 +572,9 @@ export interface components {
          * @enum {string}
          */
         StatusEnum: "available" | "pending" | "sold" | "removed";
+        UnreadCount: {
+            readonly unread_count: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -775,9 +770,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["UnreadCount"];
                 };
             };
         };
@@ -1111,7 +1104,12 @@ export interface operations {
     };
     users_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Text to match against usernames and first names. */
+                q?: string;
+                /** @description A school slug, or "all". Defaults to the signed-in user's school. */
+                school?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1158,13 +1156,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PublicUserRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PublicUserRequest"];
-                "multipart/form-data": components["schemas"]["PublicUserRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {

@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { listConversations, type Conversation } from "@/lib/messaging";
+import type { components } from "@/lib/api/schema";
+import { listConversations } from "@/lib/messaging";
 import { Avatar } from "./avatar";
+
+type Conversation = components["schemas"]["Conversation"];
 
 function time(value: string | null) {
   if (!value) return "";

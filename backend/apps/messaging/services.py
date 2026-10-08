@@ -1,15 +1,11 @@
-from allauth.account.models import EmailAddress
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import User
+from apps.accounts.services import verified_users
 
-from .models import Conversation, ConversationParticipant, Message
-
-
-def is_verified_user(user: User) -> bool:
-    return bool(user.is_active and EmailAddress.objects.filter(user=user, verified=True).exists())
+from .models import MESSAGE_MAX_LENGTH, Conversation, ConversationParticipant, Message
 
 
 def direct_key(first: User, second: User) -> str:
@@ -21,7 +17,7 @@ def direct_key(first: User, second: User) -> str:
 def start_direct_conversation(*, sender: User, recipient: User) -> Conversation:
     if sender.pk == recipient.pk:
         raise ValidationError("You cannot message yourself.")
-    if not is_verified_user(sender) or not is_verified_user(recipient):
+    if verified_users().filter(pk__in=[sender.pk, recipient.pk]).count() != 2:
         raise ValidationError("Both students must have active, verified accounts.")
     conversation, created = Conversation.objects.get_or_create(
         direct_key=direct_key(sender, recipient),
@@ -42,9 +38,9 @@ def send_message(*, conversation: Conversation, sender: User, body: str) -> Mess
     body = body.strip()
     if not body:
         raise ValidationError("Message cannot be empty.")
-    if len(body) > 2000:
-        raise ValidationError("Messages may contain at most 2,000 characters.")
-    if not is_verified_user(sender):
+    if len(body) > MESSAGE_MAX_LENGTH:
+        raise ValidationError(f"Messages may contain at most {MESSAGE_MAX_LENGTH:,} characters.")
+    if not verified_users().filter(pk=sender.pk).exists():
         raise ValidationError("Your account must be active and verified to send messages.")
     membership = ConversationParticipant.objects.filter(
         conversation=conversation, user=sender

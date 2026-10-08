@@ -17,6 +17,5 @@ class SchoolSerializer(serializers.ModelSerializer):
             "city",
             "state",
             "country_code",
-            "timezone",
             "domains",
         ]

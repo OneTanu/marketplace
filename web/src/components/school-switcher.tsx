@@ -3,13 +3,16 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { getCurrentUser, getSchools, type SchoolMarketplace } from "@/lib/platform";
+import { getCurrentUser, getSchools } from "@/lib/platform";
+import type { components } from "@/lib/api/schema";
+
+type School = components["schemas"]["School"];
 
 export function SchoolSwitcher() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [schools, setSchools] = useState<SchoolMarketplace[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
   const [homeSlug, setHomeSlug] = useState("");
   const [ready, setReady] = useState(false);
   const routeSlug = pathname.match(/^\/schools\/([^/]+)/)?.[1];
