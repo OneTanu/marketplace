@@ -24,8 +24,8 @@ type Errors = Partial<Record<string, string[]>>;
 const PROHIBITED =
   "weapons, alcohol, tobacco and vapes, drugs and prescriptions, food, counterfeits, or stolen goods";
 
-// Where sellers land after posting. My listings (#9) will replace this.
-const AFTER_POST_HREF = "/profile";
+// Where sellers land after posting.
+const AFTER_POST_HREF = "/listings/mine";
 
 // Fields whose errors show next to their input; any other error shows above the submit button.
 const FIELDS = new Set([

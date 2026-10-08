@@ -143,7 +143,10 @@ export function ProfileClient() {
                 <p className="mt-1 font-medium text-muted">@{user.username}</p>
               </div>
             </div>
-            <button onClick={() => { setEditing((value) => !value); setSaved(false); setErrors({}); }} className="btn btn-secondary">{editing ? "Cancel" : "Edit profile"}</button>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/listings/mine" className="btn btn-secondary">My listings</Link>
+              <button onClick={() => { setEditing((value) => !value); setSaved(false); setErrors({}); }} className="btn btn-secondary">{editing ? "Cancel" : "Edit profile"}</button>
+            </div>
           </div>
 
           {editing ? (

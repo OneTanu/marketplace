@@ -2,6 +2,7 @@ import type { components } from "@/lib/api/schema";
 
 type Condition = components["schemas"]["ConditionEnum"];
 type Color = components["schemas"]["ColorEnum"];
+type Status = components["schemas"]["StatusEnum"];
 
 // Labels for the choices the API accepts. Typed against the generated schema, so the type
 // check fails if the backend adds or renames a choice.
@@ -30,6 +31,13 @@ export const COLORS: { value: Color; label: string }[] = [
   { value: "silver", label: "Silver" },
   { value: "multi", label: "Multicolor" },
 ];
+
+export const STATUS_LABELS: Record<Status, string> = {
+  available: "Available",
+  pending: "Pending",
+  sold: "Sold",
+  removed: "Removed",
+};
 
 // Matches the backend's FREE_CATEGORY_SLUG: items in Free are always $0.
 export const FREE_CATEGORY_SLUG = "free";

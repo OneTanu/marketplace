@@ -1,18 +1,22 @@
 import io
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
+from django.utils import timezone
 from PIL import ExifTags, Image, ImageCms
 
 from apps.accounts.models import User
+from apps.listings import services
 from apps.listings.models import Category, Listing, ListingKind, ListingPhoto
 from apps.schools.models import School
 
 CATEGORIES_URL = "/api/categories/"
 LISTINGS_URL = "/api/listings/"
+MY_LISTINGS_URL = "/api/listings/mine/"
 SEEDED_ITEM_CATEGORIES = {
     "Clothing",
     "Dorm & furniture",
@@ -105,7 +109,12 @@ def test_categories_rejects_unknown_kind(seller_client):
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     ("method", "url"),
-    [("get", CATEGORIES_URL), ("post", LISTINGS_URL), ("get", f"{LISTINGS_URL}1/")],
+    [
+        ("get", CATEGORIES_URL),
+        ("post", LISTINGS_URL),
+        ("get", f"{LISTINGS_URL}1/"),
+        ("get", MY_LISTINGS_URL),
+    ],
 )
 def test_endpoints_require_sign_in(client, method, url):
     response = getattr(client, method)(url)
@@ -533,6 +542,94 @@ def test_any_signed_in_student_can_fetch_a_listing(seller_client, gw):
 @pytest.mark.django_db
 def test_fetching_a_missing_listing_is_404(seller_client):
     assert seller_client.get(f"{LISTINGS_URL}999999/").status_code == 404
+
+
+# --- My listings ---
+
+
+def make_listing(owner, title, *, status=Listing.Status.AVAILABLE, days_ago=0):
+    """A listing posted days_ago, already moved to status (status services arrive with #6)."""
+    listing = services.create_item_listing(
+        owner,
+        category=category("clothing"),
+        title=title,
+        price_cents=2500,
+        condition="good",
+        photos=[image()],
+    )
+    Listing.objects.filter(pk=listing.pk).update(
+        status=status, created_at=timezone.now() - timedelta(days=days_ago)
+    )
+    return listing
+
+
+def titles(response):
+    return [listing["title"] for listing in response.json()]
+
+
+@pytest.mark.django_db
+def test_my_listings_has_only_the_signed_in_sellers_listings(seller_client, seller, umd, gw):
+    make_listing(seller, "Mine")
+    classmate = User.objects.create_user(
+        "classmate@umd.edu", "pw-123456789", username="classmate", school=umd
+    )
+    make_listing(classmate, "Classmate's")
+    make_listing(
+        User.objects.create_user(
+            "colonial@gwu.edu", "pw-123456789", username="colonial", school=gw
+        ),
+        "GW",
+    )
+
+    response = seller_client.get(MY_LISTINGS_URL)
+
+    assert response.status_code == 200
+    assert titles(response) == ["Mine"]
+    body = response.json()[0]
+    assert body["seller"] == {"id": seller.pk}
+    assert [p["position"] for p in body["photos"]] == [0]
+
+
+@pytest.mark.django_db
+def test_my_listings_are_newest_first(seller_client, seller):
+    # Created out of order, so the result can't come from id order by accident.
+    make_listing(seller, "Two days old", days_ago=2)
+    make_listing(seller, "New", days_ago=0)
+    make_listing(seller, "Five days old", days_ago=5)
+
+    response = seller_client.get(MY_LISTINGS_URL)
+
+    assert titles(response) == ["New", "Two days old", "Five days old"]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("listing_status", ["available", "pending", "sold"])
+def test_my_listings_status_filter(seller_client, seller, listing_status):
+    for each in ("available", "pending", "sold"):
+        make_listing(seller, f"{each} 1", status=each, days_ago=1)
+        make_listing(seller, f"{each} 2", status=each)
+
+    response = seller_client.get(MY_LISTINGS_URL, {"status": listing_status})
+
+    assert response.status_code == 200
+    assert titles(response) == [f"{listing_status} 2", f"{listing_status} 1"]
+    assert {listing["status"] for listing in response.json()} == {listing_status}
+
+
+@pytest.mark.django_db
+def test_my_listings_rejects_unknown_status(seller_client):
+    response = seller_client.get(MY_LISTINGS_URL, {"status": "draft"})
+    assert response.status_code == 400
+    assert "status" in response.json()
+
+
+@pytest.mark.django_db
+def test_my_listings_leaves_out_removed_listings(seller_client, seller):
+    make_listing(seller, "Still for sale")
+    make_listing(seller, "Taken down", status=Listing.Status.REMOVED)
+
+    assert titles(seller_client.get(MY_LISTINGS_URL)) == ["Still for sale"]
+    assert seller_client.get(MY_LISTINGS_URL, {"status": "removed"}).json() == []
 
 
 # --- CSRF through the web app proxy ---
