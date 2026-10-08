@@ -104,6 +104,15 @@ class User(AbstractUser):
             ),
         ]
 
+    def clean(self):
+        # Model forms (the admin) call clean(), so a bad handle becomes a field error there
+        # instead of reaching save(), where the same check raises.
+        super().clean()
+        try:
+            self.instagram_handle = normalize_instagram_handle(self.instagram_handle)
+        except ValidationError as error:
+            raise ValidationError({"instagram_handle": error.messages}) from error
+
     def save(self, *args, **kwargs):
         self.email = self.email.strip().lower()
         self.username = self.username.strip().lower()

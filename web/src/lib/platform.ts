@@ -1,28 +1,4 @@
-export type SchoolMarketplace = {
-  name: string;
-  short_name: string;
-  slug: string;
-  signup_is_open: boolean;
-  marketplace_status: "planned" | "waitlist" | "open" | "paused";
-  city: string;
-  state: string;
-  country_code: string;
-  timezone: string;
-  domains: string[];
-};
-
-export type CurrentUser = {
-  id: number;
-  email: string;
-  username: string;
-  first_name: string;
-  last_name: string;
-  school: SchoolMarketplace | null;
-  instagram_handle: string | null;
-  profile_description: string;
-  follower_count: number;
-  following_count: number;
-};
+import { api, errorMessage } from "@/lib/api/client";
 
 export type ProfileUpdateErrors = {
   instagram_handle?: string;
@@ -30,120 +6,74 @@ export type ProfileUpdateErrors = {
   detail?: string;
 };
 
-export type PublicUser = {
-  id: number;
-  username: string;
-  first_name: string;
-  school: SchoolMarketplace | null;
-  instagram_handle: string;
-  profile_description: string;
-  follower_count: number;
-  following_count: number;
-  is_following: boolean;
-  is_self: boolean;
-};
-
-async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(path, { credentials: "same-origin" });
-  if (!response.ok) throw new Error(`Request failed with ${response.status}`);
-  return response.json() as Promise<T>;
+function failed(response: Response): never {
+  throw new Error(`Request failed with ${response.status}`);
 }
 
-export function getSchools() {
-  return getJson<SchoolMarketplace[]>("/api/schools/");
+export async function getSchools() {
+  const { data, response } = await api.GET("/api/schools/");
+  return data ?? failed(response);
 }
 
-export function getSchool(slug: string) {
-  return getJson<SchoolMarketplace>(`/api/schools/${encodeURIComponent(slug)}/`);
+export async function getSchool(slug: string) {
+  const { data, response } = await api.GET("/api/schools/{slug}/", { params: { path: { slug } } });
+  return data ?? failed(response);
 }
 
 export async function getCurrentUser() {
-  const response = await fetch("/api/me/", { credentials: "same-origin", cache: "no-store" });
+  const { data, response } = await api.GET("/api/me/", { cache: "no-store" });
   if (response.status === 401 || response.status === 403) return null;
-  if (!response.ok) throw new Error(`Request failed with ${response.status}`);
-  return response.json() as Promise<CurrentUser>;
+  return data ?? failed(response);
 }
 
-export function searchUsers(query: string, school?: string) {
-  const params = new URLSearchParams({ q: query });
-  if (school) params.set("school", school);
-  return getJson<PublicUser[]>(`/api/users/?${params.toString()}`);
+export async function searchUsers(query: string, school?: string) {
+  const { data, response } = await api.GET("/api/users/", {
+    params: { query: { q: query, ...(school ? { school } : {}) } },
+  });
+  return data ?? failed(response);
 }
 
-export function getPublicUser(username: string) {
-  return getJson<PublicUser>(`/api/users/${encodeURIComponent(username)}/`);
-}
-
-function cookie(name: string) {
-  return document.cookie
-    .split("; ")
-    .find((part) => part.startsWith(`${name}=`))
-    ?.split("=")
-    .slice(1)
-    .join("=");
+export async function getPublicUser(username: string) {
+  const { data, response } = await api.GET("/api/users/{username}/", {
+    params: { path: { username } },
+  });
+  return data ?? failed(response);
 }
 
 export async function updateCurrentUser(update: {
   instagram_handle: string;
   profile_description: string;
-}): Promise<{ user?: CurrentUser; errors: ProfileUpdateErrors }> {
-  let csrf = cookie("csrftoken");
-  if (!csrf) {
-    await fetch("/api/auth/browser/v1/config", { credentials: "same-origin" });
-    csrf = cookie("csrftoken");
-  }
+}) {
   try {
-    const response = await fetch("/api/me/", {
-      method: "PATCH",
-      credentials: "same-origin",
-      headers: {
-        "Content-Type": "application/json",
-        ...(csrf ? { "X-CSRFToken": decodeURIComponent(csrf) } : {}),
-      },
-      body: JSON.stringify(update),
-    });
-    const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-    if (response.ok) return { user: body as CurrentUser, errors: {} };
-    const message = (key: string) => {
-      const value = body[key];
-      if (Array.isArray(value)) return String(value[0]);
-      return typeof value === "string" ? value : undefined;
+    const { data, error } = await api.PATCH("/api/me/", { body: update });
+    if (data) return { user: data, errors: {} as ProfileUpdateErrors };
+    const instagramError = errorMessage(error, "instagram_handle");
+    const descriptionError = errorMessage(error, "profile_description");
+    const errors: ProfileUpdateErrors = {
+      instagram_handle: instagramError,
+      profile_description: descriptionError,
+      detail:
+        errorMessage(error, "detail") ??
+        (instagramError || descriptionError
+          ? undefined
+          : "We couldn’t save your profile. Please try again."),
     };
-    const instagramError = message("instagram_handle");
-    const descriptionError = message("profile_description");
-    return {
-      errors: {
-        instagram_handle: instagramError,
-        profile_description: descriptionError,
-        detail:
-          message("detail") ??
-          (instagramError || descriptionError
-            ? undefined
-            : "We couldn’t save your profile. Please try again."),
-      },
-    };
+    return { errors };
   } catch {
     return { errors: { detail: "Tanu couldn’t reach the server. Check your connection and try again." } };
   }
 }
 
 export async function setFollowing(username: string, following: boolean) {
-  let csrf = cookie("csrftoken");
-  if (!csrf) {
-    await fetch("/api/auth/browser/v1/config", { credentials: "same-origin" });
-    csrf = cookie("csrftoken");
+  const params = { params: { path: { username } } };
+  if (!following) {
+    const { error, response } = await api.DELETE("/api/users/{username}/follow/", params);
+    if (!response.ok) throw new Error(errorMessage(error, "detail") ?? "We couldn’t update this follow.");
+    return null;
   }
-  const response = await fetch(`/api/users/${encodeURIComponent(username)}/follow/`, {
-    method: following ? "POST" : "DELETE",
-    credentials: "same-origin",
-    headers: csrf ? { "X-CSRFToken": decodeURIComponent(csrf) } : {},
-  });
-  if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as { detail?: string };
-    throw new Error(body.detail ?? "We couldn’t update this follow.");
-  }
-  if (response.status === 204) return null;
-  return response.json() as Promise<PublicUser>;
+  const { data, error } = await api.POST("/api/users/{username}/follow/", params);
+  if (!data) throw new Error(errorMessage(error, "detail") ?? "We couldn’t update this follow.");
+  return data;
 }
 
 export async function homeMarketplacePath() {

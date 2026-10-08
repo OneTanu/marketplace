@@ -15,9 +15,13 @@ import {
   type ListingColor,
   type ListingCondition,
 } from "@/lib/discovery";
-import { getCurrentUser, getSchools, searchUsers, type PublicUser, type SchoolMarketplace } from "@/lib/platform";
+import type { components } from "@/lib/api/schema";
+import { getCurrentUser, getSchools, searchUsers } from "@/lib/platform";
 import { ListingCard } from "./listing-card";
 import { MarketplaceFilterBar, type SortOption } from "./marketplace-filter-bar";
+
+type PublicUser = components["schemas"]["PublicUser"];
+type School = components["schemas"]["School"];
 
 function UserResult({ user }: { user: PublicUser }) {
   const initial = (user.first_name[0] || user.username[0]).toUpperCase();
@@ -27,7 +31,7 @@ function UserResult({ user }: { user: PublicUser }) {
   </Link>;
 }
 
-export function MarketplaceFeed({ school }: { school?: SchoolMarketplace }) {
+export function MarketplaceFeed({ school }: { school?: School }) {
   const searchParams = useSearchParams();
   const requestedSchool = searchParams.get("school");
   const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
@@ -46,7 +50,7 @@ export function MarketplaceFeed({ school }: { school?: SchoolMarketplace }) {
   const [inseam, setInseam] = useState(() => searchParams.get("inseam") ?? "");
   const [color, setColor] = useState<ListingColor | "">(() => (searchParams.get("color") ?? "") as ListingColor | "");
   const [sort, setSort] = useState<SortOption>(() => (searchParams.get("ordering") as SortOption) || "relevance");
-  const [schools, setSchools] = useState<SchoolMarketplace[]>(school ? [school] : []);
+  const [schools, setSchools] = useState<School[]>(school ? [school] : []);
   const [peopleResult, setPeopleResult] = useState<{ query: string; people: PublicUser[]; state: "ready" | "signed-out" | "error" }>({ query: "", people: [], state: "ready" });
 
   useEffect(() => {

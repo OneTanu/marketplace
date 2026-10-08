@@ -15,13 +15,15 @@ import {
   type ListingColor,
   type ListingCondition,
 } from "@/lib/discovery";
-import type { SchoolMarketplace } from "@/lib/platform";
+import type { components } from "@/lib/api/schema";
+
+type School = components["schemas"]["School"];
 
 export type SortOption = "relevance" | "newest" | "price_low" | "price_high";
 
 type FilterBarProps = {
   listings: DiscoveryListing[];
-  schools: SchoolMarketplace[];
+  schools: School[];
   showSchool: boolean;
   school: string;
   category: string;

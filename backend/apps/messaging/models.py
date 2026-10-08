@@ -2,6 +2,8 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Q
 
+MESSAGE_MAX_LENGTH = 2000
+
 
 class Conversation(models.Model):
     direct_key = models.CharField(max_length=50, unique=True)
@@ -69,10 +71,8 @@ class Message(models.Model):
         on_delete=models.PROTECT,
         related_name="sent_messages",
     )
-    body = models.TextField(max_length=2000)
+    body = models.TextField(max_length=MESSAGE_MAX_LENGTH)
     created_at = models.DateTimeField(auto_now_add=True)
-    edited_at = models.DateTimeField(null=True, blank=True)
-    deleted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["created_at", "id"]

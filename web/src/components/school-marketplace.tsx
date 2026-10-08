@@ -4,10 +4,13 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { MarketplaceFeed } from "@/components/discovery/marketplace-feed";
-import { getSchool, type SchoolMarketplace } from "@/lib/platform";
+import { getSchool } from "@/lib/platform";
+import type { components } from "@/lib/api/schema";
+
+type School = components["schemas"]["School"];
 
 export function SchoolMarketplaceView({ slug }: { slug: string }) {
-  const [school, setSchool] = useState<SchoolMarketplace | null>(null);
+  const [school, setSchool] = useState<School | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "missing">("loading");
 
   useEffect(() => {

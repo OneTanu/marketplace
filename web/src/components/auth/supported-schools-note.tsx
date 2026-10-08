@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from "react";
 
-import { getSchools, type SchoolMarketplace } from "@/lib/platform";
+import { getSchools } from "@/lib/platform";
+import type { components } from "@/lib/api/schema";
+
+type School = components["schemas"]["School"];
 
 export function SupportedSchoolsNote() {
-  const [schools, setSchools] = useState<SchoolMarketplace[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
 
   useEffect(() => {
     let active = true;

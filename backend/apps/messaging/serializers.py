@@ -4,15 +4,16 @@ from rest_framework import serializers
 from apps.accounts.models import User
 from apps.schools.serializers import SchoolSerializer
 
-from .models import Conversation, Message
+from .models import MESSAGE_MAX_LENGTH, Conversation, Message
 
 
 class MessagingUserSerializer(serializers.ModelSerializer):
-    school = SchoolSerializer(read_only=True)
+    school = SchoolSerializer(read_only=True, allow_null=True)
 
     class Meta:
         model = User
         fields = ["id", "username", "first_name", "school"]
+        read_only_fields = fields
 
 
 class MessageSerializer(serializers.ModelSerializer):
@@ -32,6 +33,10 @@ class MessageSerializer(serializers.ModelSerializer):
 class MessagePageSerializer(serializers.Serializer):
     messages = MessageSerializer(many=True, read_only=True)
     has_more = serializers.BooleanField(read_only=True)
+
+
+class UnreadCountSerializer(serializers.Serializer):
+    unread_count = serializers.IntegerField(read_only=True)
 
 
 class MessageQuerySerializer(serializers.Serializer):
@@ -59,6 +64,7 @@ class ConversationSerializer(serializers.ModelSerializer):
             "created_at",
             "last_message_at",
         ]
+        read_only_fields = fields
 
     def _membership(self, conversation):
         request = self.context["request"]
@@ -84,7 +90,7 @@ class ConversationSerializer(serializers.ModelSerializer):
         )
         return MessagingUserSerializer(other).data if other else None
 
-    @extend_schema_field(MessageSerializer)
+    @extend_schema_field(MessageSerializer(allow_null=True))
     def get_latest_message(self, conversation):
         message = conversation.messages.order_by("-id").first()
         return MessageSerializer(message, context=self.context).data if message else None
@@ -103,7 +109,7 @@ class StartConversationSerializer(serializers.Serializer):
 
 
 class SendMessageSerializer(serializers.Serializer):
-    body = serializers.CharField(max_length=2000, trim_whitespace=True)
+    body = serializers.CharField(max_length=MESSAGE_MAX_LENGTH, trim_whitespace=True)
 
 
 class MarkReadSerializer(serializers.Serializer):

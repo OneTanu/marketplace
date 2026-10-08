@@ -197,8 +197,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: {}
+                $ref: '#/components/schemas/UnreadCount'
           description: ''
   /api/listings/:
     post:
@@ -523,6 +522,17 @@ paths:
   /api/users/:
     get:
       operationId: users_list
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Text to match against usernames and first names.
+      - in: query
+        name: school
+        schema:
+          type: string
+        description: A school slug, or "all". Defaults to the signed-in user's school.
       tags:
       - users
       security:
@@ -567,18 +577,6 @@ paths:
         required: true
       tags:
       - users
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PublicUserRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PublicUserRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PublicUserRequest'
-        required: true
       security:
       - cookieAuth: []
       responses:
@@ -686,6 +684,7 @@ components:
         latest_message:
           allOf:
           - $ref: '#/components/schemas/Message'
+          nullable: true
           readOnly: true
         unread_count:
           type: integer
@@ -697,10 +696,12 @@ components:
         last_message_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
       required:
       - created_at
       - id
+      - last_message_at
       - latest_message
       - other_user
       - unread_count
@@ -727,6 +728,7 @@ components:
           allOf:
           - $ref: '#/components/schemas/School'
           readOnly: true
+          nullable: true
         instagram_handle:
           type: string
           nullable: true
@@ -1047,17 +1049,17 @@ components:
           readOnly: true
         username:
           type: string
-          pattern: ^[A-Za-z0-9._]+$
-          maxLength: 30
-          minLength: 3
+          readOnly: true
         first_name:
           type: string
-          maxLength: 150
+          readOnly: true
         school:
           allOf:
           - $ref: '#/components/schemas/School'
           readOnly: true
+          nullable: true
       required:
+      - first_name
       - id
       - school
       - username
@@ -1104,22 +1106,21 @@ components:
           readOnly: true
         username:
           type: string
-          pattern: ^[A-Za-z0-9._]+$
-          maxLength: 30
-          minLength: 3
+          readOnly: true
         first_name:
           type: string
-          maxLength: 150
+          readOnly: true
         school:
           allOf:
           - $ref: '#/components/schemas/School'
           readOnly: true
+          nullable: true
         instagram_handle:
           type: string
-          maxLength: 30
+          readOnly: true
         profile_description:
           type: string
-          maxLength: 300
+          readOnly: true
         follower_count:
           type: integer
           readOnly: true
@@ -1133,31 +1134,15 @@ components:
           type: boolean
           readOnly: true
       required:
+      - first_name
       - follower_count
       - following_count
       - id
+      - instagram_handle
       - is_following
       - is_self
+      - profile_description
       - school
-      - username
-    PublicUserRequest:
-      type: object
-      properties:
-        username:
-          type: string
-          minLength: 3
-          pattern: ^[A-Za-z0-9._]+$
-          maxLength: 30
-        first_name:
-          type: string
-          maxLength: 150
-        instagram_handle:
-          type: string
-          maxLength: 30
-        profile_description:
-          type: string
-          maxLength: 300
-      required:
       - username
     RemovedByEnum:
       enum:
@@ -1190,9 +1175,6 @@ components:
         country_code:
           type: string
           maxLength: 2
-        timezone:
-          type: string
-          maxLength: 64
         domains:
           type: array
           items:
@@ -1233,10 +1215,6 @@ components:
           type: string
           minLength: 1
           maxLength: 2
-        timezone:
-          type: string
-          minLength: 1
-          maxLength: 64
       required:
       - name
       - short_name
@@ -1291,6 +1269,14 @@ components:
         * `pending` - Pending
         * `sold` - Sold
         * `removed` - Removed
+    UnreadCount:
+      type: object
+      properties:
+        unread_count:
+          type: integer
+          readOnly: true
+      required:
+      - unread_count
   securitySchemes:
     cookieAuth:
       type: apiKey

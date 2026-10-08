@@ -4,8 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { getPublicUser, setFollowing, type PublicUser } from "@/lib/platform";
+import { getPublicUser, setFollowing } from "@/lib/platform";
 import { startConversation } from "@/lib/messaging";
+import type { components } from "@/lib/api/schema";
+
+type PublicUser = components["schemas"]["PublicUser"];
 
 export function PublicProfile({ username }: { username: string }) {
   const router = useRouter();

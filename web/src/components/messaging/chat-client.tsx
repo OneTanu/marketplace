@@ -3,8 +3,12 @@
 import Link from "next/link";
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 
-import { getConversation, listMessages, markConversationRead, sendMessage, type ChatMessage, type Conversation } from "@/lib/messaging";
+import type { components } from "@/lib/api/schema";
+import { getConversation, listMessages, markConversationRead, sendMessage } from "@/lib/messaging";
 import { Avatar } from "./avatar";
+
+type ChatMessage = components["schemas"]["Message"];
+type Conversation = components["schemas"]["Conversation"];
 
 const MAX_LENGTH = 2000;
 // A new timestamp divider appears when messages are this far apart.

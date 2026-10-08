@@ -1,14 +1,12 @@
-from allauth.account.models import EmailAddress
-from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
-from rest_framework.exceptions import ValidationError
 from rest_framework.generics import GenericAPIView, ListAPIView, RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from apps.accounts.models import User
+from apps.accounts.services import verified_users
+from apps.errors import service_validation_errors
 
 from .models import Conversation, ConversationParticipant, Message
 from .serializers import (
@@ -19,6 +17,7 @@ from .serializers import (
     MessageSerializer,
     SendMessageSerializer,
     StartConversationSerializer,
+    UnreadCountSerializer,
 )
 from .services import mark_conversation_read, send_message, start_direct_conversation
 
@@ -51,15 +50,11 @@ class ConversationListCreateView(ListAPIView):
     def post(self, request):
         payload = StartConversationSerializer(data=request.data)
         payload.is_valid(raise_exception=True)
-        verified_ids = EmailAddress.objects.filter(verified=True).values("user_id")
         recipient = get_object_or_404(
-            User.objects.filter(is_active=True, id__in=verified_ids),
-            username__iexact=payload.validated_data["username"],
+            verified_users(), username__iexact=payload.validated_data["username"]
         )
-        try:
+        with service_validation_errors():
             conversation = start_direct_conversation(sender=request.user, recipient=recipient)
-        except DjangoValidationError as error:
-            raise ValidationError({"detail": error.message}) from error
         hydrated = conversation_queryset(request.user).get(pk=conversation.pk)
         return Response(self.get_serializer(hydrated).data)
 
@@ -110,14 +105,12 @@ class ConversationMessageView(GenericAPIView):
         conversation = self.get_conversation()
         payload = SendMessageSerializer(data=request.data)
         payload.is_valid(raise_exception=True)
-        try:
+        with service_validation_errors():
             message = send_message(
                 conversation=conversation,
                 sender=request.user,
                 body=payload.validated_data["body"],
             )
-        except DjangoValidationError as error:
-            raise ValidationError({"detail": error.message}) from error
         return Response(MessageSerializer(message, context={"request": request}).data, status=201)
 
 
@@ -133,17 +126,15 @@ class MarkConversationReadView(GenericAPIView):
         message = None
         if message_id := payload.validated_data.get("message_id"):
             message = get_object_or_404(Message, pk=message_id)
-        try:
+        with service_validation_errors():
             mark_conversation_read(conversation=conversation, user=request.user, message=message)
-        except DjangoValidationError as error:
-            raise ValidationError({"detail": error.message}) from error
         return Response(status=204)
 
 
 class UnreadCountView(GenericAPIView):
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(responses={200: dict})
+    @extend_schema(responses=UnreadCountSerializer)
     def get(self, request):
         count = 0
         for conversation in conversation_queryset(request.user):
