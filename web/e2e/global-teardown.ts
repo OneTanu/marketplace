@@ -1,7 +1,6 @@
 import { execFileSync } from "node:child_process";
 
-/** Name of the local E2E API container (started by playwright.config.ts). */
-export const API_CONTAINER = "tanu-e2e-backend";
+import { API_CONTAINER } from "./slot";
 
 /**
  * Killing `docker compose run` (which is what Playwright does to stop a web server) leaves

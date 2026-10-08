@@ -35,6 +35,7 @@ cd web && pnpm api:types                        # regenerate TS types after the 
 cd web && pnpm typecheck                        # Next.js route types + tsc
 cd web && pnpm exec playwright install chromium # one-time: browser for E2E tests
 cd web && pnpm e2e                              # Playwright E2E (needs `docker compose up -d db`): web :3100 -> API :8100, fresh `tanu_e2e` DB
+cd web && E2E_SLOT=1 pnpm e2e                 # parallel run from another worktree: web :3101 -> API :8101, DB `tanu_1_e2e`; one slot per worktree
 cd web && pnpm exec playwright show-report      # open the last E2E report
 ```
 
