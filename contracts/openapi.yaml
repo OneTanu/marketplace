@@ -226,7 +226,9 @@ paths:
   /api/listings/{id}/:
     get:
       operationId: listings_retrieve
-      description: Any signed-in student can fetch a listing, whatever its school.
+      description: |-
+        Any signed-in student can fetch a listing, whatever its school. A Removed listing is a
+        404 for everyone but its seller.
       parameters:
       - in: path
         name: id
@@ -273,6 +275,26 @@ paths:
           description: ''
         '409':
           description: The listing isn't Available, so it can't be edited.
+    delete:
+      operationId: listings_destroy
+      description: |-
+        Remove an Available listing (seller only). It's a soft delete: the listing stays
+        for its seller's records but is a 404 for everyone else.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - listings
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+        '409':
+          description: The listing isn't Available, so it can't be removed.
   /api/listings/{id}/photos/:
     post:
       operationId: listings_photos_create
@@ -367,7 +389,9 @@ paths:
   /api/listings/mine/:
     get:
       operationId: listings_mine_list
-      description: The signed-in seller's own listings, newest first.
+      description: |-
+        The signed-in seller's own listings, newest first. Listings they removed are left
+        out; listings moderation removed are included, with `removed_by` set.
       parameters:
       - in: query
         name: status
@@ -794,6 +818,15 @@ components:
           allOf:
           - $ref: '#/components/schemas/StatusEnum'
           readOnly: true
+        removed_by:
+          description: 'Who removed a Removed listing, shown only to its seller: blank
+            unless the listing is Removed, and null for everyone else.'
+          nullable: true
+          readOnly: true
+          oneOf:
+          - $ref: '#/components/schemas/RemovedByEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
         title:
           type: string
           readOnly: true
@@ -846,6 +879,7 @@ components:
       - kind
       - photos
       - price_cents
+      - removed_by
       - school
       - seller
       - status
@@ -1027,6 +1061,9 @@ components:
       - id
       - school
       - username
+    NullEnum:
+      enum:
+      - null
     PatchedCurrentUserRequest:
       type: object
       properties:
@@ -1122,6 +1159,11 @@ components:
           maxLength: 300
       required:
       - username
+    RemovedByEnum:
+      enum:
+      - seller
+      - moderation
+      type: string
     School:
       type: object
       properties:

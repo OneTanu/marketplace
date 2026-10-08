@@ -2,6 +2,7 @@ import threading
 from datetime import timedelta
 
 import pytest
+from django.core.exceptions import PermissionDenied
 from django.db import connection, transaction
 from django.utils import timezone
 
@@ -53,12 +54,19 @@ def make_listing(status=AVAILABLE, **fields):
     )
 
 
+def move(function, listing):
+    """Call a status function the way its caller would; the seller removes their own listing."""
+    if function == "remove_by_seller":
+        return services.remove_by_seller(listing, listing.seller)
+    return getattr(services, function)(listing)
+
+
 @pytest.mark.django_db
 @pytest.mark.parametrize(("function", "from_status"), list(ALLOWED))
 def test_allowed_move(function, from_status):
     listing = make_listing(status=from_status)
 
-    returned = getattr(services, function)(listing)
+    returned = move(function, listing)
 
     listing.refresh_from_db()
     assert listing.status == ALLOWED[(function, from_status)]
@@ -74,7 +82,7 @@ def test_disallowed_move_raises_and_changes_nothing(function, from_status):
     before = Listing.objects.values().get(pk=listing.pk)
 
     with pytest.raises(ListingStatusError) as excinfo:
-        getattr(services, function)(listing)
+        move(function, listing)
 
     assert Listing.objects.values().get(pk=listing.pk) == before
     assert excinfo.value.listing_id == listing.pk
@@ -91,7 +99,7 @@ def test_removal_records_who_and_when(function, removed_by):
     listing = make_listing()
     before = timezone.now()
 
-    getattr(services, function)(listing)
+    move(function, listing)
 
     listing.refresh_from_db()
     assert listing.status == REMOVED
@@ -100,11 +108,25 @@ def test_removal_records_who_and_when(function, removed_by):
 
 
 @pytest.mark.django_db
+def test_only_the_seller_can_remove_as_seller():
+    listing = make_listing()
+    classmate = User.objects.create_user(
+        "classmate@umd.edu", "pw-123456789", username="classmate", school=listing.school
+    )
+    before = Listing.objects.values().get(pk=listing.pk)
+
+    with pytest.raises(PermissionDenied):
+        services.remove_by_seller(listing, classmate)
+
+    assert Listing.objects.values().get(pk=listing.pk) == before
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize("function", ["mark_pending", "return_to_available", "mark_sold"])
 def test_non_removal_moves_leave_removal_fields_blank(function):
     listing = make_listing(status=PENDING if function != "mark_pending" else AVAILABLE)
 
-    getattr(services, function)(listing)
+    move(function, listing)
 
     listing.refresh_from_db()
     assert listing.removed_by == ""

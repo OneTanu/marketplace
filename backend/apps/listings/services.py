@@ -346,15 +346,16 @@ def mark_sold(listing: Listing) -> Listing:
     return _move(listing, "mark as Sold", allowed_from={Status.PENDING}, to=Status.SOLD)
 
 
-def remove_by_seller(listing: Listing) -> Listing:
-    """Available -> Removed by the seller (soft delete). Checking that the caller is
-    the seller is the API's job."""
+def remove_by_seller(listing: Listing, seller) -> Listing:
+    """Available -> Removed by its seller (soft delete). Raises PermissionDenied if `seller`
+    isn't the listing's seller."""
     return _move(
         listing,
         "remove (seller)",
         allowed_from={Status.AVAILABLE},
         to=Status.REMOVED,
         removed_by=Listing.RemovedBy.SELLER,
+        seller=seller,
     )
 
 
@@ -376,12 +377,16 @@ def _move(
     allowed_from: set[str],
     to: str,
     removed_by: str = "",
+    seller=None,
 ) -> Listing:
     """Lock the row, check the current status in the database (not the possibly stale
     instance passed in), then apply the move. Concurrent callers queue on the lock, so
-    the second one sees the first one's result and is rejected."""
+    the second one sees the first one's result and is rejected. If `seller` is given, only
+    that user may make the move."""
     with transaction.atomic():
         locked = Listing.objects.select_for_update().get(pk=listing.pk)
+        if seller is not None and locked.seller_id != seller.pk:
+            raise PermissionDenied("Only the seller can change this listing.")
         if locked.status not in allowed_from:
             raise ListingStatusError(locked, action)
         locked.status = to
