@@ -731,7 +731,6 @@ components:
           nullable: true
         instagram_handle:
           type: string
-          nullable: true
         profile_description:
           type: string
           maxLength: 300
@@ -755,7 +754,6 @@ components:
       properties:
         instagram_handle:
           type: string
-          nullable: true
         profile_description:
           type: string
           maxLength: 300
@@ -1071,7 +1069,6 @@ components:
       properties:
         instagram_handle:
           type: string
-          nullable: true
         profile_description:
           type: string
           maxLength: 300

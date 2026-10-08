@@ -162,7 +162,7 @@ export function ProfileClient() {
                 <span className="flex justify-between text-sm font-bold">Instagram <span className="font-normal text-muted">Optional and public</span></span>
                 <div className="mt-2 flex h-12 items-center rounded-xl border border-line bg-white px-4 focus-within:border-brand focus-within:ring-4 focus-within:ring-[var(--brand-soft)]">
                   <span className="text-muted">@</span>
-                  <input name="instagram_handle" defaultValue={user.instagram_handle ?? ""} maxLength={100} className="h-full min-w-0 flex-1 bg-transparent pl-1 outline-none" placeholder="yourhandle" />
+                  <input name="instagram_handle" defaultValue={user.instagram_handle} maxLength={100} className="h-full min-w-0 flex-1 bg-transparent pl-1 outline-none" placeholder="yourhandle" />
                 </div>
                 <p className="mt-1.5 text-xs leading-5 text-muted">Each Instagram handle can be connected to only one Tanu account. Instagram ownership is not yet verified by Tanu.</p>
                 {errors.instagram_handle && <span className="mt-1.5 block text-sm text-[var(--danger)]">{errors.instagram_handle}</span>}

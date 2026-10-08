@@ -381,13 +381,13 @@ export interface components {
             readonly first_name: string;
             readonly last_name: string;
             readonly school: components["schemas"]["School"] | null;
-            instagram_handle?: string | null;
+            instagram_handle?: string;
             profile_description?: string;
             readonly follower_count: number;
             readonly following_count: number;
         };
         CurrentUserRequest: {
-            instagram_handle?: string | null;
+            instagram_handle?: string;
             profile_description?: string;
         };
         ItemDetails: {
@@ -500,7 +500,7 @@ export interface components {
         /** @enum {unknown} */
         NullEnum: null;
         PatchedCurrentUserRequest: {
-            instagram_handle?: string | null;
+            instagram_handle?: string;
             profile_description?: string;
         };
         /**
