@@ -244,6 +244,126 @@ paths:
               schema:
                 $ref: '#/components/schemas/Listing'
           description: ''
+    patch:
+      operationId: listings_partial_update
+      description: |-
+        Edit an Available listing (seller only). Send only the fields that change; item
+        details go in a nested `item_details` object.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - listings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedListingUpdateRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+          description: ''
+        '409':
+          description: The listing isn't Available, so it can't be edited.
+  /api/listings/{id}/photos/:
+    post:
+      operationId: listings_photos_create
+      description: |-
+        Add one photo to an Available listing (seller only), after its other photos.
+        A listing has at most 10 photos. Returns the whole listing.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - listings
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ListingPhotoUploadRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+          description: ''
+        '409':
+          description: The listing isn't Available, so it can't be edited.
+  /api/listings/{id}/photos/{photo_id}/:
+    delete:
+      operationId: listings_photos_destroy
+      description: |-
+        Delete a photo from an Available listing (seller only). A listing's last photo
+        can't be deleted. Later photos move up. Returns the whole listing.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: photo_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - listings
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+          description: ''
+        '409':
+          description: The listing isn't Available, so it can't be edited.
+  /api/listings/{id}/photos/order/:
+    put:
+      operationId: listings_photos_order_update
+      description: Reorder an Available listing's photos (seller only). Returns the
+        whole listing.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - listings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListingPhotoOrderRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+          description: ''
+        '409':
+          description: The listing isn't Available, so it can't be edited.
   /api/listings/mine/:
     get:
       operationId: listings_mine_list
@@ -636,6 +756,21 @@ components:
       - color
       - condition
       - size
+    ItemDetailsUpdateRequest:
+      type: object
+      properties:
+        condition:
+          $ref: '#/components/schemas/ConditionEnum'
+        size:
+          type: string
+          maxLength: 30
+        brand:
+          type: string
+          maxLength: 100
+        color:
+          oneOf:
+          - $ref: '#/components/schemas/ColorEnum'
+          - $ref: '#/components/schemas/BlankEnum'
     KindEnum:
       enum:
       - item
@@ -780,6 +915,27 @@ components:
       - id
       - image_url
       - position
+    ListingPhotoOrderRequest:
+      type: object
+      properties:
+        photo_ids:
+          type: array
+          items:
+            type: integer
+          description: Every photo ID of the listing, each once, in the new order.
+            The first is the cover.
+      required:
+      - photo_ids
+    ListingPhotoUploadRequest:
+      type: object
+      properties:
+        photo:
+          type: string
+          format: binary
+          description: One JPEG, PNG or WebP file of up to 10 MB. It goes after the
+            other photos.
+      required:
+      - photo
     MarkReadRequest:
       type: object
       properties:
@@ -873,6 +1029,29 @@ components:
         profile_description:
           type: string
           maxLength: 300
+    PatchedListingUpdateRequest:
+      type: object
+      description: |-
+        JSON input for editing an Available item listing. Every field is optional; fields left
+        out keep their value. Kind, school, currency and status aren't fields here and are ignored
+        if sent. The category and Free/$0 rules are checked by the update service, against the
+        listing's resulting category and price.
+      properties:
+        category:
+          type: integer
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 5000
+        price_cents:
+          type: integer
+          maximum: 1000000
+          minimum: 0
+        item_details:
+          $ref: '#/components/schemas/ItemDetailsUpdateRequest'
     PublicUser:
       type: object
       properties:

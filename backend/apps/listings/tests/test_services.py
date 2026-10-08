@@ -162,6 +162,51 @@ def test_concurrent_mark_pending_only_one_succeeds():
     assert listing.status == PENDING
 
 
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+def test_edit_waits_for_a_concurrent_status_change_and_is_rejected():
+    """Deals marks the listing Pending while the seller's edit is in flight. The edit queues
+    on the row lock, then sees Pending and changes nothing."""
+    listing = make_listing()
+    deals_holds_lock = threading.Event()
+    release_deals = threading.Event()
+    results = {}
+
+    def deals():
+        try:
+            with transaction.atomic():
+                services.mark_pending(Listing.objects.get(pk=listing.pk))
+                deals_holds_lock.set()
+                release_deals.wait(timeout=10)
+        finally:
+            deals_holds_lock.set()
+            connection.close()
+
+    def edit():
+        try:
+            services.update_item_listing(
+                Listing.objects.get(pk=listing.pk), listing.seller, title="Changed", price_cents=1
+            )
+            results["edit"] = "ok"
+        except ListingStatusError:
+            results["edit"] = "rejected"
+        finally:
+            connection.close()
+
+    a = threading.Thread(target=deals)
+    a.start()
+    assert deals_holds_lock.wait(timeout=10)
+    b = threading.Thread(target=edit)
+    b.start()
+    _wait_for_a_backend_blocked_on_a_lock()
+    release_deals.set()
+    a.join(timeout=10)
+    b.join(timeout=10)
+
+    assert results == {"edit": "rejected"}
+    listing.refresh_from_db()
+    assert (listing.status, listing.title, listing.price_cents) == (PENDING, "Gray jeans", 2500)
+
+
 def _wait_for_a_backend_blocked_on_a_lock(timeout=10):
     deadline = timezone.now() + timedelta(seconds=timeout)
     with connection.cursor() as cursor:

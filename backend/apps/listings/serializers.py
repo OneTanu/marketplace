@@ -129,3 +129,50 @@ class ListingCreateSerializer(serializers.Serializer):
     def validate(self, attrs):
         services.validate_price(attrs["category"], attrs["price_cents"])
         return attrs
+
+
+class ItemDetailsUpdateSerializer(serializers.Serializer):
+    condition = serializers.ChoiceField(choices=ItemDetails.Condition.choices, required=False)
+    size = serializers.CharField(
+        max_length=ItemDetails._meta.get_field("size").max_length,
+        allow_blank=True,
+        required=False,
+    )
+    brand = serializers.CharField(
+        max_length=ItemDetails._meta.get_field("brand").max_length,
+        allow_blank=True,
+        required=False,
+    )
+    color = serializers.ChoiceField(choices=Color.choices, allow_blank=True, required=False)
+
+
+class ListingUpdateSerializer(serializers.Serializer):
+    """JSON input for editing an Available item listing. Every field is optional; fields left
+    out keep their value. Kind, school, currency and status aren't fields here and are ignored
+    if sent. The category and Free/$0 rules are checked by the update service, against the
+    listing's resulting category and price."""
+
+    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), required=False)
+    title = serializers.CharField(max_length=services.MAX_TITLE_LENGTH, required=False)
+    description = MultilineCharField(
+        max_length=services.MAX_DESCRIPTION_LENGTH, allow_blank=True, required=False
+    )
+    price_cents = serializers.IntegerField(
+        min_value=0, max_value=services.MAX_PRICE_CENTS, required=False
+    )
+    item_details = ItemDetailsUpdateSerializer(required=False)
+
+
+class ListingPhotoUploadSerializer(serializers.Serializer):
+    photo = serializers.FileField(
+        help_text="One JPEG, PNG or WebP file of up to 10 MB. It goes after the other photos."
+    )
+
+
+class ListingPhotoOrderSerializer(serializers.Serializer):
+    photo_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        allow_empty=False,
+        help_text="Every photo ID of the listing, each once, in the new order. "
+        "The first is the cover.",
+    )

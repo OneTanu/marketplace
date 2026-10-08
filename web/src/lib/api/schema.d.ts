@@ -135,6 +135,67 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /**
+         * @description Edit an Available listing (seller only). Send only the fields that change; item
+         *     details go in a nested `item_details` object.
+         */
+        patch: operations["listings_partial_update"];
+        trace?: never;
+    };
+    "/api/listings/{id}/photos/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Add one photo to an Available listing (seller only), after its other photos.
+         *     A listing has at most 10 photos. Returns the whole listing.
+         */
+        post: operations["listings_photos_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/listings/{id}/photos/{photo_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * @description Delete a photo from an Available listing (seller only). A listing's last photo
+         *     can't be deleted. Later photos move up. Returns the whole listing.
+         */
+        delete: operations["listings_photos_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/listings/{id}/photos/order/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Reorder an Available listing's photos (seller only). Returns the whole listing. */
+        put: operations["listings_photos_order_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
         patch?: never;
         trace?: never;
     };
@@ -325,6 +386,12 @@ export interface components {
             readonly brand: string;
             readonly color: components["schemas"]["ColorEnum"] | components["schemas"]["BlankEnum"];
         };
+        ItemDetailsUpdateRequest: {
+            condition?: components["schemas"]["ConditionEnum"];
+            size?: string;
+            brand?: string;
+            color?: components["schemas"]["ColorEnum"] | components["schemas"]["BlankEnum"];
+        };
         /**
          * @description * `item` - Item
          *     * `service` - Service
@@ -375,6 +442,17 @@ export interface components {
             readonly position: number;
             readonly image_url: string;
         };
+        ListingPhotoOrderRequest: {
+            /** @description Every photo ID of the listing, each once, in the new order. The first is the cover. */
+            photo_ids: number[];
+        };
+        ListingPhotoUploadRequest: {
+            /**
+             * Format: binary
+             * @description One JPEG, PNG or WebP file of up to 10 MB. It goes after the other photos.
+             */
+            photo: string;
+        };
         MarkReadRequest: {
             message_id?: number;
         };
@@ -408,6 +486,19 @@ export interface components {
         PatchedCurrentUserRequest: {
             instagram_handle?: string | null;
             profile_description?: string;
+        };
+        /**
+         * @description JSON input for editing an Available item listing. Every field is optional; fields left
+         *     out keep their value. Kind, school, currency and status aren't fields here and are ignored
+         *     if sent. The category and Free/$0 rules are checked by the update service, against the
+         *     listing's resulting category and price.
+         */
+        PatchedListingUpdateRequest: {
+            category?: number;
+            title?: string;
+            description?: string;
+            price_cents?: number;
+            item_details?: components["schemas"]["ItemDetailsUpdateRequest"];
         };
         PublicUser: {
             readonly id: number;
@@ -714,6 +805,131 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Listing"];
                 };
+            };
+        };
+    };
+    listings_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedListingUpdateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listing"];
+                };
+            };
+            /** @description The listing isn't Available, so it can't be edited. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listings_photos_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ListingPhotoUploadRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listing"];
+                };
+            };
+            /** @description The listing isn't Available, so it can't be edited. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listings_photos_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                photo_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listing"];
+                };
+            };
+            /** @description The listing isn't Available, so it can't be edited. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listings_photos_order_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListingPhotoOrderRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listing"];
+                };
+            };
+            /** @description The listing isn't Available, so it can't be edited. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
