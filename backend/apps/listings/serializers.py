@@ -1,10 +1,10 @@
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from apps.schools.models import School
+from apps.schools.models import MarketplaceStatus, School
 
 from . import services
-from .models import Category, Color, ItemDetails, Listing, ListingPhoto
+from .models import Category, Color, ItemDetails, Listing, ListingKind, ListingPhoto
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -202,3 +202,110 @@ class ListingPhotoOrderSerializer(serializers.Serializer):
         help_text="Every photo ID of the listing, each once, in the new order. "
         "The first is the cover.",
     )
+
+
+class ListingCardSerializer(serializers.ModelSerializer):
+    """A listing as a feed card: enough to show and link it, without description or every
+    photo. Expects the queryset from views.card_queryset (cover photo prefetched)."""
+
+    cover_url = serializers.SerializerMethodField(
+        help_text="The cover photo's thumbnail, or its full image until the thumbnail job has "
+        "made one."
+    )
+    condition = serializers.ChoiceField(
+        source="item_details.condition", choices=ItemDetails.Condition.choices, read_only=True
+    )
+    size = serializers.CharField(source="item_details.size", read_only=True)
+    brand = serializers.CharField(source="item_details.brand", read_only=True)
+    school = SchoolSummarySerializer(read_only=True)
+    seller = SellerSummarySerializer(read_only=True)
+
+    class Meta:
+        model = Listing
+        fields = [
+            "id",
+            "status",
+            "title",
+            "price_cents",
+            "currency",
+            "cover_url",
+            "condition",
+            "size",
+            "brand",
+            "school",
+            "seller",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+    def get_cover_url(self, listing) -> str | None:
+        cover = listing.cover_photos[0] if listing.cover_photos else None
+        if cover is None:
+            return None
+        return (cover.thumbnail or cover.image).url
+
+
+class ListingFeedPageSerializer(serializers.Serializer):
+    results = ListingCardSerializer(many=True)
+    next_cursor = serializers.CharField(
+        allow_null=True,
+        help_text="Pass as `cursor` to get the next page. Null on the last page.",
+    )
+
+
+class FeedQuerySerializer(serializers.Serializer):
+    """The feed's query parameters. Repeat `condition` or `color` to match any of several."""
+
+    school = serializers.CharField(
+        required=False,
+        help_text=f'A school slug, or "{services.ALL_SCHOOLS}". Defaults to your school.',
+    )
+    category = serializers.SlugRelatedField(
+        slug_field="slug",
+        queryset=Category.objects.filter(kind=ListingKind.ITEM, is_active=True),
+        required=False,
+        help_text="A category slug. Includes every category under it.",
+    )
+    min_price = serializers.IntegerField(min_value=0, required=False, help_text="In cents.")
+    max_price = serializers.IntegerField(min_value=0, required=False, help_text="In cents.")
+    condition = serializers.ListField(
+        child=serializers.ChoiceField(choices=ItemDetails.Condition.choices), required=False
+    )
+    color = serializers.ListField(
+        child=serializers.ChoiceField(choices=Color.choices), required=False
+    )
+    size = serializers.CharField(required=False, help_text="Exact size, any case, e.g. 32x30.")
+    brand = serializers.CharField(required=False, help_text="Exact brand, any case.")
+    sort = serializers.ChoiceField(choices=list(services.FEED_SORTS), default="newest")
+    cursor = serializers.CharField(
+        required=False,
+        max_length=200,
+        help_text="`next_cursor` from the last page, with the same sort.",
+    )
+
+    def validate_school(self, slug):
+        if slug == services.ALL_SCHOOLS:
+            return slug
+        open_schools = School.objects.filter(marketplace_status=MarketplaceStatus.OPEN)
+        if not open_schools.filter(slug=slug).exists():
+            raise serializers.ValidationError(f'There\'s no open marketplace for "{slug}".')
+        return slug
+
+    def validate(self, attrs):
+        low, high = attrs.get("min_price"), attrs.get("max_price")
+        if low is not None and high is not None and low > high:
+            raise serializers.ValidationError({"max_price": ["Must be at least min_price."]})
+        return attrs
+
+    def filters(self) -> services.FeedFilters:
+        data = self.validated_data
+        return services.FeedFilters(
+            school=data.get("school", ""),
+            category=data.get("category"),
+            min_price=data.get("min_price"),
+            max_price=data.get("max_price"),
+            conditions=data.get("condition", ()),
+            colors=data.get("color", ()),
+            size=data.get("size", ""),
+            brand=data.get("brand", ""),
+        )
