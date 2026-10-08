@@ -1,9 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { AUTH, signIn } from "./sign-in";
 import { TEST_USER } from "./test-user";
-
-// allauth headless browser API, reached through the Next.js /api proxy. No trailing slashes.
-const AUTH = "/api/auth/browser/v1";
 
 // Each page proves it rendered (a level-1 heading, or the signed-in username on Profile) and
 // that the nav marks it current. Kept loose on purpose so page redesigns don't break it.
@@ -14,22 +12,11 @@ const SHELL_PAGES = [
 ];
 
 test("signs in through the proxy and loads the app shell", async ({ context, page, baseURL }) => {
-  // context.request shares the browser context's cookie jar, so the session cookie set by
-  // login is sent by the pages loaded afterwards.
   const api = context.request;
-
-  expect((await api.get(`${AUTH}/config`)).ok()).toBe(true);
-  const csrfToken = (await context.cookies()).find((c) => c.name === "csrftoken")?.value;
-  expect(csrfToken, "csrftoken cookie set by /config").toBeTruthy();
 
   expect((await api.get(`${AUTH}/auth/session`)).status()).toBe(401);
 
-  const login = await api.post(`${AUTH}/auth/login`, {
-    data: { email: TEST_USER.email, password: TEST_USER.password },
-    // A browser sends its Origin on POST; Django checks it against CSRF_TRUSTED_ORIGINS.
-    headers: { "X-CSRFToken": csrfToken!, Origin: baseURL! },
-  });
-  expect(login.status(), await login.text()).toBe(200);
+  await signIn(context, baseURL!);
 
   const session = await api.get(`${AUTH}/auth/session`);
   expect(session.status()).toBe(200);
