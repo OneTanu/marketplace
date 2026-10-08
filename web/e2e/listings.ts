@@ -12,6 +12,7 @@ type NewListing = {
   priceCents?: number;
   condition?: string;
   size?: string;
+  brand?: string;
   color?: string;
 };
 
@@ -36,6 +37,7 @@ export async function postListing(context: BrowserContext, baseURL: string, list
       price_cents: String(listing.priceCents ?? 2500),
       condition: listing.condition ?? "good",
       size: listing.size ?? "",
+      brand: listing.brand ?? "",
       color: listing.color ?? "",
       photos: { name: "photo.jpg", mimeType: "image/jpeg", buffer: readFileSync(PHOTO) },
     },

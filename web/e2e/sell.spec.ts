@@ -27,7 +27,8 @@ test("posts a listing with a photo and sees it in My listings", async ({ context
   await page.getByLabel("Condition").selectOption({ label: "Good" });
   await page.getByRole("button", { name: "Post listing" }).click();
 
-  await expect(page).toHaveURL("/listings/mine");
+  // Posting uploads and processes photos; give it longer than a plain page load.
+  await expect(page).toHaveURL("/listings/mine", { timeout: 15_000 });
   const row = page.getByRole("listitem").filter({ hasText: title });
   await expect(row).toBeVisible();
   await expect(row.getByText("$24.99", { exact: true })).toBeVisible();
@@ -61,7 +62,8 @@ test("posts jeans into Men › Jeans with a waist and length", async ({ context,
   await page.getByLabel("Length").selectOption("30");
   await page.getByRole("button", { name: "Post listing" }).click();
 
-  await expect(page).toHaveURL("/listings/mine");
+  // Posting uploads and processes photos; give it longer than a plain page load.
+  await expect(page).toHaveURL("/listings/mine", { timeout: 15_000 });
   await page.getByRole("listitem").filter({ hasText: title }).getByRole("link", { name: "View" }).click();
   const details = page.getByRole("list", { name: "Details" });
   await expect(details).toContainText("Size 32x30");
