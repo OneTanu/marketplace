@@ -158,7 +158,7 @@ def test_create_listing_with_details_and_photos(seller_client, seller, umd, medi
         "slug": "clothing",
     }
     assert body["school"] == {"id": umd.pk, "short_name": "UMD"}
-    assert body["seller"] == {"id": seller.pk}
+    assert body["seller"] == {"id": seller.pk, "username": "seller"}
     assert body["item_details"] == {
         "condition": "like_new",
         "size": "M",
@@ -599,7 +599,7 @@ def test_my_listings_has_only_the_signed_in_sellers_listings(seller_client, sell
     assert response.status_code == 200
     assert titles(response) == ["Mine"]
     body = response.json()[0]
-    assert body["seller"] == {"id": seller.pk}
+    assert body["seller"] == {"id": seller.pk, "username": "seller"}
     assert [p["position"] for p in body["photos"]] == [0]
 
 
@@ -933,6 +933,19 @@ def test_only_available_listings_can_be_edited(
     assert "Only Available listings can be edited" in response.json()["detail"]
     assert seller_client.get(listing_url(body["id"])).json() == body | {"status": listing_status}
     assert stored_files(media_root) == files_before
+
+
+@pytest.mark.django_db
+def test_another_student_sees_the_listing_and_its_sellers_username(
+    seller_client, seller, classmate_client
+):
+    body = posted(seller_client)
+
+    response = classmate_client.get(listing_url(body["id"]))
+
+    assert response.status_code == 200
+    assert response.json()["seller"] == {"id": seller.pk, "username": "seller"}
+    assert response.json()["removed_by"] is None  # only the seller learns who removed it
 
 
 @pytest.mark.django_db

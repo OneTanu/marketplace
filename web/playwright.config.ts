@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 import { API_CONTAINER, API_PORT, POSTGRES_DB, WEB_PORT } from "./e2e/slot";
-import { TEST_USER } from "./e2e/test-user";
+import { TEST_BUYER, TEST_USER } from "./e2e/test-user";
 
 // E2E runs its own servers on their own ports and database, so it never clashes with
 // `pnpm dev` (3000), the compose API (8000), or the dev database (tanu). E2E_SLOT picks
@@ -17,6 +17,7 @@ const backendEnv = {
   PORT: String(API_PORT),
   WEB_APP_URL: WEB_URL,
   E2E_USER_EMAIL: TEST_USER.email,
+  E2E_BUYER_EMAIL: TEST_BUYER.email,
   E2E_USER_PASSWORD: TEST_USER.password,
   // So runserver's startup line reaches Playwright through the pipe right away.
   PYTHONUNBUFFERED: "1",

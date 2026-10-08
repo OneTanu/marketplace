@@ -22,8 +22,8 @@ class SchoolSummarySerializer(serializers.ModelSerializer):
 
 
 class SellerSummarySerializer(serializers.Serializer):
-    # Accounts doesn't expose public profile fields yet; add them here when it does.
     id = serializers.IntegerField(read_only=True)
+    username = serializers.CharField(read_only=True)
 
 
 class ItemDetailsSerializer(serializers.ModelSerializer):

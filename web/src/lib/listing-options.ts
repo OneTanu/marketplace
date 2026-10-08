@@ -39,6 +39,17 @@ export const STATUS_LABELS: Record<Status, string> = {
   removed: "Removed",
 };
 
+export const STATUS_BADGE_CLASSES: Record<Status, string> = {
+  available: "bg-green-600/10 text-green-700 dark:text-green-400",
+  pending: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  sold: "bg-foreground/10 text-foreground/70",
+  removed: "bg-red-600/10 text-red-700 dark:text-red-400",
+};
+
+export const conditionLabel = (value: Condition) =>
+  CONDITIONS.find((c) => c.value === value)?.label ?? value;
+export const colorLabel = (value: Color) => COLORS.find((c) => c.value === value)?.label ?? value;
+
 // Matches the backend's FREE_CATEGORY_SLUG: items in Free are always $0.
 export const FREE_CATEGORY_SLUG = "free";
 
