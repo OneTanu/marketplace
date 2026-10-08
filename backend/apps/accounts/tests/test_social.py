@@ -127,6 +127,29 @@ def test_follow_and_unfollow_user(client):
 
 
 @pytest.mark.django_db
+def test_public_profile_shows_follow_counts_and_viewers_follow_state(client):
+    viewer = verified_user("viewer", "Viewer")
+    target = verified_user("maya", "Maya")
+    fan = verified_user("fan", "Fan")
+    Follow.objects.create(follower=fan, following=target)
+    Follow.objects.create(follower=target, following=fan)
+    client.force_login(viewer)
+
+    before = client.get("/api/users/maya/").json()
+    Follow.objects.create(follower=viewer, following=target)
+    after = client.get("/api/users/maya/").json()
+    client.force_login(target)
+    own = client.get("/api/users/maya/").json()
+
+    assert (before["follower_count"], before["following_count"]) == (1, 1)
+    assert before["is_following"] is False
+    assert (after["follower_count"], after["following_count"]) == (2, 1)
+    assert after["is_following"] is True
+    assert own["is_self"] is True
+    assert own["is_following"] is False
+
+
+@pytest.mark.django_db
 def test_user_cannot_follow_self(client):
     viewer = verified_user("viewer", "Viewer")
     client.force_login(viewer)

@@ -1,4 +1,4 @@
-from django.db.models import Prefetch
+from django.db.models import Count, F, OuterRef, Prefetch, Q, Subquery
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework.generics import GenericAPIView, ListAPIView, RetrieveAPIView
@@ -22,17 +22,45 @@ from .serializers import (
 from .services import mark_conversation_read, send_message, start_direct_conversation
 
 
+def my_conversations(user):
+    return Conversation.objects.filter(participant_records__user=user)
+
+
+def unread_messages(user):
+    """Counts, over my_conversations(user), the messages from others after the user's last read
+    message (all of them if nothing is read yet). The F() reuses my_conversations()' participant
+    join, so it reads the user's own read position, not the other student's."""
+    after_last_read = Q(participant_records__last_read_message__isnull=True) | Q(
+        messages__id__gt=F("participant_records__last_read_message_id")
+    )
+    return Count("messages", filter=~Q(messages__sender=user) & after_last_read)
+
+
 def conversation_queryset(user):
+    """The user's conversations, ready for ConversationSerializer in a fixed number of queries:
+    unread counts are annotated, and only each conversation's latest message is prefetched."""
+    latest_id = Message.objects.filter(conversation=OuterRef("pk")).order_by("-id").values("id")
+    latest_ids = my_conversations(user).annotate(latest_id=Subquery(latest_id[:1]))
     return (
-        Conversation.objects.filter(participants=user)
+        my_conversations(user)
+        .annotate(unread_count=unread_messages(user))
+        # Restated because Django drops Meta.ordering from GROUP BY queries.
+        .order_by(*Conversation._meta.ordering)
         .prefetch_related(
             Prefetch(
                 "participant_records",
-                queryset=ConversationParticipant.objects.select_related("user__school"),
+                queryset=ConversationParticipant.objects.select_related(
+                    "user__school"
+                ).prefetch_related("user__school__domains"),
             ),
-            "messages__sender__school",
+            Prefetch(
+                "messages",
+                queryset=Message.objects.filter(id__in=latest_ids.values("latest_id"))
+                .select_related("sender__school")
+                .prefetch_related("sender__school__domains"),
+                to_attr="latest_messages",
+            ),
         )
-        .distinct()
     )
 
 
@@ -72,14 +100,16 @@ class ConversationMessageView(GenericAPIView):
     PAGE_SIZE = 50
 
     def get_conversation(self):
-        return get_object_or_404(conversation_queryset(self.request.user), pk=self.kwargs["pk"])
+        return get_object_or_404(my_conversations(self.request.user), pk=self.kwargs["pk"])
 
     @extend_schema(parameters=[MessageQuerySerializer], responses=MessagePageSerializer)
     def get(self, request, pk):
         conversation = self.get_conversation()
         query = MessageQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
-        messages = conversation.messages.select_related("sender__school")
+        messages = conversation.messages.select_related("sender__school").prefetch_related(
+            "sender__school__domains"
+        )
         before_id = query.validated_data.get("before_id")
         after_id = query.validated_data.get("after_id")
 
@@ -120,7 +150,7 @@ class MarkConversationReadView(GenericAPIView):
 
     @extend_schema(responses={204: None})
     def post(self, request, pk):
-        conversation = get_object_or_404(conversation_queryset(request.user), pk=pk)
+        conversation = get_object_or_404(my_conversations(request.user), pk=pk)
         payload = self.get_serializer(data=request.data)
         payload.is_valid(raise_exception=True)
         message = None
@@ -136,15 +166,7 @@ class UnreadCountView(GenericAPIView):
 
     @extend_schema(responses=UnreadCountSerializer)
     def get(self, request):
-        count = 0
-        for conversation in conversation_queryset(request.user):
-            membership = next(
-                record
-                for record in conversation.participant_records.all()
-                if record.user_id == request.user.pk
-            )
-            messages = conversation.messages.exclude(sender=request.user)
-            if membership.last_read_message_id:
-                messages = messages.filter(id__gt=membership.last_read_message_id)
-            count += messages.count()
-        return Response({"unread_count": count})
+        totals = my_conversations(request.user).aggregate(
+            unread_count=unread_messages(request.user)
+        )
+        return Response(totals)

@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from apps.schools.serializers import SchoolSerializer
 
-from .models import Follow, User
+from .models import User
 from .services import update_profile
 
 
@@ -41,9 +41,10 @@ class CurrentUserSerializer(serializers.ModelSerializer):
 
 class PublicUserSerializer(serializers.ModelSerializer):
     school = SchoolSerializer(read_only=True, allow_null=True)
-    follower_count = serializers.SerializerMethodField()
-    following_count = serializers.SerializerMethodField()
-    is_following = serializers.SerializerMethodField()
+    # Annotated by public_users() in views.py.
+    follower_count = serializers.IntegerField(read_only=True)
+    following_count = serializers.IntegerField(read_only=True)
+    is_following = serializers.BooleanField(read_only=True)
     is_self = serializers.SerializerMethodField()
 
     class Meta:
@@ -61,20 +62,6 @@ class PublicUserSerializer(serializers.ModelSerializer):
             "is_self",
         ]
         read_only_fields = fields
-
-    def get_follower_count(self, user) -> int:
-        return user.follower_relationships.count()
-
-    def get_following_count(self, user) -> int:
-        return user.following_relationships.count()
-
-    def get_is_following(self, user) -> bool:
-        request = self.context.get("request")
-        return bool(
-            request
-            and request.user.is_authenticated
-            and Follow.objects.filter(follower=request.user, following=user).exists()
-        )
 
     def get_is_self(self, user) -> bool:
         request = self.context.get("request")
