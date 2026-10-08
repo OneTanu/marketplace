@@ -11,9 +11,11 @@ The allowed status moves are:
     Sold      -> Removed    remove_by_moderation
 
 Any other move raises ListingStatusError and leaves the listing unchanged.
+
+Sellers edit a listing (fields and photos) only while it is Available; see "Editing" below.
 """
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from io import BytesIO
 from typing import NamedTuple
 from uuid import uuid4
@@ -33,6 +35,8 @@ MAX_DESCRIPTION_LENGTH = 5_000
 MIN_PHOTOS = 1
 MAX_PHOTOS = 10
 MAX_PHOTO_BYTES = 10 * 1024 * 1024  # 10 MB
+TOO_MANY_PHOTOS = f"A listing can have up to {MAX_PHOTOS} photos. Delete one to add another."
+LAST_PHOTO = "A listing needs at least one photo. Add another before deleting this one."
 # Accepted Pillow formats and the extension each is stored with. Pillow reports JPEGs that
 # hold more than one picture (iPhone HDR, many Android cameras) as MPO.
 PHOTO_EXTENSIONS = {"JPEG": "jpg", "MPO": "jpg", "PNG": "png", "WEBP": "webp"}
@@ -65,6 +69,13 @@ def validate_price(category: Category, price_cents: int) -> None:
         raise ValidationError({"price_cents": "Items in Free must be $0."})
     if not is_free and price_cents == 0:
         raise ValidationError({"price_cents": "Set a price, or choose the Free category."})
+
+
+def validate_description(description: str) -> None:
+    if len(description) > MAX_DESCRIPTION_LENGTH:
+        raise ValidationError(
+            {"description": f"Keep the description under {MAX_DESCRIPTION_LENGTH:,} characters."}
+        )
 
 
 def validate_photos(photos: Sequence[UploadedFile]) -> None:
@@ -134,10 +145,7 @@ def create_item_listing(
     except ValidationError as exc:
         raise ValidationError({"category": exc.messages}) from exc
     validate_price(category, price_cents)
-    if len(description) > MAX_DESCRIPTION_LENGTH:
-        raise ValidationError(
-            {"description": f"Keep the description under {MAX_DESCRIPTION_LENGTH:,} characters."}
-        )
+    validate_description(description)
     try:
         validate_photos(photos)
         # Clean every photo before storing any: a file written to storage isn't removed when
@@ -338,3 +346,154 @@ def _move(
     for field in ("status", "removed_by", "removed_at", "updated_at"):
         setattr(listing, field, getattr(locked, field))
     return listing
+
+
+# --- Editing (seller only, Available only) ---
+
+LISTING_EDIT_FIELDS = frozenset({"category", "title", "description", "price_cents"})
+ITEM_DETAIL_EDIT_FIELDS = frozenset({"condition", "size", "brand", "color"})
+
+
+def update_item_listing(
+    listing: Listing,
+    editor,
+    *,
+    item_details: Mapping[str, str] | None = None,
+    **changes,
+) -> Listing:
+    """Change some of an Available item listing's fields (category, title, description,
+    price_cents) and item details (condition, size, brand, color). Fields left out keep their
+    value. Validated like create_item_listing; the Free/$0 rule is checked against the
+    resulting category and price. Kind, school, currency and status can't be changed here.
+
+    Sellers change a listing's price only here, once it's posted. Errors in item details are
+    keyed "item_details.<field>"."""
+    unknown = set(changes) - LISTING_EDIT_FIELDS
+    unknown |= set(item_details or {}) - ITEM_DETAIL_EDIT_FIELDS
+    if unknown:
+        raise TypeError(f"Can't edit {', '.join(sorted(unknown))} on a listing.")
+
+    with transaction.atomic():
+        locked = _lock_for_edit(listing, editor, "edit")
+        category = changes.get("category", locked.category)
+        if category.pk != locked.category_id:
+            # Only a new category is checked, so a listing whose category was retired after
+            # it was posted can still be edited.
+            try:
+                validate_item_category(category)
+            except ValidationError as exc:
+                raise ValidationError({"category": exc.messages}) from exc
+        validate_price(category, changes.get("price_cents", locked.price_cents))
+        validate_description(changes.get("description", ""))
+
+        # Workstream 6: price-drop alerts hook in here (compare the old and new price_cents).
+        for field, value in changes.items():
+            setattr(locked, field, value)
+        locked.full_clean()
+        locked.save()
+        if item_details:
+            details = getattr(locked, "item_details", None) or ItemDetails(listing=locked)
+            for field, value in item_details.items():
+                setattr(details, field, value)
+            try:
+                details.full_clean()
+            except ValidationError as exc:
+                # Django can't nest a dict of errors in another, so the key carries the path.
+                raise ValidationError(
+                    {f"item_details.{field}": errors for field, errors in exc.message_dict.items()}
+                ) from exc
+            details.save()
+    return locked
+
+
+def add_photo(listing: Listing, editor, photo: UploadedFile) -> ListingPhoto:
+    """Add one photo after an Available listing's other photos (at most MAX_PHOTOS in all).
+
+    The photo is cleaned before anything is written to storage, and outside the row lock so a
+    slow re-encode doesn't hold up Deals; every rule is checked again once the lock is held."""
+    check_can_edit(listing, editor, "add a photo to")
+    if listing.photos.count() >= MAX_PHOTOS:
+        raise ValidationError({"photo": TOO_MANY_PHOTOS})
+    if photo.size > MAX_PHOTO_BYTES:
+        raise ValidationError(
+            {"photo": f"This photo is larger than {MAX_PHOTO_BYTES // (1024 * 1024)} MB."}
+        )
+    try:
+        cleaned = _clean_photo(photo)
+    except ValidationError as exc:
+        raise ValidationError({"photo": f"This photo {exc.message}."}) from exc
+
+    with transaction.atomic():
+        locked = _lock_for_edit(listing, editor, "add a photo to")
+        photos = list(locked.photos.all())
+        if len(photos) >= MAX_PHOTOS:
+            raise ValidationError({"photo": TOO_MANY_PHOTOS})
+        _renumber(photos)  # in case positions have gaps (e.g. photos added in the admin)
+        locked.save(update_fields=["updated_at"])
+        # Last, so no later step in the transaction can fail after the file is written.
+        stored = _store_photo(locked, cleaned, position=len(photos))
+    return stored
+
+
+def delete_photo(listing: Listing, editor, photo_id: int) -> None:
+    """Delete one of an Available listing's photos, never its last one. Later photos move up,
+    so positions stay 0..n-1 (deleting the cover makes the next photo the cover).
+    Raises ListingPhoto.DoesNotExist if the listing has no such photo."""
+    with transaction.atomic():
+        locked = _lock_for_edit(listing, editor, "delete a photo from")
+        photos = list(locked.photos.all())
+        photo = next((p for p in photos if p.pk == photo_id), None)
+        if photo is None:
+            raise ListingPhoto.DoesNotExist(f"Listing {locked.pk} has no photo {photo_id}.")
+        if len(photos) <= MIN_PHOTOS:
+            raise ValidationError({"photo": LAST_PHOTO})
+        photo.delete()
+        photos.remove(photo)
+        _renumber(photos)
+        locked.save(update_fields=["updated_at"])
+        # Storage isn't part of the transaction, so the file goes only once the row is gone.
+        storage, name = photo.image.storage, photo.image.name
+        transaction.on_commit(lambda: storage.delete(name))
+
+
+def reorder_photos(listing: Listing, editor, photo_ids: Sequence[int]) -> None:
+    """Put an Available listing's photos in the given order (the first is the cover).
+    photo_ids must hold each of the listing's current photos exactly once."""
+    with transaction.atomic():
+        locked = _lock_for_edit(listing, editor, "reorder the photos of")
+        photos = {photo.pk: photo for photo in locked.photos.all()}
+        if len(photo_ids) != len(photos) or set(photo_ids) != set(photos):
+            raise ValidationError(
+                {"photo_ids": "List each of this listing's photos exactly once, in the new order."}
+            )
+        _renumber([photos[photo_id] for photo_id in photo_ids])
+        locked.save(update_fields=["updated_at"])
+
+
+def check_can_edit(listing: Listing, editor, action: str = "edit") -> None:
+    """Raise PermissionDenied unless editor is the seller, and ListingStatusError unless the
+    listing is Available. A quick check on the given instance; the editing services repeat it
+    on the locked row."""
+    if listing.seller_id != editor.pk:
+        raise PermissionDenied("Only the seller can change this listing.")
+    if listing.status != Status.AVAILABLE:
+        raise ListingStatusError(listing, action)
+
+
+def _lock_for_edit(listing: Listing, editor, action: str) -> Listing:
+    """Lock the listing row, then check the editor and status on the locked row. Edits and
+    Deals' status changes queue on the same lock, so an edit can't land on a listing that has
+    just gone Pending. Call inside transaction.atomic()."""
+    locked = Listing.objects.select_for_update().get(pk=listing.pk)
+    check_can_edit(locked, editor, action)
+    return locked
+
+
+def _renumber(photos: Sequence[ListingPhoto]) -> None:
+    """Give the photos positions 0..n-1 in the order given, saving only those that moved."""
+    moved = []
+    for position, photo in enumerate(photos):
+        if photo.position != position:
+            photo.position = position
+            moved.append(photo)
+    ListingPhoto.objects.bulk_update(moved, ["position"])

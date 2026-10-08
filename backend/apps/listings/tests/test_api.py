@@ -114,6 +114,10 @@ def test_categories_rejects_unknown_kind(seller_client):
         ("post", LISTINGS_URL),
         ("get", f"{LISTINGS_URL}1/"),
         ("get", MY_LISTINGS_URL),
+        ("patch", f"{LISTINGS_URL}1/"),
+        ("post", f"{LISTINGS_URL}1/photos/"),
+        ("delete", f"{LISTINGS_URL}1/photos/1/"),
+        ("put", f"{LISTINGS_URL}1/photos/order/"),
     ],
 )
 def test_endpoints_require_sign_in(client, method, url):
@@ -630,6 +634,478 @@ def test_my_listings_leaves_out_removed_listings(seller_client, seller):
 
     assert titles(seller_client.get(MY_LISTINGS_URL)) == ["Still for sale"]
     assert seller_client.get(MY_LISTINGS_URL, {"status": "removed"}).json() == []
+
+
+# --- Editing ---
+
+
+def listing_url(listing_id):
+    return f"{LISTINGS_URL}{listing_id}/"
+
+
+def photos_url(listing_id):
+    return f"{LISTINGS_URL}{listing_id}/photos/"
+
+
+def photo_url(listing_id, photo_id):
+    return f"{LISTINGS_URL}{listing_id}/photos/{photo_id}/"
+
+
+def order_url(listing_id):
+    return f"{LISTINGS_URL}{listing_id}/photos/order/"
+
+
+def patch_listing(client, listing_id, data):
+    return client.patch(listing_url(listing_id), data, content_type="application/json")
+
+
+def put_order(client, listing_id, photo_ids):
+    return client.put(
+        order_url(listing_id), {"photo_ids": photo_ids}, content_type="application/json"
+    )
+
+
+def posted(client, photo_count=1, **overrides):
+    """A listing posted through the API, as its response body."""
+    photos = [image(f"{i}.jpg") for i in range(photo_count)]
+    response = post_listing(client, photos=photos, **overrides)
+    assert response.status_code == 201, response.json()
+    return response.json()
+
+
+def photo_ids(body):
+    return [photo["id"] for photo in sorted(body["photos"], key=lambda p: p["position"])]
+
+
+def stored_positions(listing_id):
+    return list(
+        ListingPhoto.objects.filter(listing_id=listing_id)
+        .order_by("position")
+        .values_list("id", "position")
+    )
+
+
+def stored_files(media_root):
+    return {f for f in media_root.rglob("*") if f.is_file()}
+
+
+def set_status(listing_id, listing_status):
+    Listing.objects.filter(pk=listing_id).update(status=listing_status)
+
+
+@pytest.fixture
+def classmate_client(umd):
+    classmate = User.objects.create_user(
+        "classmate@umd.edu", "pw-123456789", username="classmate", school=umd
+    )
+    client = Client()
+    client.force_login(classmate)
+    return client
+
+
+# Each write endpoint, as a function of (client, listing body) that sends a valid request.
+EDIT_REQUESTS = {
+    "patch": lambda client, body: patch_listing(client, body["id"], {"title": "New title"}),
+    "add photo": lambda client, body: client.post(photos_url(body["id"]), {"photo": image()}),
+    "delete photo": lambda client, body: client.delete(photo_url(body["id"], photo_ids(body)[0])),
+    "reorder": lambda client, body: put_order(client, body["id"], photo_ids(body)[::-1]),
+}
+
+
+@pytest.mark.django_db
+def test_seller_edits_fields_and_item_details(seller_client):
+    body = posted(seller_client)
+
+    response = patch_listing(
+        seller_client,
+        body["id"],
+        {
+            "title": "Blue winter jacket",
+            "description": "Worn two seasons.\r\nNo stains.",
+            "category": category("other").pk,
+            "price_cents": 1999,
+            "item_details": {"condition": "good", "color": "blue"},
+        },
+    )
+
+    assert response.status_code == 200, response.json()
+    edited = response.json()
+    assert edited["title"] == "Blue winter jacket"
+    assert edited["description"] == "Worn two seasons.\nNo stains."
+    assert edited["category"]["slug"] == "other"
+    assert edited["price_cents"] == 1999
+    # Item details left out keep their value.
+    assert edited["item_details"] == {
+        "condition": "good",
+        "size": "M",
+        "brand": "Patagonia",
+        "color": "blue",
+    }
+    assert edited["photos"] == body["photos"]
+    assert edited["updated_at"] > body["updated_at"]
+    assert seller_client.get(listing_url(body["id"])).json() == edited
+
+
+@pytest.mark.django_db
+def test_patch_can_clear_optional_details(seller_client):
+    body = posted(seller_client)
+    response = patch_listing(
+        seller_client,
+        body["id"],
+        {"description": "", "item_details": {"size": "", "brand": "", "color": ""}},
+    )
+    assert response.status_code == 200, response.json()
+    assert response.json()["description"] == ""
+    assert response.json()["item_details"] == {
+        "condition": "like_new",
+        "size": "",
+        "brand": "",
+        "color": "",
+    }
+
+
+@pytest.mark.django_db
+def test_patch_ignores_server_set_fields(seller_client, umd, gw):
+    body = posted(seller_client)
+    response = patch_listing(
+        seller_client,
+        body["id"],
+        {
+            "title": "Still a jacket",
+            "school": gw.pk,
+            "status": "sold",
+            "kind": "service",
+            "currency": "EUR",
+            "seller": 999,
+        },
+    )
+    assert response.status_code == 200, response.json()
+    listing = Listing.objects.get(pk=body["id"])
+    assert listing.title == "Still a jacket"
+    assert listing.school == umd
+    assert listing.status == Listing.Status.AVAILABLE
+    assert listing.kind == ListingKind.ITEM
+    assert listing.currency == "USD"
+    assert listing.seller_id == body["seller"]["id"]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("posted_as", "changes", "accepted"),
+    [
+        # The Free/$0 rule applies to the resulting category and price.
+        ("clothing", {"category": "free"}, False),  # Free, but still $25
+        ("clothing", {"category": "free", "price_cents": 0}, True),
+        ("clothing", {"price_cents": 0}, False),  # $0 outside Free
+        ("free", {"price_cents": 500}, False),
+        ("free", {"category": "clothing"}, False),  # leaving Free at $0
+        ("free", {"category": "clothing", "price_cents": 500}, True),
+        ("free", {"title": "Free lamp"}, True),
+    ],
+)
+def test_patch_free_rule(seller_client, posted_as, changes, accepted):
+    body = posted(
+        seller_client,
+        category=category(posted_as).pk,
+        price_cents=0 if posted_as == "free" else 2500,
+    )
+    data = changes | (
+        {"category": category(changes["category"]).pk} if "category" in changes else {}
+    )
+
+    response = patch_listing(seller_client, body["id"], data)
+
+    assert (response.status_code == 200) is accepted, response.json()
+    if not accepted:
+        assert response.status_code == 400
+        assert "price_cents" in response.json()
+        listing = Listing.objects.get(pk=body["id"])
+        assert (listing.category.slug, listing.price_cents) == (
+            posted_as,
+            body["price_cents"],
+        )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("data", "field"),
+    [
+        ({"title": ""}, "title"),
+        ({"title": "x" * 121}, "title"),
+        ({"description": "x" * 5_001}, "description"),
+        ({"price_cents": -1}, "price_cents"),
+        ({"price_cents": 1_000_001}, "price_cents"),
+        ({"price_cents": "24.99"}, "price_cents"),
+        ({"category": service_category}, "category"),
+        ({"category": retired_category}, "category"),
+        ({"category": 999_999}, "category"),
+        ({"item_details": {"condition": "mint"}}, "item_details"),
+        ({"item_details": {"condition": ""}}, "item_details"),
+        ({"item_details": {"color": "teal"}}, "item_details"),
+        ({"item_details": {"size": "x" * 31}}, "item_details"),
+    ],
+)
+def test_patch_validation_errors_are_field_level(seller_client, data, field):
+    body = posted(seller_client)
+    resolved = {key: value() if callable(value) else value for key, value in data.items()}
+
+    response = patch_listing(seller_client, body["id"], resolved)
+
+    assert response.status_code == 400
+    assert field in response.json(), response.json()
+    assert seller_client.get(listing_url(body["id"])).json() == body
+
+
+@pytest.mark.django_db
+def test_item_details_errors_from_the_service_are_nested(seller_client):
+    """A listing can lack an ItemDetails row (e.g. made in the admin). Adding details then
+    needs a condition, which only the update service can tell."""
+    body = posted(seller_client)
+    Listing.objects.get(pk=body["id"]).item_details.delete()
+
+    response = patch_listing(seller_client, body["id"], {"item_details": {"size": "M"}})
+
+    assert response.status_code == 400
+    assert set(response.json()) == {"item_details"}
+    assert set(response.json()["item_details"]) == {"condition"}
+    assert not Listing.objects.filter(pk=body["id"], item_details__isnull=False).exists()
+
+
+@pytest.mark.django_db
+def test_seller_and_status_are_checked_before_fields(seller_client, classmate_client):
+    body = posted(seller_client)
+    invalid = {"title": "", "price_cents": -1}
+    assert patch_listing(classmate_client, body["id"], invalid).status_code == 403
+    set_status(body["id"], "pending")
+    assert patch_listing(seller_client, body["id"], invalid).status_code == 409
+    assert seller_client.post(photos_url(body["id"]), {}).status_code == 409
+
+
+@pytest.mark.django_db
+def test_listing_in_a_retired_category_can_still_be_edited(seller_client):
+    body = posted(seller_client)
+    Category.objects.filter(slug="clothing").update(is_active=False)
+    response = patch_listing(
+        seller_client, body["id"], {"title": "Jacket", "category": category("clothing").pk}
+    )
+    assert response.status_code == 200, response.json()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("request_name", list(EDIT_REQUESTS))
+def test_only_the_seller_can_edit(seller_client, classmate_client, media_root, request_name):
+    body = posted(seller_client, photo_count=2)
+    files_before = stored_files(media_root)
+
+    response = EDIT_REQUESTS[request_name](classmate_client, body)
+
+    assert response.status_code == 403
+    assert seller_client.get(listing_url(body["id"])).json() == body
+    assert stored_files(media_root) == files_before
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("request_name", list(EDIT_REQUESTS))
+@pytest.mark.parametrize("listing_status", ["pending", "sold", "removed"])
+def test_only_available_listings_can_be_edited(
+    seller_client, media_root, request_name, listing_status
+):
+    body = posted(seller_client, photo_count=2)
+    set_status(body["id"], listing_status)
+    files_before = stored_files(media_root)
+
+    response = EDIT_REQUESTS[request_name](seller_client, body)
+
+    assert response.status_code == 409
+    assert "Only Available listings can be edited" in response.json()["detail"]
+    assert seller_client.get(listing_url(body["id"])).json() == body | {"status": listing_status}
+    assert stored_files(media_root) == files_before
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("request_name", list(EDIT_REQUESTS))
+def test_removed_listing_is_404_for_others(seller_client, classmate_client, request_name):
+    body = posted(seller_client, photo_count=2)
+    set_status(body["id"], "removed")
+    assert EDIT_REQUESTS[request_name](classmate_client, body).status_code == 404
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("request_name", list(EDIT_REQUESTS))
+def test_editing_a_missing_listing_is_404(seller_client, request_name):
+    missing = {"id": 999_999, "photos": [{"id": 1, "position": 0}]}
+    assert EDIT_REQUESTS[request_name](seller_client, missing).status_code == 404
+
+
+@pytest.mark.django_db
+def test_add_photo_goes_last_and_is_cleaned(seller_client, media_root):
+    body = posted(seller_client, photo_count=2)
+    exif = Image.Exif()
+    exif[ExifTags.IFD.GPSInfo] = {
+        ExifTags.GPS.GPSLatitudeRef: "N",
+        ExifTags.GPS.GPSLatitude: (38.0, 59.0, 10.0),
+    }
+    upload = encode(Image.new("RGB", (3000, 1000), "blue"), "JPEG", exif=exif.tobytes())
+    assert Image.open(io.BytesIO(upload)).getexif().get_ifd(ExifTags.IFD.GPSInfo)
+
+    response = seller_client.post(
+        photos_url(body["id"]), {"photo": SimpleUploadedFile("garage.html", upload)}
+    )
+
+    assert response.status_code == 201, response.json()
+    edited = response.json()
+    assert photo_ids(edited)[:2] == photo_ids(body)
+    assert [p["position"] for p in edited["photos"]] == [0, 1, 2]
+    added = edited["photos"][2]
+    assert Path(added["image_url"]).suffix == ".jpg"
+    assert Path(added["image_url"]).stem != "garage"
+    data, stored = stored_photo(media_root, response, index=2)
+    assert not stored.getexif()
+    assert b"Exif" not in data
+    assert stored.size == (2048, 683)
+
+
+@pytest.mark.django_db
+def test_add_photo_closes_gaps_in_positions(seller_client):
+    body = posted(seller_client, photo_count=2)
+    first, second = photo_ids(body)
+    ListingPhoto.objects.filter(pk=second).update(position=5)  # e.g. set in the admin
+
+    response = seller_client.post(photos_url(body["id"]), {"photo": image()})
+
+    assert response.status_code == 201, response.json()
+    added = photo_ids(response.json())[2]
+    assert stored_positions(body["id"]) == [(first, 0), (second, 1), (added, 2)]
+
+
+@pytest.mark.django_db
+def test_add_photo_caps_a_listing_at_ten(seller_client, media_root):
+    body = posted(seller_client, photo_count=9)
+    assert seller_client.post(photos_url(body["id"]), {"photo": image()}).status_code == 201
+    files_before = stored_files(media_root)
+
+    response = seller_client.post(photos_url(body["id"]), {"photo": image()})
+
+    assert response.status_code == 400
+    assert response.json()["photo"] == [
+        "A listing can have up to 10 photos. Delete one to add another."
+    ]
+    assert ListingPhoto.objects.filter(listing_id=body["id"]).count() == 10
+    assert stored_files(media_root) == files_before
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("upload", "error"),
+    [
+        (lambda: SimpleUploadedFile("notes.jpg", b"not an image"), "isn't a JPEG, PNG or WebP"),
+        (gif_photo, "isn't a JPEG, PNG or WebP"),
+        (lambda: truncated("PNG"), "couldn't be read"),
+        (oversized_photo, "larger than 10 MB"),
+    ],
+)
+def test_add_photo_rejects_bad_files(seller_client, media_root, upload, error):
+    body = posted(seller_client)
+    files_before = stored_files(media_root)
+
+    response = seller_client.post(photos_url(body["id"]), {"photo": upload()})
+
+    assert response.status_code == 400
+    assert error in response.json()["photo"][0]
+    assert ListingPhoto.objects.filter(listing_id=body["id"]).count() == 1
+    assert stored_files(media_root) == files_before
+
+
+@pytest.mark.django_db
+def test_add_photo_requires_a_file(seller_client):
+    body = posted(seller_client)
+    response = seller_client.post(photos_url(body["id"]), {})
+    assert response.status_code == 400
+    assert "photo" in response.json()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("deleted_index", [0, 1, 2])
+def test_delete_photo_keeps_positions_contiguous(
+    seller_client, media_root, django_capture_on_commit_callbacks, deleted_index
+):
+    body = posted(seller_client, photo_count=3)
+    ids = photo_ids(body)
+    deleted = ListingPhoto.objects.get(pk=ids[deleted_index])
+
+    with django_capture_on_commit_callbacks(execute=True):
+        response = seller_client.delete(photo_url(body["id"], ids[deleted_index]))
+
+    assert response.status_code == 200, response.json()
+    remaining = [photo_id for photo_id in ids if photo_id != ids[deleted_index]]
+    assert photo_ids(response.json()) == remaining  # deleting the cover promotes the next one
+    assert stored_positions(body["id"]) == [(remaining[0], 0), (remaining[1], 1)]
+    assert not (media_root / deleted.image.name).exists()
+
+
+@pytest.mark.django_db
+def test_last_photo_cannot_be_deleted(seller_client, media_root):
+    body = posted(seller_client)
+    files_before = stored_files(media_root)
+
+    response = seller_client.delete(photo_url(body["id"], photo_ids(body)[0]))
+
+    assert response.status_code == 400
+    assert "at least one photo" in response.json()["photo"][0]
+    assert stored_positions(body["id"]) == [(photo_ids(body)[0], 0)]
+    assert stored_files(media_root) == files_before
+
+
+@pytest.mark.django_db
+def test_deleting_another_listings_photo_is_404(seller_client):
+    first = posted(seller_client, photo_count=2)
+    second = posted(seller_client, photo_count=2)
+    response = seller_client.delete(photo_url(first["id"], photo_ids(second)[0]))
+    assert response.status_code == 404
+    assert ListingPhoto.objects.filter(listing_id=second["id"]).count() == 2
+
+
+@pytest.mark.django_db
+def test_reorder_photos(seller_client):
+    body = posted(seller_client, photo_count=3)
+    a, b, c = photo_ids(body)
+
+    response = put_order(seller_client, body["id"], [c, a, b])
+
+    assert response.status_code == 200, response.json()
+    assert photo_ids(response.json()) == [c, a, b]
+    assert stored_positions(body["id"]) == [(c, 0), (a, 1), (b, 2)]
+    # The API lists photos cover first.
+    assert [p["id"] for p in seller_client.get(listing_url(body["id"])).json()["photos"]] == [
+        c,
+        a,
+        b,
+    ]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "order",
+    [
+        lambda ids, other: ids[:2],  # one missing
+        lambda ids, other: [*ids, ids[0]],  # one twice
+        lambda ids, other: [ids[0], ids[0], ids[1]],  # one twice, one missing
+        lambda ids, other: [*ids, other],  # another listing's photo
+        lambda ids, other: [ids[0], ids[1], other],  # swapped for another listing's photo
+        lambda ids, other: [*ids, 999_999],  # no such photo
+        lambda ids, other: [],
+    ],
+)
+def test_reorder_must_list_exactly_the_current_photos(seller_client, order):
+    body = posted(seller_client, photo_count=3)
+    other = photo_ids(posted(seller_client))[0]
+    before = stored_positions(body["id"])
+
+    response = put_order(seller_client, body["id"], order(photo_ids(body), other))
+
+    assert response.status_code == 400
+    assert "photo_ids" in response.json()
+    assert stored_positions(body["id"]) == before
 
 
 # --- CSRF through the web app proxy ---

@@ -6,7 +6,6 @@ ADMIN_PAGES = [
     "/admin/schools/school/",
     "/admin/schools/school/add/",
     "/admin/listings/listing/",
-    "/admin/listings/listing/add/",
     "/admin/listings/category/",
     "/admin/accounts/user/",
 ]

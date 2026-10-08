@@ -12,12 +12,24 @@ class CategoryAdmin(admin.ModelAdmin):
 
 
 class ListingPhotoInline(admin.TabularInline):
+    # View only: uploads go through listings services, which strip location data, resize,
+    # and keep positions 0..n-1. A file added here would skip all of that.
     model = ListingPhoto
-    extra = 1
+    extra = 0
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 class ItemDetailsInline(admin.StackedInline):
     model = ItemDetails
+    can_delete = False  # an item listing always has its details (condition)
 
 
 class ServiceDetailsInline(admin.StackedInline):
@@ -29,27 +41,41 @@ class ListingAdmin(admin.ModelAdmin):
     list_display = ["title", "kind", "status", "price_cents", "seller", "school", "created_at"]
     list_filter = ["school", "kind", "status", "category"]
     search_fields = ["title", "description", "seller__email"]
-    raw_id_fields = ["seller"]
-    # Status only changes through listings services (see the action below).
-    readonly_fields = ["status", "removed_by", "removed_at"]
+    # Moderators can fix wording (title, description, details) and remove listings. Everything
+    # with rules attached changes only through listings services: status (see the action
+    # below), price and category (the Free/$0 rule, later price-drop alerts), and the seller
+    # and school (a listing's school is always its seller's school).
+    readonly_fields = [
+        "school",
+        "seller",
+        "kind",
+        "category",
+        "price_cents",
+        "currency",
+        "status",
+        "removed_by",
+        "removed_at",
+    ]
     actions = ["remove_by_moderation"]
 
     def get_inlines(self, request, obj):
-        # Only the detail table matching the listing's kind. New listings default to items.
+        # Only the detail table matching the listing's kind.
         if obj is not None and obj.kind == ListingKind.SERVICE:
             return [ListingPhotoInline, ServiceDetailsInline]
         return [ListingPhotoInline, ItemDetailsInline]
 
+    def has_add_permission(self, request):
+        # Listings are posted through the API, which applies the listing rules.
+        return False
+
     def has_delete_permission(self, request, obj=None):
-        # Removal is a soft delete (Remove action above); conversations, deals and reports
+        # Removal is a soft delete (the Remove action below); conversations, deals and reports
         # point at listings, so the row must stay.
         return False
 
     def save_model(self, request, obj, form, change):
-        if not change:
-            return super().save_model(request, obj, form, change)
-        # Status isn't in the form, but obj was loaded before this save, so a service may
-        # have moved the listing in between. Never write the status fields back.
+        # obj was loaded before this save, so a service may have changed a read-only field
+        # (e.g. status) in between. Never write those back.
         fields = [
             f.name
             for f in obj._meta.concrete_fields
