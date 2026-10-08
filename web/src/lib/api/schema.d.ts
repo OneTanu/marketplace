@@ -108,7 +108,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * @description The feed: Available and Pending listings at your school (or the school asked for),
+         *     filtered, newest first by default, a page at a time. Sold and Removed listings aren't
+         *     included.
+         */
+        get: operations["listings_list"];
         put?: never;
         /**
          * @description Post an item listing at the seller's school. Photos are sent as repeated `photos`
@@ -431,6 +436,26 @@ export interface components {
             readonly updated_at: string;
         };
         /**
+         * @description A listing as a feed card: enough to show and link it, without description or every
+         *     photo. Expects the queryset from views.card_queryset (cover photo prefetched).
+         */
+        ListingCard: {
+            readonly id: number;
+            readonly status: components["schemas"]["StatusEnum"];
+            readonly title: string;
+            readonly price_cents: number;
+            readonly currency: string;
+            /** @description The cover photo's thumbnail, or its full image until the thumbnail job has made one. */
+            readonly cover_url: string | null;
+            readonly condition: components["schemas"]["ConditionEnum"];
+            readonly size: string;
+            readonly brand: string;
+            readonly school: components["schemas"]["SchoolSummary"];
+            readonly seller: components["schemas"]["SellerSummary"];
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        /**
          * @description Multipart input for creating an item listing. Kind, school, currency and status are set
          *     by the server, so they aren't fields here and are ignored if sent.
          */
@@ -449,6 +474,11 @@ export interface components {
             color: components["schemas"]["ColorEnum"] | components["schemas"]["BlankEnum"];
             /** @description 1 to 10 JPEG, PNG or WebP files of up to 10 MB each, in order. The first is the cover. */
             photos: string[];
+        };
+        ListingFeedPage: {
+            results: components["schemas"]["ListingCard"][];
+            /** @description Pass as `cursor` to get the next page. Null on the last page. */
+            next_cursor: string | null;
         };
         ListingPhoto: {
             readonly id: number;
@@ -773,6 +803,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UnreadCount"];
+                };
+            };
+        };
+    };
+    listings_list: {
+        parameters: {
+            query?: {
+                /** @description Exact brand, any case. */
+                brand?: string;
+                /** @description A category slug. Includes every category under it. */
+                category?: string;
+                color?: ("black" | "white" | "gray" | "brown" | "beige" | "red" | "pink" | "orange" | "yellow" | "green" | "blue" | "purple" | "gold" | "silver" | "multi")[];
+                condition?: ("new_with_tags" | "like_new" | "good" | "fair" | "poor")[];
+                /** @description `next_cursor` from the last page, with the same sort. */
+                cursor?: string;
+                /** @description In cents. */
+                max_price?: number;
+                /** @description In cents. */
+                min_price?: number;
+                /** @description A school slug, or "all". Defaults to your school. */
+                school?: string;
+                /** @description Exact size, any case, e.g. 32x30. */
+                size?: string;
+                /**
+                 * @description * `newest` - newest
+                 *     * `price_asc` - price_asc
+                 *     * `price_desc` - price_desc
+                 */
+                sort?: "newest" | "price_asc" | "price_desc";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListingFeedPage"];
                 };
             };
         };

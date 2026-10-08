@@ -28,6 +28,8 @@ from django.db import transaction
 from django.utils import timezone
 from PIL import Image, ImageOps
 
+from apps.schools.models import MarketplaceStatus
+
 from . import tasks
 from .models import Category, ItemDetails, Listing, ListingKind, ListingPhoto
 
@@ -561,3 +563,76 @@ def _renumber(photos: Sequence[ListingPhoto]) -> None:
             photo.position = position
             moved.append(photo)
     ListingPhoto.objects.bulk_update(moved, ["position"])
+
+
+# --- Browsing ---
+
+# What other students see in the feed and in search: Pending stays visible (it often falls
+# back to Available), with its status so the client can badge it. Sold and Removed don't.
+BROWSABLE_STATUSES = (Status.AVAILABLE, Status.PENDING)
+ALL_SCHOOLS = "all"
+FEED_SORTS = {
+    # Each sort ends with a unique key (id), so paging is stable however many share a value.
+    "newest": ("-created_at", "-id"),
+    "price_asc": ("price_cents", "id"),
+    "price_desc": ("-price_cents", "-id"),
+}
+
+
+class FeedFilters(NamedTuple):
+    """What a student asked the feed for. Every field is optional; empty means no filter."""
+
+    school: str = ""  # a school slug, ALL_SCHOOLS, or "" for the viewer's school
+    category: Category | None = None  # matches the category and everything under it
+    min_price: int | None = None  # cents
+    max_price: int | None = None
+    conditions: Sequence[str] = ()
+    colors: Sequence[str] = ()
+    size: str = ""
+    brand: str = ""
+
+
+def browse_listings(viewer, filters: FeedFilters):
+    """The listings a student can browse, filtered but not yet sorted or paged. The one
+    function behind the feed and (later) keyword search and watched searches.
+
+    Scoped to the viewer's school unless the filters name another school or ALL_SCHOOLS (every
+    school whose marketplace is open); a viewer without a school (staff) sees every school by
+    default."""
+    listings = Listing.objects.filter(kind=ListingKind.ITEM, status__in=BROWSABLE_STATUSES)
+
+    if filters.school == ALL_SCHOOLS:
+        listings = listings.filter(school__marketplace_status=MarketplaceStatus.OPEN)
+    elif filters.school:
+        listings = listings.filter(school__slug=filters.school)
+    elif viewer.school_id is not None:
+        listings = listings.filter(school_id=viewer.school_id)
+
+    if filters.category is not None:
+        listings = listings.filter(category_id__in=category_and_descendants(filters.category))
+    if filters.min_price is not None:
+        listings = listings.filter(price_cents__gte=filters.min_price)
+    if filters.max_price is not None:
+        listings = listings.filter(price_cents__lte=filters.max_price)
+    if filters.conditions:
+        listings = listings.filter(item_details__condition__in=filters.conditions)
+    if filters.colors:
+        listings = listings.filter(item_details__color__in=filters.colors)
+    if filters.size:
+        listings = listings.filter(item_details__size__iexact=filters.size)
+    if filters.brand:
+        listings = listings.filter(item_details__brand__iexact=filters.brand)
+    return listings
+
+
+def category_and_descendants(category: Category) -> list[int]:
+    """The ids of the category and every category under it, retired ones included (their
+    listings still belong to the department). One query per level of the tree."""
+    ids = [category.pk]
+    level = [category.pk]
+    while level:
+        children = Category.objects.filter(parent_id__in=level).values_list("pk", flat=True)
+        # Skipping ones already seen stops a loop an admin edit could make in the tree.
+        level = [pk for pk in children if pk not in ids]
+        ids += level
+    return ids

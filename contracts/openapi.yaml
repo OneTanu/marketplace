@@ -200,6 +200,137 @@ paths:
                 $ref: '#/components/schemas/UnreadCount'
           description: ''
   /api/listings/:
+    get:
+      operationId: listings_list
+      description: |-
+        The feed: Available and Pending listings at your school (or the school asked for),
+        filtered, newest first by default, a page at a time. Sold and Removed listings aren't
+        included.
+      parameters:
+      - in: query
+        name: brand
+        schema:
+          type: string
+          minLength: 1
+        description: Exact brand, any case.
+      - in: query
+        name: category
+        schema:
+          type: string
+          minLength: 1
+        description: A category slug. Includes every category under it.
+      - in: query
+        name: color
+        schema:
+          type: array
+          items:
+            enum:
+            - black
+            - white
+            - gray
+            - brown
+            - beige
+            - red
+            - pink
+            - orange
+            - yellow
+            - green
+            - blue
+            - purple
+            - gold
+            - silver
+            - multi
+            type: string
+            description: |-
+              * `black` - Black
+              * `white` - White
+              * `gray` - Gray
+              * `brown` - Brown
+              * `beige` - Beige
+              * `red` - Red
+              * `pink` - Pink
+              * `orange` - Orange
+              * `yellow` - Yellow
+              * `green` - Green
+              * `blue` - Blue
+              * `purple` - Purple
+              * `gold` - Gold
+              * `silver` - Silver
+              * `multi` - Multicolor
+      - in: query
+        name: condition
+        schema:
+          type: array
+          items:
+            enum:
+            - new_with_tags
+            - like_new
+            - good
+            - fair
+            - poor
+            type: string
+            description: |-
+              * `new_with_tags` - New with tags
+              * `like_new` - Like new
+              * `good` - Good
+              * `fair` - Fair
+              * `poor` - Poor
+      - in: query
+        name: cursor
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description: '`next_cursor` from the last page, with the same sort.'
+      - in: query
+        name: max_price
+        schema:
+          type: integer
+          minimum: 0
+        description: In cents.
+      - in: query
+        name: min_price
+        schema:
+          type: integer
+          minimum: 0
+        description: In cents.
+      - in: query
+        name: school
+        schema:
+          type: string
+          minLength: 1
+        description: A school slug, or "all". Defaults to your school.
+      - in: query
+        name: size
+        schema:
+          type: string
+          minLength: 1
+        description: Exact size, any case, e.g. 32x30.
+      - in: query
+        name: sort
+        schema:
+          enum:
+          - newest
+          - price_asc
+          - price_desc
+          type: string
+          default: newest
+          minLength: 1
+        description: |-
+          * `newest` - newest
+          * `price_asc` - price_asc
+          * `price_desc` - price_desc
+      tags:
+      - listings
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingFeedPage'
+          description: ''
     post:
       operationId: listings_create
       description: |-
@@ -890,6 +1021,69 @@ components:
       - status
       - title
       - updated_at
+    ListingCard:
+      type: object
+      description: |-
+        A listing as a feed card: enough to show and link it, without description or every
+        photo. Expects the queryset from views.card_queryset (cover photo prefetched).
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        price_cents:
+          type: integer
+          readOnly: true
+        currency:
+          type: string
+          readOnly: true
+        cover_url:
+          type: string
+          nullable: true
+          readOnly: true
+          description: The cover photo's thumbnail, or its full image until the thumbnail
+            job has made one.
+        condition:
+          allOf:
+          - $ref: '#/components/schemas/ConditionEnum'
+          readOnly: true
+        size:
+          type: string
+          readOnly: true
+        brand:
+          type: string
+          readOnly: true
+        school:
+          allOf:
+          - $ref: '#/components/schemas/SchoolSummary'
+          readOnly: true
+        seller:
+          allOf:
+          - $ref: '#/components/schemas/SellerSummary'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - brand
+      - condition
+      - cover_url
+      - created_at
+      - currency
+      - id
+      - price_cents
+      - school
+      - seller
+      - size
+      - status
+      - title
     ListingCreateRequest:
       type: object
       description: |-
@@ -938,6 +1132,20 @@ components:
       - photos
       - price_cents
       - title
+    ListingFeedPage:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ListingCard'
+        next_cursor:
+          type: string
+          nullable: true
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      required:
+      - next_cursor
+      - results
     ListingPhoto:
       type: object
       properties:

@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
@@ -11,11 +11,14 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import services
+from . import pagination, services
 from .models import Category, Listing, ListingKind, ListingPhoto
 from .serializers import (
     CategorySerializer,
+    FeedQuerySerializer,
+    ListingCardSerializer,
     ListingCreateSerializer,
+    ListingFeedPageSerializer,
     ListingPhotoOrderSerializer,
     ListingPhotoUploadSerializer,
     ListingSerializer,
@@ -30,6 +33,14 @@ def listing_queryset():
     return Listing.objects.select_related(
         "category", "school", "seller", "item_details"
     ).prefetch_related("photos")
+
+
+def card_queryset(listings):
+    """Listings with what ListingCardSerializer needs, in a fixed number of queries: one for
+    the listings and one for their cover photos."""
+    return listings.select_related("school", "seller", "item_details").prefetch_related(
+        Prefetch("photos", ListingPhoto.objects.filter(position=0), to_attr="cover_photos")
+    )
 
 
 def visible_to(user, listings):
@@ -58,8 +69,27 @@ class CategoryListView(generics.ListAPIView):
         return categories
 
 
-class ListingCreateView(APIView):
+class ListingListCreateView(APIView):
     parser_classes = [MultiPartParser, FormParser]
+
+    @extend_schema(
+        operation_id="listings_list",
+        parameters=[FeedQuerySerializer],
+        responses={200: ListingFeedPageSerializer},
+    )
+    def get(self, request):
+        """The feed: Available and Pending listings at your school (or the school asked for),
+        filtered, newest first by default, a page at a time. Sold and Removed listings aren't
+        included."""
+        query = FeedQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        listings = card_queryset(services.browse_listings(request.user, query.filters()))
+        sort = query.validated_data["sort"]
+        rows, next_cursor = pagination.page(
+            listings, sort, services.FEED_SORTS[sort], query.validated_data.get("cursor")
+        )
+        cards = ListingCardSerializer(rows, many=True, context={"request": request})
+        return Response({"results": cards.data, "next_cursor": next_cursor})
 
     @extend_schema(
         request={"multipart/form-data": ListingCreateSerializer},
