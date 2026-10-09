@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 
+import { ListingCard } from "@/components/discovery/listing-card";
+import { api } from "@/lib/api/client";
+import type { ListingCard as Card } from "@/lib/discovery";
 import {
   getCurrentUser,
   updateCurrentUser,
@@ -11,8 +14,37 @@ import {
 import type { components } from "@/lib/api/schema";
 
 type CurrentUser = components["schemas"]["CurrentUser"];
+type Listing = components["schemas"]["Listing"];
 
 type ProfileTab = "selling" | "sold" | "bookmarks";
+
+// Which of the seller's own listings each tab shows. Removed ones stay on My listings only.
+const TAB_STATUSES: Partial<Record<ProfileTab, Listing["status"][]>> = {
+  selling: ["available", "pending"],
+  sold: ["sold"],
+};
+
+/** The feed card's shape, from a full listing: the cover is the photo with the lowest position. */
+function toCard(listing: Listing, details: NonNullable<Listing["item_details"]>): Card {
+  const cover = listing.photos.reduce<Listing["photos"][number] | undefined>(
+    (best, photo) => (!best || photo.position < best.position ? photo : best),
+    undefined,
+  );
+  return {
+    id: listing.id,
+    status: listing.status,
+    title: listing.title,
+    price_cents: listing.price_cents,
+    currency: listing.currency,
+    cover_url: cover ? (cover.thumbnail_url ?? cover.image_url) : null,
+    condition: details.condition,
+    size: details.size,
+    brand: details.brand,
+    school: listing.school,
+    seller: listing.seller,
+    created_at: listing.created_at,
+  };
+}
 
 function initials(user: CurrentUser) {
   return (user.first_name[0] || user.username[0] || "T").toUpperCase();
@@ -40,7 +72,7 @@ function EmptyCollection({ tab }: { tab: ProfileTab }) {
     },
     sold: {
       title: "No sold items yet",
-      note: "Completed sales will appear here once the deals system is connected.",
+      note: "Items you've sold will appear here.",
       action: null,
     },
     bookmarks: {
@@ -62,6 +94,24 @@ function EmptyCollection({ tab }: { tab: ProfileTab }) {
   );
 }
 
+function TabContent({ tab, listings }: { tab: ProfileTab; listings: Card[] | null | undefined }) {
+  const statuses = TAB_STATUSES[tab];
+  if (!statuses) return <EmptyCollection tab={tab} />;
+  if (listings === undefined) {
+    return <div aria-busy="true" aria-label="Loading listings" className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="aspect-[4/5] animate-pulse rounded-md bg-surface" />)}</div>;
+  }
+  if (listings === null) {
+    return <p className="text-sm text-muted">Couldn’t load your listings. Refresh to try again.</p>;
+  }
+  const shown = listings.filter((listing) => statuses.includes(listing.status));
+  if (!shown.length) return <EmptyCollection tab={tab} />;
+  return (
+    <ul aria-label="Listings" className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-8 lg:grid-cols-4">
+      {shown.map((listing) => <li key={listing.id}><ListingCard listing={listing} /></li>)}
+    </ul>
+  );
+}
+
 export function ProfileClient() {
   const [user, setUser] = useState<CurrentUser | null>();
   const [loadError, setLoadError] = useState(false);
@@ -70,6 +120,23 @@ export function ProfileClient() {
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<ProfileUpdateErrors>({});
   const [tab, setTab] = useState<ProfileTab>("selling");
+  // undefined while loading, null if the request failed.
+  const [listings, setListings] = useState<Card[] | null>();
+
+  const signedIn = Boolean(user);
+  useEffect(() => {
+    if (!signedIn) return;
+    let active = true;
+    api
+      .GET("/api/listings/mine/")
+      .then(({ data }) => {
+        if (!active) return;
+        // Every V1 listing is an item, so item_details is always set.
+        setListings(data ? data.flatMap((l) => (l.item_details ? [toCard(l, l.item_details)] : [])) : null);
+      })
+      .catch(() => active && setListings(null));
+    return () => { active = false; };
+  }, [signedIn]);
 
   useEffect(() => {
     let active = true;
@@ -195,7 +262,7 @@ export function ProfileClient() {
             <button key={value} role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className="relative min-w-max px-5 py-3 text-sm font-bold text-muted transition hover:text-foreground aria-[selected=true]:text-foreground after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-brand after:opacity-0 aria-[selected=true]:after:opacity-100">{label}</button>
           ))}
         </div>
-        <EmptyCollection tab={tab} />
+        <TabContent tab={tab} listings={listings} />
       </section>
     </main>
   );

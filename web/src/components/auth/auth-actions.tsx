@@ -21,8 +21,9 @@ export function AuthActions() {
   }, [pathname]);
 
   async function logout() {
+    // allauth answers a successful logout with 401 (meaning "no longer authenticated").
     const { response } = await authRequest("auth/session", { method: "DELETE" });
-    if (response.ok) { setAuthenticated(false); router.push("/"); router.refresh(); }
+    if (response.ok || response.status === 401) { setAuthenticated(false); router.push("/"); router.refresh(); }
   }
 
   if (!ready || authenticated === null) return <div className="h-9 w-28 animate-pulse rounded-[0.625rem] bg-surface" aria-hidden="true" />;
