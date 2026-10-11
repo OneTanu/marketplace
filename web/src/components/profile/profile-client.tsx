@@ -13,6 +13,9 @@ import {
 } from "@/lib/platform";
 import type { components } from "@/lib/api/schema";
 
+import { InstagramLink } from "./instagram-link";
+import { StudentIdCard } from "./student-id-card";
+
 type CurrentUser = components["schemas"]["CurrentUser"];
 type Listing = components["schemas"]["Listing"];
 
@@ -44,23 +47,6 @@ function toCard(listing: Listing, details: NonNullable<Listing["item_details"]>)
     seller: listing.seller,
     created_at: listing.created_at,
   };
-}
-
-function initials(user: CurrentUser) {
-  return (user.first_name[0] || user.username[0] || "T").toUpperCase();
-}
-
-function InstagramLink({ handle }: { handle: string }) {
-  return (
-    <a
-      className="inline-flex items-center gap-2 font-semibold text-ink underline decoration-ink/25 underline-offset-4 transition hover:decoration-ink"
-      href={`https://www.instagram.com/${encodeURIComponent(handle)}/`}
-      target="_blank"
-      rel="noreferrer"
-    >
-      @{handle} <span aria-hidden="true">↗</span>
-    </a>
-  );
 }
 
 function EmptyCollection({ tab }: { tab: ProfileTab }) {
@@ -198,28 +184,11 @@ export function ProfileClient() {
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 pb-28 sm:px-6 sm:py-12 desktop:pb-12">
-      <section className="animate-in overflow-hidden rounded-[2rem] border border-line bg-surface shadow-[0_18px_60px_rgb(20_35_29/8%)]">
-        <div className="h-28 bg-ink sm:h-36" />
-        <div className="px-5 pb-7 sm:px-8">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-            <div className="-mt-12 flex flex-col items-start gap-4 sm:-mt-14 sm:flex-row sm:items-end">
-              <div className="grid size-24 shrink-0 place-items-center rounded-[1.75rem] border-4 border-surface bg-[var(--brand-soft)] text-4xl font-black text-brand shadow-sm sm:size-28">{initials(user)}</div>
-              <div className="pb-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="type-wide text-3xl font-black">{user.first_name || `@${user.username}`}</h1>
-                  <span className="rounded bg-[var(--brand-soft)] px-2 py-0.5 text-xs font-bold text-brand">Verified student</span>
-                </div>
-                <p className="mt-1 font-medium text-muted">@{user.username}</p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Link href="/listings/mine" className="btn btn-secondary">My listings</Link>
-              <button onClick={() => { setEditing((value) => !value); setSaved(false); setErrors({}); }} className="btn btn-secondary">{editing ? "Cancel" : "Edit profile"}</button>
-            </div>
-          </div>
-
+      <section className="animate-in grid items-start gap-6 lg:grid-cols-[minmax(0,26rem)_1fr] lg:gap-8">
+        <StudentIdCard firstName={user.first_name} lastInitial={user.last_name[0]?.toUpperCase() ?? ""} username={user.username} schoolName={user.school?.name} schoolColors={user.school?.colors} dateJoined={user.date_joined} soldCount={user.sold_count} />
+        <div>
           {editing ? (
-            <form onSubmit={saveProfile} className="mt-7 max-w-2xl space-y-5 rounded-2xl border border-line bg-white/65 p-5">
+            <form onSubmit={saveProfile} className="max-w-2xl space-y-5 rounded-2xl border border-line bg-white/65 p-5">
               <label className="block">
                 <span className="flex justify-between text-sm font-bold">Description <span className="font-normal text-muted">Optional · 300 characters</span></span>
                 <textarea name="profile_description" defaultValue={user.profile_description} maxLength={300} rows={4} className="mt-2 w-full resize-none rounded-xl border border-line bg-white px-4 py-3 text-[15px] outline-none transition focus:border-brand focus:ring-4 focus:ring-[var(--brand-soft)]" placeholder="Tell other students a little about you and what you sell." />
@@ -238,21 +207,19 @@ export function ProfileClient() {
               <div className="flex justify-end"><button disabled={pending} className="btn btn-primary">{pending ? "Saving…" : "Save profile"}</button></div>
             </form>
           ) : (
-            <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
-              <div>
-                <p className="max-w-2xl leading-7 text-foreground/80">{user.profile_description || "Add a short description so other students know a little about you and what you usually sell."}</p>
-                <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
-                  {user.school && <span className="font-semibold text-foreground">{user.school.name}</span>}
-                  {user.instagram_handle && <InstagramLink handle={user.instagram_handle} />}
-                </div>
-                {saved && <p className="mt-3 text-sm font-semibold text-ink">Profile saved.</p>}
+            <div>
+              <p className="max-w-2xl leading-7 text-foreground/80">{user.profile_description || "Add a short description so other students know a little about you and what you usually sell."}</p>
+              <div className="mt-4 flex flex-wrap items-center gap-x-7 gap-y-3 text-sm">
+                <div className="flex gap-6"><div><strong className="text-base">{user.follower_count}</strong> <span className="text-muted">Followers</span></div><div><strong className="text-base">{user.following_count}</strong> <span className="text-muted">Following</span></div></div>
+                {user.instagram_handle && <InstagramLink handle={user.instagram_handle} />}
               </div>
-              <div className="flex gap-6 text-sm">
-                <div><strong className="block text-lg text-foreground">{user.follower_count}</strong><span className="text-muted">Followers</span></div>
-                <div><strong className="block text-lg text-foreground">{user.following_count}</strong><span className="text-muted">Following</span></div>
-              </div>
+              {saved && <p className="mt-3 text-sm font-semibold text-ink">Profile saved.</p>}
             </div>
           )}
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Link href="/listings/mine" className="btn btn-secondary">My listings</Link>
+            <button onClick={() => { setEditing((value) => !value); setSaved(false); setErrors({}); }} className="btn btn-secondary">{editing ? "Cancel" : "Edit profile"}</button>
+          </div>
         </div>
       </section>
 
