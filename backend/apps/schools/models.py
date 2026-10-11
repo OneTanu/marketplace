@@ -1,3 +1,5 @@
+from django.contrib.postgres.fields import ArrayField
+from django.core.validators import RegexValidator
 from django.db import models
 
 
@@ -26,6 +28,17 @@ class School(models.Model):
     state = models.CharField(max_length=100, blank=True)
     country_code = models.CharField(max_length=2, default="US")
     sort_order = models.PositiveSmallIntegerField(default=0)
+    # School colors in order: the first leads the listing badge and the profile stripe, the
+    # second is its accent. Shown as a stripe or badge only, never as a theme or logo.
+    colors = ArrayField(
+        models.CharField(
+            max_length=7,
+            validators=[RegexValidator(r"^#[0-9A-F]{6}$", "Use a hex color like #E21833.")],
+        ),
+        default=list,
+        blank=True,
+        size=4,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

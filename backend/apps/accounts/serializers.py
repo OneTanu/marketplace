@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.listings.services import sold_count
 from apps.schools.serializers import SchoolSerializer
 
 from .models import User
@@ -15,6 +16,7 @@ class CurrentUserSerializer(serializers.ModelSerializer):
     following_count = serializers.IntegerField(
         source="following_relationships.count", read_only=True
     )
+    sold_count = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -29,8 +31,21 @@ class CurrentUserSerializer(serializers.ModelSerializer):
             "profile_description",
             "follower_count",
             "following_count",
+            "sold_count",
+            "date_joined",
         ]
-        read_only_fields = ["id", "email", "username", "first_name", "last_name", "school"]
+        read_only_fields = [
+            "id",
+            "email",
+            "username",
+            "first_name",
+            "last_name",
+            "school",
+            "date_joined",
+        ]
+
+    def get_sold_count(self, user) -> int:
+        return sold_count(user)
 
     def update(self, instance, validated_data):
         # Raises Django ValidationErrors; CurrentUserView turns them into 400s.
@@ -42,8 +57,11 @@ class PublicUserSerializer(serializers.ModelSerializer):
     # Annotated by public_users() in views.py.
     follower_count = serializers.IntegerField(read_only=True)
     following_count = serializers.IntegerField(read_only=True)
+    sold_count = serializers.IntegerField(read_only=True)
     is_following = serializers.BooleanField(read_only=True)
     is_self = serializers.SerializerMethodField()
+    # Only the initial: the full last name stays private.
+    last_initial = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -51,15 +69,21 @@ class PublicUserSerializer(serializers.ModelSerializer):
             "id",
             "username",
             "first_name",
+            "last_initial",
             "school",
             "instagram_handle",
             "profile_description",
             "follower_count",
             "following_count",
+            "sold_count",
+            "date_joined",
             "is_following",
             "is_self",
         ]
         read_only_fields = fields
+
+    def get_last_initial(self, user) -> str:
+        return user.last_name[:1].upper()
 
     def get_is_self(self, user) -> bool:
         request = self.context.get("request")

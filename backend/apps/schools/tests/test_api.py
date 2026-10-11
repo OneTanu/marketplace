@@ -1,4 +1,5 @@
 import pytest
+from django.core.exceptions import ValidationError
 
 from apps.schools.models import MarketplaceStatus, School
 
@@ -13,6 +14,16 @@ def test_school_directory_is_public(client):
     assert umd["marketplace_status"] == MarketplaceStatus.OPEN
     assert umd["signup_is_open"] is True
     assert umd["domains"] == ["terpmail.umd.edu", "umd.edu"]
+    assert umd["colors"] == ["#E21833", "#FFD200", "#000000"]
+
+
+@pytest.mark.django_db
+def test_school_colors_must_be_uppercase_hex():
+    umd = School.objects.get(slug="umd")
+    umd.colors = ["red"]
+
+    with pytest.raises(ValidationError, match="hex color"):
+        umd.full_clean()
 
 
 @pytest.mark.django_db

@@ -46,16 +46,16 @@ export default function HomePage() {
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
         <div className="flex items-end justify-between gap-4">
           <h2 className="type-wide text-2xl font-black sm:text-3xl">Shop by department</h2>
-          <Link href="/search" className="text-sm font-semibold text-brand hover:underline">See everything</Link>
+          <Link href="/search" className="text-sm font-semibold text-ink underline decoration-kraft decoration-2 underline-offset-4 hover:decoration-ink">See everything</Link>
         </div>
         <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
           {departments.map((department) => <Link key={department.name} href={department.href} className="group block">
             <div className="relative aspect-square overflow-hidden rounded-md bg-surface"><Image src={department.image} alt="" fill sizes="(max-width: 1024px) 50vw, 20vw" className="object-cover transition duration-500 desktop:group-hover:scale-[1.03]" /></div>
             <p className="mt-2.5 font-bold">{department.name}</p>
           </Link>)}
-          <Link href="/search?category=dorm-furniture" className="col-span-2 flex flex-col justify-between rounded-md bg-ink p-5 text-white transition hover:bg-brand lg:col-span-1 lg:aspect-square">
+          <Link href="/search?category=dorm-furniture" className="group col-span-2 flex flex-col justify-between rounded-md bg-ink p-5 text-white transition hover:bg-kraft hover:text-ink lg:col-span-1 lg:aspect-square">
             <p className="type-wide text-2xl font-black leading-tight">Campus items</p>
-            <p className="mt-6 text-sm leading-6 text-white/75">Calculators, mini fridges, lamps, textbooks, and the rest of your move-in list.</p>
+            <p className="mt-6 text-sm leading-6 text-white/75 group-hover:text-ink/75">Calculators, mini fridges, lamps, textbooks, and the rest of your move-in list.</p>
           </Link>
         </div>
       </div>

@@ -12,6 +12,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.errors import service_validation_errors
+from apps.listings.services import sold_count_annotation
 
 from .models import Follow, User
 from .serializers import CurrentUserSerializer, PublicUserSerializer
@@ -26,7 +27,7 @@ def follow_count(**filters):
 
 def public_users(viewer):
     """Verified users loaded for PublicUserSerializer in a fixed number of queries, however many
-    there are: follow counts and the viewer's follow state are annotated."""
+    there are: follow and sold counts and the viewer's follow state are annotated."""
     return (
         verified_users()
         .select_related("school")
@@ -34,6 +35,7 @@ def public_users(viewer):
         .annotate(
             follower_count=follow_count(following=OuterRef("pk")),
             following_count=follow_count(follower=OuterRef("pk")),
+            sold_count=sold_count_annotation(),
             is_following=Exists(Follow.objects.filter(follower=viewer, following=OuterRef("pk"))),
         )
     )

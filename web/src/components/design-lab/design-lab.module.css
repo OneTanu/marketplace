@@ -1,0 +1,3 @@
+/* Hold slip perforation between the header and the day strip. */
+.perforated { border-top: 1.5px dashed var(--ink); }
+.perforated > * + * { border-left: 1.5px dashed var(--line); }
