@@ -52,7 +52,7 @@ export function MarketplaceDepartmentNav({ schoolSlug }: { schoolSlug?: string }
   }
 
   const tabClass = (active: boolean) => `relative flex min-h-12 min-w-max items-center gap-1 px-3 text-sm font-semibold transition hover:text-ink ${active ? "text-ink after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-ink" : "text-muted"}`;
-  const menuLink = "flex items-center justify-between border-b border-line py-3 text-sm font-semibold transition hover:text-brand";
+  const menuLink = "flex items-center justify-between border-b border-line py-3 text-sm font-semibold decoration-kraft decoration-2 underline-offset-4 hover:underline";
   const menuDepartment = tree?.departments.find((d) => d.slug === activeMenu);
   const menuItems: { key: string; label: string; href: string }[] = menuDepartment
     ? [

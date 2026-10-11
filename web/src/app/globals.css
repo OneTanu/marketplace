@@ -8,11 +8,13 @@
   --surface: #f3f2f7;
   --muted: #6b6a7b;
   --line: #e4e3eb;
-  --brand: #3426e8;
-  --brand-strong: #2519c4;
-  --brand-soft: #ecebfd;
   --ink: #17162b;
   --ink-soft: #efeef5;
+  /* Ink does the work (buttons, focus); kraft is the hang-tag accent. Kraft is too pale for text on white. */
+  --brand: var(--ink);
+  --brand-strong: #34324f;
+  --brand-soft: #f3e9d7;
+  --kraft: #d7b98e;
   --signal: #e8336f;
   --danger: #c0262d;
   --danger-soft: #fdf0f0;
@@ -27,6 +29,7 @@
   --color-brand: var(--brand);
   --color-brand-strong: var(--brand-strong);
   --color-ink: var(--ink);
+  --color-kraft: var(--kraft);
   --color-signal: var(--signal);
   --font-sans: var(--font-archivo);
 }
@@ -67,7 +70,7 @@
   .btn-primary { background: var(--brand); color: #fff; }
   .btn-primary:not(:disabled):hover { background: var(--brand-strong); }
   .btn-secondary { border: 1.5px solid var(--ink); color: var(--ink); background: var(--background); }
-  .btn-secondary:not(:disabled):hover { background: var(--ink); color: #fff; }
+  .btn-secondary:not(:disabled):hover { background: var(--kraft); }
   .btn-quiet { color: var(--ink); padding: 0 0.75rem; }
   .btn-quiet:hover { background: var(--surface); }
 
