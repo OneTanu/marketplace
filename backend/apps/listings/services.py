@@ -25,6 +25,8 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
+from django.db.models import Count, OuterRef, Subquery
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from PIL import Image, ImageOps
 
@@ -563,6 +565,20 @@ def _renumber(photos: Sequence[ListingPhoto]) -> None:
             photo.position = position
             moved.append(photo)
     ListingPhoto.objects.bulk_update(moved, ["position"])
+
+
+# --- Seller stats ---
+
+
+def sold_count_annotation():
+    """Annotates a user queryset with each user's number of Sold listings (0 when none)."""
+    sold = Listing.objects.filter(seller=OuterRef("pk"), status=Status.SOLD)
+    sold = sold.order_by().values("seller")
+    return Coalesce(Subquery(sold.annotate(total=Count("pk")).values("total")), 0)
+
+
+def sold_count(seller) -> int:
+    return Listing.objects.filter(seller=seller, status=Status.SOLD).count()
 
 
 # --- Browsing ---

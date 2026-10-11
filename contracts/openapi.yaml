@@ -876,7 +876,15 @@ components:
         following_count:
           type: integer
           readOnly: true
+        sold_count:
+          type: integer
+          readOnly: true
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
       required:
+      - date_joined
       - email
       - first_name
       - follower_count
@@ -884,6 +892,7 @@ components:
       - id
       - last_name
       - school
+      - sold_count
       - username
     CurrentUserRequest:
       type: object
@@ -1320,6 +1329,9 @@ components:
         first_name:
           type: string
           readOnly: true
+        last_initial:
+          type: string
+          readOnly: true
         school:
           allOf:
           - $ref: '#/components/schemas/School'
@@ -1337,6 +1349,13 @@ components:
         following_count:
           type: integer
           readOnly: true
+        sold_count:
+          type: integer
+          readOnly: true
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
         is_following:
           type: boolean
           readOnly: true
@@ -1344,6 +1363,7 @@ components:
           type: boolean
           readOnly: true
       required:
+      - date_joined
       - first_name
       - follower_count
       - following_count
@@ -1351,8 +1371,10 @@ components:
       - instagram_handle
       - is_following
       - is_self
+      - last_initial
       - profile_description
       - school
+      - sold_count
       - username
     RemovedByEnum:
       enum:
@@ -1385,6 +1407,13 @@ components:
         country_code:
           type: string
           maxLength: 2
+        colors:
+          type: array
+          items:
+            type: string
+            pattern: ^#[0-9A-F]{6}$
+            maxLength: 7
+          maxItems: 4
         domains:
           type: array
           items:
@@ -1425,6 +1454,14 @@ components:
           type: string
           minLength: 1
           maxLength: 2
+        colors:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            pattern: ^#[0-9A-F]{6}$
+            maxLength: 7
+          maxItems: 4
       required:
       - name
       - short_name
@@ -1438,7 +1475,15 @@ components:
         short_name:
           type: string
           readOnly: true
+        colors:
+          type: array
+          items:
+            type: string
+            pattern: ^#[0-9A-F]{6}$
+            maxLength: 7
+          readOnly: true
       required:
+      - colors
       - id
       - short_name
     SellerSummary:

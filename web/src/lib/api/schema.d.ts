@@ -391,6 +391,9 @@ export interface components {
             profile_description?: string;
             readonly follower_count: number;
             readonly following_count: number;
+            readonly sold_count: number;
+            /** Format: date-time */
+            readonly date_joined: string;
         };
         CurrentUserRequest: {
             instagram_handle?: string;
@@ -551,11 +554,15 @@ export interface components {
             readonly id: number;
             readonly username: string;
             readonly first_name: string;
+            readonly last_initial: string;
             readonly school: components["schemas"]["School"] | null;
             readonly instagram_handle: string;
             readonly profile_description: string;
             readonly follower_count: number;
             readonly following_count: number;
+            readonly sold_count: number;
+            /** Format: date-time */
+            readonly date_joined: string;
             readonly is_following: boolean;
             readonly is_self: boolean;
         };
@@ -570,6 +577,7 @@ export interface components {
             city?: string;
             state?: string;
             country_code?: string;
+            colors?: string[];
             readonly domains: string[];
         };
         SchoolRequest: {
@@ -581,10 +589,12 @@ export interface components {
             city?: string;
             state?: string;
             country_code?: string;
+            colors?: string[];
         };
         SchoolSummary: {
             readonly id: number;
             readonly short_name: string;
+            readonly colors: string[];
         };
         SellerSummary: {
             readonly id: number;

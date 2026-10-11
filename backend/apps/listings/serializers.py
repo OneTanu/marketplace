@@ -17,7 +17,7 @@ class CategorySerializer(serializers.ModelSerializer):
 class SchoolSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = School
-        fields = ["id", "short_name"]
+        fields = ["id", "short_name", "colors"]
         read_only_fields = fields
 
 

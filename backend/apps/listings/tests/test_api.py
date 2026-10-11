@@ -171,7 +171,11 @@ def test_create_listing_with_details_and_photos(seller_client, seller, umd, medi
         "slug": "women-coats-jackets",
         "parent": category("women").pk,
     }
-    assert body["school"] == {"id": umd.pk, "short_name": "UMD"}
+    assert body["school"] == {
+        "id": umd.pk,
+        "short_name": "UMD",
+        "colors": ["#E21833", "#FFD200", "#000000"],
+    }
     assert body["seller"] == {"id": seller.pk, "username": "seller"}
     assert body["item_details"] == {
         "condition": "like_new",
