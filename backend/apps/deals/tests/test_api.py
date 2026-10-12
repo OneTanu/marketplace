@@ -22,6 +22,9 @@ def test_deal_endpoints_are_private_and_walk_through_handoff(client):
     assert created.json()["my_role"] == "buyer"
     assert created.json()["awaiting_me"] is False
 
+    client.force_login(seller)
+    assert client.get("/api/conversations/unread-count/").json() == {"unread_count": 1}
+
     client.force_login(outsider)
     assert client.get(f"/api/deals/{deal_id}/").status_code == 404
 

@@ -47,6 +47,10 @@ def test_offer_starts_awaiting_seller_with_conversation_and_event():
     assert deal.conversation.participants.count() == 2
     assert DealOffer.objects.get(deal=deal).offered_by == buyer
     assert DealEvent.objects.get(deal=deal).event_type == "request_created"
+    message = deal.conversation.messages.get()
+    assert message.sender == buyer
+    assert message.listing == listing
+    assert message.body == "Made an offer of $42.00 for this item."
     assert deal.response_deadline > timezone.now()
 
 

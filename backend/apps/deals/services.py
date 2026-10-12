@@ -10,7 +10,7 @@ from django.utils import timezone
 from apps.accounts.services import verified_users
 from apps.listings import services as listing_services
 from apps.listings.models import Listing
-from apps.messaging.services import start_direct_conversation
+from apps.messaging.services import send_message, start_direct_conversation
 
 from .models import Deal, DealEvent, DealOffer, HandoffConfirmation
 
@@ -89,6 +89,19 @@ def create_deal(*, listing: Listing, buyer, kind: str, amount_cents: int | None 
     )
     DealOffer.objects.create(deal=deal, offered_by=buyer, amount_cents=amount_cents)
     _event(deal, "request_created", buyer, amount_cents=amount_cents, kind=kind)
+    dollars, cents = divmod(amount_cents, 100)
+    amount = f"${dollars:,}.{cents:02d}"
+    message = (
+        f"Made an offer of {amount} for this item."
+        if kind == Deal.Kind.OFFER
+        else f"Sent a request to buy this item for {amount}."
+    )
+    send_message(
+        conversation=conversation,
+        sender=buyer,
+        body=message,
+        listing=listing,
+    )
     _schedule_expiry(deal, deadline, Deal.Status.AWAITING_SELLER)
     return deal
 
