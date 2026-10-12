@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { actOnDeal, counterDeal, listConversationDeals, meetupState } from "@/lib/deals";
+import { TradeSummary } from "@/components/deals/trade";
+import { actOnDeal, counterDeal, listConversationDeals, meetupState, tradePackage } from "@/lib/deals";
 import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
 import { centsToDollars } from "@/lib/money";
@@ -164,6 +165,8 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
   const myUsername = deal.my_role === "buyer" ? deal.buyer.username : deal.seller.username;
   const myReview = reviews.find((review) => review.author.username === myUsername);
   const acceptedMeetup = meetups.accepted;
+  const isTrade = deal.kind === "trade";
+  const tradeOffer = tradePackage(deal);
   const latestMeetupUpdate = deal.meetup_updates[0];
 
   return (
@@ -178,12 +181,26 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
             {deal.listing.title}
           </Link>
           <p className="text-sm">
-            <span className="font-semibold">{centsToDollars(deal.agreed_amount_cents ?? deal.current_amount_cents)}</span>
+            <span className="font-semibold">{isTrade ? "Trade" : centsToDollars(deal.agreed_amount_cents ?? deal.current_amount_cents)}</span>
             <span className="text-muted"> · {statusText[deal.status]}</span>
+            {deal.asap && <span className="ml-2 rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-xs font-bold text-brand">ASAP</span>}
           </p>
         </div>
       </div>
 
+      {isTrade && (
+        <div className="mt-2 rounded-lg border border-line bg-background p-3">
+          <TradeSummary deal={deal} compact />
+          {deal.awaiting_me && deal.status !== "backup" && (
+            <Link href="/deals" className="mt-2 inline-block text-sm font-semibold text-brand underline">
+              {tradeOffer ? "Counter with different items in Deals" : "Pick items in Deals"}
+            </Link>
+          )}
+        </div>
+      )}
+      {deal.asap && deal.my_role === "seller" && open && deal.status !== "pending" && (
+        <p className="mt-2 text-xs font-semibold text-brand">@{deal.buyer.username} wants to meet as soon as possible.</p>
+      )}
       {deal.status === "backup" && (
         <p className="mt-2 text-xs leading-5 text-muted">
           Another buyer is pending. The seller can choose this request if that handoff falls through.
@@ -279,10 +296,12 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
         <div className="mt-3 flex flex-wrap gap-2">
           {deal.awaiting_me && (
             <>
-              <button type="button" onClick={() => run("accept")} disabled={working} className="btn btn-primary h-9 px-3 text-sm">
-                {deal.status === "backup" ? "Choose this buyer" : "Accept"}
-              </button>
-              {deal.status !== "backup" && <button type="button" onClick={() => setCountering(true)} disabled={working} className="btn btn-secondary h-9 px-3 text-sm">Counter</button>}
+              {(!isTrade || tradeOffer) && (
+                <button type="button" onClick={() => run("accept")} disabled={working} className="btn btn-primary h-9 px-3 text-sm">
+                  {deal.status === "backup" ? "Choose this buyer" : "Accept"}
+                </button>
+              )}
+              {deal.status !== "backup" && !isTrade && <button type="button" onClick={() => setCountering(true)} disabled={working} className="btn btn-secondary h-9 px-3 text-sm">Counter</button>}
               <button type="button" onClick={() => run("decline")} disabled={working} className="btn btn-secondary h-9 px-3 text-sm">Decline</button>
             </>
           )}

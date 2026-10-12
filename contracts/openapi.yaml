@@ -513,6 +513,66 @@ paths:
               schema:
                 $ref: '#/components/schemas/MeetupStatusUpdate'
           description: ''
+  /api/deals/{id}/trade-offer/:
+    post:
+      operationId: deals_trade_offer_create
+      description: |-
+        Offer a trade package (some of the buyer's items, plus optional cash from either side)
+        on a trade request. The seller sends the first one; after that each side can counter.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - deals
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TradeOfferRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TradeOfferRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TradeOfferRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+          description: ''
+  /api/deals/{id}/trade-options/:
+    get:
+      operationId: deals_trade_options_list
+      description: |-
+        The buyer's Available items that can go into a trade package. Only the two people in
+        the deal can see it.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - deals
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DealListing'
+          description: ''
   /api/listings/:
     get:
       operationId: listings_list
@@ -1287,6 +1347,14 @@ components:
     BlankEnum:
       enum:
       - ''
+    CashPayerEnum:
+      enum:
+      - buyer
+      - seller
+      type: string
+      description: |-
+        * `buyer` - Buyer
+        * `seller` - Seller
     Category:
       type: object
       properties:
@@ -1410,6 +1478,9 @@ components:
         amount_cents:
           type: integer
           minimum: 1
+        asap:
+          type: boolean
+          default: false
         meeting_spot_id:
           type: integer
           minimum: 1
@@ -1546,6 +1617,9 @@ components:
         awaiting_me:
           type: boolean
           readOnly: true
+        asap:
+          type: boolean
+          readOnly: true
         offers:
           type: array
           items:
@@ -1576,6 +1650,7 @@ components:
           readOnly: true
       required:
       - agreed_amount_cents
+      - asap
       - awaiting_me
       - buyer
       - buyer_confirmed
@@ -1627,10 +1702,12 @@ components:
       enum:
       - buy_now
       - offer
+      - trade
       type: string
       description: |-
         * `buy_now` - Buy now
         * `offer` - Offer
+        * `trade` - Trade
     DealListing:
       type: object
       properties:
@@ -1681,15 +1758,26 @@ components:
         amount_cents:
           type: integer
           readOnly: true
+        trade_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DealListing'
+          readOnly: true
+        cash_payer:
+          allOf:
+          - $ref: '#/components/schemas/CashPayerEnum'
+          readOnly: true
         created_at:
           type: string
           format: date-time
           readOnly: true
       required:
       - amount_cents
+      - cash_payer
       - created_at
       - id
       - offered_by
+      - trade_items
     DealStatus:
       enum:
       - awaiting_seller
@@ -2665,6 +2753,30 @@ components:
         * `pending` - Pending
         * `sold` - Sold
         * `removed` - Removed
+    TradeOfferRequest:
+      type: object
+      properties:
+        trade_item_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+          maxItems: 5
+          minItems: 1
+        cash_cents:
+          type: integer
+          minimum: 0
+          default: 0
+        cash_payer:
+          default: ''
+          oneOf:
+          - $ref: '#/components/schemas/CashPayerEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        meetup_proposal_id:
+          type: integer
+          minimum: 1
+      required:
+      - trade_item_ids
     UnreadCount:
       type: object
       properties:

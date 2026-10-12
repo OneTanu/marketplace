@@ -12,6 +12,7 @@ import { HoldSlip, RequestRow } from "./deal-timers";
 import { atSchool, LAB_LISTINGS } from "./lab-listings";
 import { LAB_SCHOOLS, labSchool, type LabSchool } from "./lab-schools";
 import { MeetupSchedulerMock } from "./meetup-scheduler";
+import { TradePickerMock } from "./trade-picker";
 
 const HOUR = 60 * 60 * 1000;
 // Fixed so server and client render the same times. Thu Oct 8 2026, 6 PM Eastern.
@@ -132,6 +133,13 @@ export function DesignLab() {
         note="A buyer chooses from the seller's preferred approved locations and automatically suggested times. The seller only has to confirm or suggest a change; chat stays available for exceptions."
       >
         <MeetupSchedulerMock />
+      </Section>
+
+      <Section
+        title="Trade item selection"
+        note="Three ways for the other party to choose exactly which available listings they want in exchange, with optional cash to balance the trade."
+      >
+        <TradePickerMock />
       </Section>
     </div>
   );

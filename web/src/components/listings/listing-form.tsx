@@ -152,6 +152,7 @@ const PANTS_SLUG = /-(jeans|pants)$/;
 const PANTS_SIZE = /^(\d{2})x(\d{2})$/;
 const WAISTS = Array.from({ length: 21 }, (_, i) => String(24 + i)); // 24-44
 const LENGTHS = Array.from({ length: 11 }, (_, i) => String(26 + i)); // 26-36
+const LETTER_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 
 export function isFreeCategory(categories: Category[] | null, categoryId: string): boolean {
   return findCategory(categories, categoryId)?.slug === FREE_CATEGORY_SLUG;
@@ -624,8 +625,7 @@ function CategoryPicker({
   );
 }
 
-/** Free-text size, or for jeans and pants a waist and a length that make the size ("32x30").
- * A pants listing whose size was typed some other way keeps the text box, so it isn't lost. */
+/** Free-text size, or for jeans and pants either a letter size or waist and length. */
 function SizeField({
   formId,
   errors,
@@ -641,12 +641,17 @@ function SizeField({
   const match = PANTS_SIZE.exec(initial);
   // A stored size the selects can't show (e.g. "50x40") stays in the text box.
   const parsed = match && WAISTS.includes(match[1]) && LENGTHS.includes(match[2]) ? match : null;
+  const initialLetterSize = LETTER_SIZES.includes(initial.toUpperCase()) ? initial.toUpperCase() : "";
   const [waist, setWaist] = useState(parsed?.[1] ?? "");
   const [length, setLength] = useState(parsed?.[2] ?? "");
+  const [letterSize, setLetterSize] = useState(initialLetterSize);
+  const [pantsSizeType, setPantsSizeType] = useState<"letter" | "measurements">(
+    parsed ? "measurements" : "letter",
+  );
   const invalid = errors.size?.length ? true : undefined;
   const describedBy = invalid ? errorId("size") : undefined;
 
-  if (!pants || (initial && !parsed)) {
+  if (!pants || (initial && !parsed && !initialLetterSize)) {
     return (
       <div>
         <label htmlFor={fieldId("size")} className="block text-sm text-foreground/70">
@@ -670,8 +675,41 @@ function SizeField({
   return (
     <fieldset>
       <legend className="block text-sm text-foreground/70">Size</legend>
-      <input type="hidden" name="size" value={waist && length ? `${waist}x${length}` : ""} />
-      <div className="grid grid-cols-2 gap-2">
+      <input
+        type="hidden"
+        name="size"
+        value={pantsSizeType === "letter" ? letterSize : waist && length ? `${waist}x${length}` : ""}
+      />
+      <div className="mb-2 grid grid-cols-2 rounded-lg bg-surface p-1 text-sm">
+        <button
+          type="button"
+          onClick={() => setPantsSizeType("letter")}
+          className={`rounded-md px-3 py-2 font-semibold ${pantsSizeType === "letter" ? "bg-background shadow-sm" : "text-muted"}`}
+        >
+          Letter size
+        </button>
+        <button
+          type="button"
+          onClick={() => setPantsSizeType("measurements")}
+          className={`rounded-md px-3 py-2 font-semibold ${pantsSizeType === "measurements" ? "bg-background shadow-sm" : "text-muted"}`}
+        >
+          Waist × length
+        </button>
+      </div>
+      {pantsSizeType === "letter" ? (
+        <select
+          id={fieldId("size")}
+          aria-label="Letter size"
+          value={letterSize}
+          onChange={(event) => setLetterSize(event.target.value)}
+          aria-invalid={invalid}
+          aria-describedby={describedBy}
+          className={inputClass}
+        >
+          <option value="">Select a size</option>
+          {LETTER_SIZES.map((value) => <option key={value} value={value}>{value}</option>)}
+        </select>
+      ) : <div className="grid grid-cols-2 gap-2">
         <select
           id={fieldId("waist")}
           name="waist"
@@ -706,7 +744,7 @@ function SizeField({
             </option>
           ))}
         </select>
-      </div>
+      </div>}
       <FieldError id={errorId("size")} messages={errors.size} />
     </fieldset>
   );

@@ -7,6 +7,7 @@ class Deal(models.Model):
     class Kind(models.TextChoices):
         BUY_NOW = "buy_now", "Buy now"
         OFFER = "offer", "Offer"
+        TRADE = "trade", "Trade"
 
     class Status(models.TextChoices):
         AWAITING_SELLER = "awaiting_seller", "Awaiting seller"
@@ -33,6 +34,8 @@ class Deal(models.Model):
     current_amount_cents = models.PositiveIntegerField()
     agreed_amount_cents = models.PositiveIntegerField(null=True, blank=True)
     currency = models.CharField(max_length=3, default="USD")
+    # The buyer asked to meet as soon as possible. Only shown to the seller; no rules change.
+    asap = models.BooleanField(default=False)
     response_deadline = models.DateTimeField(null=True, blank=True)
     handoff_deadline = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -67,11 +70,22 @@ class Deal(models.Model):
 
 
 class DealOffer(models.Model):
+    """One round of a negotiation. For a trade it's a whole package: the buyer's items the
+    seller would get, plus `amount_cents` of cash paid by `cash_payer` (blank when no cash)."""
+
+    class CashPayer(models.TextChoices):
+        BUYER = "buyer", "Buyer"
+        SELLER = "seller", "Seller"
+
     deal = models.ForeignKey(Deal, on_delete=models.CASCADE, related_name="offers")
     offered_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="deal_offers"
     )
     amount_cents = models.PositiveIntegerField()
+    trade_items = models.ManyToManyField(
+        "listings.Listing", blank=True, related_name="trade_offers"
+    )
+    cash_payer = models.CharField(max_length=10, choices=CashPayer.choices, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

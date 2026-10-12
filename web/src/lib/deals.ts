@@ -147,3 +147,24 @@ export function meetupState(deal: Deal, now: number) {
     allStale: pending.length > 0 && fresh.length === 0,
   };
 }
+
+export async function getTradeOptions(dealId: number) {
+  const { data, error, response } = await api.GET("/api/deals/{id}/trade-options/", {
+    params: { path: { id: dealId } },
+  });
+  return data ?? failed(error, response);
+}
+
+export async function offerTrade(dealId: number, body: components["schemas"]["TradeOfferRequest"]) {
+  const { data, error, response } = await api.POST("/api/deals/{id}/trade-offer/", {
+    params: { path: { id: dealId } },
+    body,
+  });
+  return data ?? failed(error, response);
+}
+
+/** A trade's package on the table: its latest offer, or undefined before the seller picks. */
+export function tradePackage(deal: Deal) {
+  if (deal.kind !== "trade") return undefined;
+  return deal.offers.at(-1);
+}

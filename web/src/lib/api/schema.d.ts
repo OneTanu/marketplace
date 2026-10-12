@@ -277,6 +277,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/deals/{id}/trade-offer/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Offer a trade package (some of the buyer's items, plus optional cash from either side)
+         *     on a trade request. The seller sends the first one; after that each side can counter.
+         */
+        post: operations["deals_trade_offer_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/deals/{id}/trade-options/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The buyer's Available items that can go into a trade package. Only the two people in
+         *     the deal can see it.
+         */
+        get: operations["deals_trade_options_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/listings/": {
         parameters: {
             query?: never;
@@ -635,6 +675,12 @@ export interface components {
         };
         /** @enum {unknown} */
         BlankEnum: "";
+        /**
+         * @description * `buyer` - Buyer
+         *     * `seller` - Seller
+         * @enum {string}
+         */
+        CashPayerEnum: "buyer" | "seller";
         Category: {
             readonly id: number;
             readonly name: string;
@@ -686,6 +732,8 @@ export interface components {
         CreateDealRequest: {
             kind: components["schemas"]["DealKind"];
             amount_cents?: number;
+            /** @default false */
+            asap: boolean;
             meeting_spot_id?: number;
             proposed_starts_at?: string[];
         };
@@ -728,6 +776,7 @@ export interface components {
             readonly seller_confirmed: boolean;
             readonly my_role: string;
             readonly awaiting_me: boolean;
+            readonly asap: boolean;
             readonly offers: components["schemas"]["DealOffer"][];
             readonly events: components["schemas"]["DealEvent"][];
             readonly meetup_proposals: components["schemas"]["MeetupProposal"][];
@@ -748,9 +797,10 @@ export interface components {
         /**
          * @description * `buy_now` - Buy now
          *     * `offer` - Offer
+         *     * `trade` - Trade
          * @enum {string}
          */
-        DealKind: "buy_now" | "offer";
+        DealKind: "buy_now" | "offer" | "trade";
         DealListing: {
             readonly id: number;
             readonly title: string;
@@ -765,6 +815,8 @@ export interface components {
             readonly id: number;
             readonly offered_by: components["schemas"]["DealUser"];
             readonly amount_cents: number;
+            readonly trade_items: components["schemas"]["DealListing"][];
+            readonly cash_payer: components["schemas"]["CashPayerEnum"];
             /** Format: date-time */
             readonly created_at: string;
         };
@@ -1103,6 +1155,14 @@ export interface components {
          * @enum {string}
          */
         StatusEnum: "available" | "pending" | "sold" | "removed";
+        TradeOfferRequest: {
+            trade_item_ids: number[];
+            /** @default 0 */
+            cash_cents: number;
+            /** @default  */
+            cash_payer: components["schemas"]["CashPayerEnum"] | components["schemas"]["BlankEnum"];
+            meetup_proposal_id?: number;
+        };
         UnreadCount: {
             readonly unread_count: number;
         };
@@ -1590,6 +1650,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeetupStatusUpdate"];
+                };
+            };
+        };
+    };
+    deals_trade_offer_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TradeOfferRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TradeOfferRequest"];
+                "multipart/form-data": components["schemas"]["TradeOfferRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Deal"];
+                };
+            };
+        };
+    };
+    deals_trade_options_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealListing"][];
                 };
             };
         };

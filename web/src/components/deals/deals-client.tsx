@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { MeetupPicker, type MeetupSelection } from "@/components/deals/meetup-picker";
+import { TradeBuilder, TradeSummary } from "@/components/deals/trade";
 import type { components } from "@/lib/api/schema";
 import {
   acceptMeetup,
@@ -13,6 +14,7 @@ import {
   listDeals,
   meetupState,
   proposeMeetup,
+  tradePackage,
   updateMeetupStatus,
 } from "@/lib/deals";
 import { centsToDollars } from "@/lib/money";
@@ -44,6 +46,9 @@ function deadline(value: string | null | undefined) {
 }
 
 function statusLabel(deal: Deal) {
+  if (deal.kind === "trade" && deal.awaiting_me && deal.status !== "backup") {
+    return tradePackage(deal) ? "Trade offer — your response" : "Trade request — pick items";
+  }
   if (deal.awaiting_me) {
     if (deal.status === "awaiting_buyer") return "Seller countered — your response";
     if (deal.status === "backup") return "Available as a backup — your response";
@@ -60,6 +65,9 @@ function DealCard({ deal, onChange }: { deal: Deal; onChange: (deal: Deal) => vo
   const [counter, setCounter] = useState("");
   const [error, setError] = useState("");
   const [rescheduling, setRescheduling] = useState(false);
+  const [trading, setTrading] = useState(false);
+  const isTrade = deal.kind === "trade";
+  const tradeOffer = tradePackage(deal);
   const [meetupSelection, setMeetupSelection] = useState<MeetupSelection>({ meetingSpotId: null, startsAt: [], configured: false, loading: true });
   const [now] = useState(() => Date.now());
   const meetups = meetupState(deal, now);
@@ -196,16 +204,25 @@ function DealCard({ deal, onChange }: { deal: Deal; onChange: (deal: Deal) => vo
                 {deal.my_role === "seller" ? "Buyer" : "Seller"}: <Link href={`/users/${counterpart.username}`} className="font-semibold text-ink hover:underline">@{counterpart.username}</Link>
               </p>
             </div>
-            <p className="type-wide shrink-0 text-lg font-black">{centsToDollars(deal.agreed_amount_cents ?? deal.current_amount_cents)}</p>
+            <p className="type-wide shrink-0 text-lg font-black">{isTrade ? "Trade" : centsToDollars(deal.agreed_amount_cents ?? deal.current_amount_cents)}</p>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
             <span className={`rounded-full px-2.5 py-1 font-bold ${deal.awaiting_me ? "bg-signal text-white" : "bg-surface text-ink"}`}>{statusLabel(deal)}</span>
-            <span className="text-muted">{deal.kind === "buy_now" ? "Buy now" : "Offer"}</span>
+            <span className="text-muted">{deal.kind === "buy_now" ? "Buy now" : deal.kind === "trade" ? "Trade" : "Offer"}</span>
+            {deal.asap && <span className="rounded-full bg-[var(--brand-soft)] px-2.5 py-1 font-bold text-brand">ASAP</span>}
             {due && open && <span className="text-muted">Due {deadline(due)}</span>}
           </div>
         </div>
       </div>
 
+      {isTrade && (
+        <div className="mt-3 rounded-lg bg-surface p-3">
+          <TradeSummary deal={deal} />
+        </div>
+      )}
+      {deal.asap && deal.my_role === "seller" && open && deal.status !== "pending" && (
+        <p className="mt-3 text-sm font-semibold text-brand">@{deal.buyer.username} wants to meet as soon as possible. The earliest time works best.</p>
+      )}
       {deal.status === "pending" && (
         <div className="mt-3 rounded-lg bg-surface p-3 text-sm">
           {acceptedMeetup ? (
@@ -256,7 +273,14 @@ function DealCard({ deal, onChange }: { deal: Deal; onChange: (deal: Deal) => vo
       )}
       {error && <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{error}</p>}
 
-      {countering ? (
+      {trading ? (
+        <TradeBuilder
+          deal={deal}
+          meetupProposalId={meetupProposalId}
+          onDone={(updated) => { onChange(updated); setTrading(false); }}
+          onCancel={() => setTrading(false)}
+        />
+      ) : countering ? (
         <div className="mt-3 flex flex-wrap gap-2">
           <label className="field flex h-10 min-w-40 flex-1 items-center px-3">
             <span className="text-muted">$</span>
@@ -283,10 +307,13 @@ function DealCard({ deal, onChange }: { deal: Deal; onChange: (deal: Deal) => vo
         </div>
       ) : (
         <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-3">
+          {deal.awaiting_me && isTrade && !tradeOffer && (
+            <button type="button" onClick={() => setTrading(true)} disabled={working} className="btn btn-primary btn-sm">Pick items</button>
+          )}
           {deal.awaiting_me && (
             <>
-              <button type="button" onClick={() => run("accept")} disabled={working} className="btn btn-primary btn-sm">{deal.status === "backup" ? "Choose buyer" : "Accept"}</button>
-              {deal.status !== "backup" && <button type="button" onClick={() => setCountering(true)} disabled={working} className="btn btn-secondary btn-sm">Counter</button>}
+              {(!isTrade || tradeOffer) && <button type="button" onClick={() => run("accept")} disabled={working} className="btn btn-primary btn-sm">{deal.status === "backup" ? "Choose buyer" : "Accept"}</button>}
+              {deal.status !== "backup" && (!isTrade || tradeOffer) && <button type="button" onClick={() => (isTrade ? setTrading(true) : setCountering(true))} disabled={working} className="btn btn-secondary btn-sm">Counter</button>}
               <button type="button" onClick={() => run("decline")} disabled={working} className="btn btn-secondary btn-sm">Decline</button>
             </>
           )}

@@ -42,10 +42,11 @@ class DealListingSerializer(serializers.Serializer):
 
 class DealOfferSerializer(serializers.ModelSerializer):
     offered_by = DealUserSerializer(read_only=True)
+    trade_items = DealListingSerializer(many=True, read_only=True)
 
     class Meta:
         model = DealOffer
-        fields = ["id", "offered_by", "amount_cents", "created_at"]
+        fields = ["id", "offered_by", "amount_cents", "trade_items", "cash_payer", "created_at"]
         read_only_fields = fields
 
 
@@ -117,6 +118,7 @@ class DealSerializer(serializers.ModelSerializer):
             "seller_confirmed",
             "my_role",
             "awaiting_me",
+            "asap",
             "offers",
             "events",
             "meetup_proposals",
@@ -157,6 +159,7 @@ class DealSerializer(serializers.ModelSerializer):
 class CreateDealSerializer(serializers.Serializer):
     kind = serializers.ChoiceField(choices=Deal.Kind.choices)
     amount_cents = serializers.IntegerField(required=False, min_value=1)
+    asap = serializers.BooleanField(required=False, default=False)
     meeting_spot_id = serializers.IntegerField(required=False, min_value=1, write_only=True)
     proposed_starts_at = serializers.ListField(
         child=serializers.DateTimeField(),
@@ -167,6 +170,10 @@ class CreateDealSerializer(serializers.Serializer):
     )
 
     def validate(self, attrs):
+        if attrs.get("kind") == Deal.Kind.TRADE and attrs.get("amount_cents") is not None:
+            raise serializers.ValidationError(
+                {"amount_cents": "A trade request starts without an amount."}
+            )
         spot = attrs.get("meeting_spot_id")
         starts = attrs.get("proposed_starts_at")
         if (spot is None) != (starts is None):
@@ -186,6 +193,17 @@ class AcceptDealSerializer(serializers.Serializer):
 
 class CounterOfferSerializer(serializers.Serializer):
     amount_cents = serializers.IntegerField(min_value=1)
+    meetup_proposal_id = serializers.IntegerField(required=False, min_value=1)
+
+
+class TradeOfferSerializer(serializers.Serializer):
+    trade_item_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1), min_length=1, max_length=5
+    )
+    cash_cents = serializers.IntegerField(required=False, default=0, min_value=0)
+    cash_payer = serializers.ChoiceField(
+        choices=DealOffer.CashPayer.choices, required=False, allow_blank=True, default=""
+    )
     meetup_proposal_id = serializers.IntegerField(required=False, min_value=1)
 
 
