@@ -6,6 +6,11 @@ urlpatterns = [
     path("categories/", views.CategoryListView.as_view(), name="category-list"),
     path("listings/", views.ListingListCreateView.as_view(), name="listing-list"),
     path("listings/mine/", views.MyListingsView.as_view(), name="my-listings"),
+    path(
+        "users/<str:username>/listings/",
+        views.PublicSellerListingsView.as_view(),
+        name="public-seller-listings",
+    ),
     path("listings/<int:pk>/", views.ListingDetailView.as_view(), name="listing-detail"),
     path("listings/<int:pk>/photos/", views.ListingPhotosView.as_view(), name="listing-photos"),
     path(

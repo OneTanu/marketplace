@@ -11,6 +11,8 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.services import verified_users
+
 from . import pagination, services
 from .models import Category, Listing, ListingKind, ListingPhoto
 from .serializers import (
@@ -137,6 +139,48 @@ class MyListingsView(generics.ListAPIView):
                 )
             listings = listings.filter(status=listing_status)
         return listings
+
+
+PUBLIC_PROFILE_STATUSES = {
+    Listing.Status.AVAILABLE,
+    Listing.Status.PENDING,
+    Listing.Status.SOLD,
+}
+
+
+@extend_schema(
+    parameters=[
+        OpenApiParameter(
+            "status",
+            enum=sorted(PUBLIC_PROFILE_STATUSES),
+            description="Only public listings with this status.",
+        )
+    ]
+)
+class PublicSellerListingsView(generics.ListAPIView):
+    """A verified seller's Available, Pending and Sold items for their public profile.
+
+    Removed listings are never exposed here. Profiles can be visited across schools, so this
+    endpoint intentionally does not scope the seller or listings to the viewer's home school.
+    """
+
+    serializer_class = ListingCardSerializer
+
+    def get_queryset(self):
+        seller = get_object_or_404(verified_users(), username__iexact=self.kwargs["username"])
+        listing_status = self.request.query_params.get("status")
+        if listing_status is not None and listing_status not in PUBLIC_PROFILE_STATUSES:
+            raise serializers.ValidationError(
+                {"status": f'"{listing_status}" is not a public listing status.'}
+            )
+        listings = Listing.objects.filter(
+            seller=seller,
+            kind=ListingKind.ITEM,
+            status__in=PUBLIC_PROFILE_STATUSES,
+        )
+        if listing_status is not None:
+            listings = listings.filter(status=listing_status)
+        return card_queryset(listings).order_by("-created_at", "-id")
 
 
 class Conflict(APIException):

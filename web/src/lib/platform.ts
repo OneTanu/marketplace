@@ -40,6 +40,13 @@ export async function getPublicUser(username: string) {
   return data ?? failed(response);
 }
 
+export async function getPublicUserListings(username: string) {
+  const { data, response } = await api.GET("/api/users/{username}/listings/", {
+    params: { path: { username } },
+  });
+  return data ?? failed(response);
+}
+
 export async function updateCurrentUser(update: {
   instagram_handle: string;
   profile_description: string;

@@ -144,4 +144,10 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     # Separate request and response components, so file uploads are typed as binary.
     "COMPONENT_SPLIT_REQUEST": True,
+    "ENUM_NAME_OVERRIDES": {
+        "KindEnum": "apps.listings.models.ListingKind",
+        "StatusEnum": "apps.listings.models.Listing.Status",
+        "DealKind": "apps.deals.models.Deal.Kind",
+        "DealStatus": "apps.deals.models.Deal.Status",
+    },
 }

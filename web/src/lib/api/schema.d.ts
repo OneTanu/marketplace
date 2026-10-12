@@ -101,6 +101,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/deals/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["deals_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/deals/{deal_id}/reviews/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["deals_reviews_list"];
+        put?: never;
+        post: operations["deals_reviews_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/deals/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["deals_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/deals/{id}/accept/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["deals_accept_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/deals/{id}/cancel/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["deals_cancel_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/deals/{id}/confirm-handoff/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["deals_confirm_handoff_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/deals/{id}/counter/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["deals_counter_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/deals/{id}/decline/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["deals_decline_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/listings/": {
         parameters: {
             query?: never;
@@ -120,6 +248,22 @@ export interface paths {
          *     files, in order.
          */
         post: operations["listings_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/listings/{listing_id}/deals/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["listings_deals_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -281,6 +425,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/schools/{slug}/meeting-spots/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Public directory of schools known to Tanu and their marketplace state. */
+        get: operations["schools_meeting_spots_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/users/": {
         parameters: {
             query?: never;
@@ -329,10 +490,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/users/{username}/listings/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description A verified seller's Available, Pending and Sold items for their public profile.
+         *
+         *     Removed listings are never exposed here. Profiles can be visited across schools, so this
+         *     endpoint intentionally does not scope the seller or listings to the viewer's home school.
+         */
+        get: operations["users_listings_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AmountRequest: {
+            amount_cents: number;
+        };
         /** @enum {unknown} */
         BlankEnum: "";
         Category: {
@@ -379,6 +565,10 @@ export interface components {
             /** Format: date-time */
             readonly last_message_at: string | null;
         };
+        CreateDealRequest: {
+            kind: components["schemas"]["DealKind"];
+            amount_cents?: number;
+        };
         CurrentUser: {
             readonly id: number;
             /** Format: email */
@@ -398,6 +588,80 @@ export interface components {
         CurrentUserRequest: {
             instagram_handle?: string;
             profile_description?: string;
+        };
+        Deal: {
+            readonly id: number;
+            readonly listing: components["schemas"]["DealListing"];
+            readonly buyer: components["schemas"]["DealUser"];
+            readonly seller: components["schemas"]["DealUser"];
+            readonly conversation: number;
+            readonly kind: components["schemas"]["DealKind"];
+            readonly status: components["schemas"]["DealStatus"];
+            readonly current_amount_cents: number;
+            readonly agreed_amount_cents: number | null;
+            readonly currency: string;
+            /** Format: date-time */
+            readonly response_deadline: string | null;
+            /** Format: date-time */
+            readonly handoff_deadline: string | null;
+            readonly buyer_confirmed: boolean;
+            readonly seller_confirmed: boolean;
+            readonly my_role: string;
+            readonly awaiting_me: boolean;
+            readonly offers: components["schemas"]["DealOffer"][];
+            readonly events: components["schemas"]["DealEvent"][];
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        DealEvent: {
+            readonly id: number;
+            readonly event_type: string;
+            readonly actor: components["schemas"]["DealUser"] | null;
+            readonly data: unknown;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        /**
+         * @description * `buy_now` - Buy now
+         *     * `offer` - Offer
+         * @enum {string}
+         */
+        DealKind: "buy_now" | "offer";
+        DealListing: {
+            readonly id: number;
+            readonly title: string;
+            readonly status: string;
+            readonly price_cents: number;
+            readonly currency: string;
+            readonly school_slug: string;
+            readonly school_name: string;
+            readonly cover_url: string | null;
+        };
+        DealOffer: {
+            readonly id: number;
+            readonly offered_by: components["schemas"]["DealUser"];
+            readonly amount_cents: number;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        /**
+         * @description * `awaiting_seller` - Awaiting seller
+         *     * `awaiting_buyer` - Awaiting buyer
+         *     * `backup` - Backup
+         *     * `pending` - Pending handoff
+         *     * `completed` - Completed
+         *     * `canceled` - Canceled
+         *     * `declined` - Declined
+         *     * `expired` - Expired
+         * @enum {string}
+         */
+        DealStatus: "awaiting_seller" | "awaiting_buyer" | "backup" | "pending" | "completed" | "canceled" | "declined" | "expired";
+        DealUser: {
+            readonly id: number;
+            readonly username: string;
+            readonly first_name: string;
         };
         ItemDetails: {
             readonly condition: components["schemas"]["ConditionEnum"];
@@ -512,14 +776,28 @@ export interface components {
          * @enum {string}
          */
         MarketplaceStatusEnum: "planned" | "waitlist" | "open" | "paused";
+        MeetingSpot: {
+            readonly id: number;
+            readonly name: string;
+            readonly directions: string;
+            readonly safety_note: string;
+            readonly is_indoor: boolean;
+            readonly accessibility_notes: string;
+        };
         Message: {
             readonly id: number;
             readonly conversation: number;
             readonly sender: components["schemas"]["MessagingUser"];
+            readonly listing: components["schemas"]["MessageListing"];
             readonly body: string;
             /** Format: date-time */
             readonly created_at: string;
             readonly is_mine: boolean;
+        };
+        MessageListing: {
+            readonly id: number;
+            readonly title: string;
+            readonly status: components["schemas"]["StatusEnum"];
         };
         MessagePage: {
             readonly messages: components["schemas"]["Message"][];
@@ -568,6 +846,26 @@ export interface components {
         };
         /** @enum {string} */
         RemovedByEnum: "seller" | "moderation";
+        Review: {
+            readonly id: number;
+            readonly deal: number;
+            readonly author: components["schemas"]["ReviewUser"];
+            readonly subject: components["schemas"]["ReviewUser"];
+            readonly rating: number;
+            readonly comment: string;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        ReviewCreateRequest: {
+            rating: number;
+            /** @default  */
+            comment: string;
+        };
+        ReviewUser: {
+            readonly id: number;
+            readonly username: string;
+            readonly first_name: string;
+        };
         School: {
             name: string;
             short_name: string;
@@ -602,6 +900,7 @@ export interface components {
         };
         SendMessageRequest: {
             body: string;
+            listing_id?: number;
         };
         StartConversationRequest: {
             username: string;
@@ -817,6 +1116,207 @@ export interface operations {
             };
         };
     };
+    deals_list: {
+        parameters: {
+            query?: {
+                conversation?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Deal"][];
+                };
+            };
+        };
+    };
+    deals_reviews_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Review"][];
+                };
+            };
+        };
+    };
+    deals_reviews_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewCreateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReviewCreateRequest"];
+                "multipart/form-data": components["schemas"]["ReviewCreateRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Review"];
+                };
+            };
+        };
+    };
+    deals_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Deal"];
+                };
+            };
+        };
+    };
+    deals_accept_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Deal"];
+                };
+            };
+        };
+    };
+    deals_cancel_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Deal"];
+                };
+            };
+        };
+    };
+    deals_confirm_handoff_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Deal"];
+                };
+            };
+        };
+    };
+    deals_counter_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AmountRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AmountRequest"];
+                "multipart/form-data": components["schemas"]["AmountRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Deal"];
+                };
+            };
+        };
+    };
+    deals_decline_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Deal"];
+                };
+            };
+        };
+    };
     listings_list: {
         parameters: {
             query?: {
@@ -878,6 +1378,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Listing"];
+                };
+            };
+        };
+    };
+    listings_deals_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                listing_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDealRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CreateDealRequest"];
+                "multipart/form-data": components["schemas"]["CreateDealRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Deal"];
                 };
             };
         };
@@ -1186,6 +1713,27 @@ export interface operations {
             };
         };
     };
+    schools_meeting_spots_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingSpot"][];
+                };
+            };
+        };
+    };
     users_list: {
         parameters: {
             query?: {
@@ -1269,6 +1817,30 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    users_listings_list: {
+        parameters: {
+            query?: {
+                /** @description Only public listings with this status. */
+                status?: "available" | "pending" | "sold";
+            };
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListingCard"][];
+                };
             };
         };
     };

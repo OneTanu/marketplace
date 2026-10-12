@@ -23,7 +23,7 @@ function subscribe(listener: () => void) {
   listeners.add(listener);
   if (listeners.size === 1) {
     refresh();
-    timer = window.setInterval(refresh, 20_000);
+    timer = window.setInterval(refresh, 8_000);
   }
   return () => {
     listeners.delete(listener);

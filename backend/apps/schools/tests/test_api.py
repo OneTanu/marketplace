@@ -1,7 +1,7 @@
 import pytest
 from django.core.exceptions import ValidationError
 
-from apps.schools.models import MarketplaceStatus, School
+from apps.schools.models import MarketplaceStatus, MeetingSpot, School
 
 
 @pytest.mark.django_db
@@ -51,3 +51,21 @@ def test_directory_exposes_marketplace_lifecycle(client):
         MarketplaceStatus.OPEN,
         MarketplaceStatus.WAITLIST,
     ]
+
+
+@pytest.mark.django_db
+def test_school_meeting_spots_returns_only_active_locations(client):
+    umd = School.objects.get(slug="umd")
+    MeetingSpot.objects.create(
+        school=umd, name="Library entrance", directions="Meet beside the main doors."
+    )
+    MeetingSpot.objects.create(
+        school=umd, name="Retired spot", directions="Old location.", is_active=False
+    )
+
+    response = client.get("/api/schools/umd/meeting-spots/")
+
+    assert response.status_code == 200
+    names = [spot["name"] for spot in response.json()]
+    assert "Library entrance" in names
+    assert "Retired spot" not in names

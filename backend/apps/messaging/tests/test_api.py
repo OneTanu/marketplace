@@ -2,6 +2,7 @@ import pytest
 from allauth.account.models import EmailAddress
 
 from apps.accounts.models import User
+from apps.listings.models import Category, Listing
 from apps.messaging.models import Conversation, ConversationParticipant, Message
 from apps.messaging.services import mark_conversation_read, send_message, start_direct_conversation
 from apps.schools.models import School
@@ -46,6 +47,62 @@ def test_start_conversation_is_idempotent_and_private(client):
 
     client.force_login(outsider)
     assert client.get(f"/api/conversations/{first.json()['id']}/").status_code == 404
+
+
+@pytest.mark.django_db
+def test_listing_is_attached_to_a_message_in_the_existing_conversation(client):
+    buyer = verified_user("buyer")
+    seller = verified_user("seller")
+    category = Category.objects.get(slug="men-jeans")
+    first_listing = Listing.objects.create(
+        school=seller.school,
+        seller=seller,
+        category=category,
+        title="Levi's jeans",
+        price_cents=3000,
+    )
+    client.force_login(buyer)
+
+    conversation = client.post("/api/conversations/", {"username": seller.username})
+    message = client.post(
+        f"/api/conversations/{conversation.json()['id']}/messages/",
+        {"body": "Is this still available?", "listing_id": first_listing.pk},
+    )
+    repeated = client.post("/api/conversations/", {"username": seller.username})
+
+    assert message.status_code == 201
+    assert message.json()["listing"] == {
+        "id": first_listing.pk,
+        "title": "Levi's jeans",
+        "status": "available",
+    }
+    assert message.json()["body"] == "Is this still available?"
+    assert repeated.json()["id"] == conversation.json()["id"]
+    assert Conversation.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_listing_attachment_requires_the_seller_in_the_conversation(client):
+    buyer = verified_user("buyer")
+    seller = verified_user("seller")
+    other = verified_user("other")
+    listing = Listing.objects.create(
+        school=seller.school,
+        seller=seller,
+        category=Category.objects.get(slug="men-jeans"),
+        title="Levi's jeans",
+        price_cents=3000,
+    )
+    client.force_login(buyer)
+
+    conversation = client.post("/api/conversations/", {"username": other.username})
+    response = client.post(
+        f"/api/conversations/{conversation.json()['id']}/messages/",
+        {"body": "Wrong conversation", "listing_id": listing.pk},
+    )
+
+    assert response.status_code == 400
+    assert not Message.objects.exists()
 
 
 @pytest.mark.django_db

@@ -34,18 +34,18 @@ test("the seller and another student see different actions on a listing", async 
   await page.getByRole("listitem").filter({ hasText: title }).getByRole("link", { name: "View" }).click();
   await expect(page).toHaveURL(`/listings/${id}`);
 
-  // Another student: Message works; offers wait for Deals.
+  // Another student: messaging and Deals actions are available.
   const buyerContext = await browser.newContext({ baseURL });
   const buyerPage = await buyerContext.newPage();
   await signIn(buyerContext, baseURL!, TEST_BUYER);
   await buyerPage.goto(`/listings/${id}`);
   await expect(buyerPage.getByRole("heading", { level: 1, name: title })).toBeVisible();
   await expect(buyerPage.getByRole("link", { name: `@${TEST_USER.username}` })).toBeVisible();
-  await expect(buyerPage.getByRole("button", { name: "Make offer" })).toBeDisabled();
-  await expect(buyerPage.getByRole("button", { name: "Buy now" })).toBeDisabled();
+  await expect(buyerPage.getByRole("button", { name: "Make offer" })).toBeEnabled();
+  await expect(buyerPage.getByRole("button", { name: "Buy now" })).toBeEnabled();
   await expect(buyerPage.getByRole("link", { name: "Edit listing" })).toHaveCount(0);
   await buyerPage.getByRole("button", { name: "Message" }).click();
-  await expect(buyerPage).toHaveURL(/\/inbox\/\d+$/);
+  await expect(buyerPage).toHaveURL(new RegExp(`/inbox/\\d+\\?listing=${id}$`));
 
   // The seller removes it from the page; it's then gone for the other student.
   await page.getByRole("button", { name: "Remove" }).click();

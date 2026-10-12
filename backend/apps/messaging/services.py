@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.accounts.services import verified_users
+from apps.listings.models import Listing
 
 from .models import MESSAGE_MAX_LENGTH, Conversation, ConversationParticipant, Message
 
@@ -34,7 +35,9 @@ def start_direct_conversation(*, sender: User, recipient: User) -> Conversation:
 
 
 @transaction.atomic
-def send_message(*, conversation: Conversation, sender: User, body: str) -> Message:
+def send_message(
+    *, conversation: Conversation, sender: User, body: str, listing: Listing | None = None
+) -> Message:
     body = body.strip()
     if not body:
         raise ValidationError("Message cannot be empty.")
@@ -47,10 +50,16 @@ def send_message(*, conversation: Conversation, sender: User, body: str) -> Mess
     ).first()
     if membership is None:
         raise ValidationError("You are not a participant in this conversation.")
+    if listing is not None:
+        if listing.status == Listing.Status.REMOVED:
+            raise ValidationError("This listing is no longer available.")
+        if not conversation.participants.filter(pk=listing.seller_id).exists():
+            raise ValidationError("This listing does not belong in this conversation.")
     message = Message.objects.create(
         conversation=conversation,
         sender=sender,
         body=body,
+        listing=listing,
     )
     Conversation.objects.filter(pk=conversation.pk).update(
         last_message_at=message.created_at,

@@ -7,6 +7,7 @@ from rest_framework.response import Response
 
 from apps.accounts.services import verified_users
 from apps.errors import service_validation_errors
+from apps.listings.models import Listing
 
 from .models import Conversation, ConversationParticipant, Message
 from .serializers import (
@@ -56,7 +57,7 @@ def conversation_queryset(user):
             Prefetch(
                 "messages",
                 queryset=Message.objects.filter(id__in=latest_ids.values("latest_id"))
-                .select_related("sender__school")
+                .select_related("sender__school", "listing")
                 .prefetch_related("sender__school__domains"),
                 to_attr="latest_messages",
             ),
@@ -107,9 +108,9 @@ class ConversationMessageView(GenericAPIView):
         conversation = self.get_conversation()
         query = MessageQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
-        messages = conversation.messages.select_related("sender__school").prefetch_related(
-            "sender__school__domains"
-        )
+        messages = conversation.messages.select_related(
+            "sender__school", "listing"
+        ).prefetch_related("sender__school__domains")
         before_id = query.validated_data.get("before_id")
         after_id = query.validated_data.get("after_id")
 
@@ -135,11 +136,14 @@ class ConversationMessageView(GenericAPIView):
         conversation = self.get_conversation()
         payload = SendMessageSerializer(data=request.data)
         payload.is_valid(raise_exception=True)
+        listing_id = payload.validated_data.get("listing_id")
+        listing = get_object_or_404(Listing, pk=listing_id) if listing_id else None
         with service_validation_errors():
             message = send_message(
                 conversation=conversation,
                 sender=request.user,
                 body=payload.validated_data["body"],
+                listing=listing,
             )
         return Response(MessageSerializer(message, context={"request": request}).data, status=201)
 

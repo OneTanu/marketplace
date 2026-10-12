@@ -199,6 +199,213 @@ paths:
               schema:
                 $ref: '#/components/schemas/UnreadCount'
           description: ''
+  /api/deals/:
+    get:
+      operationId: deals_list
+      parameters:
+      - in: query
+        name: conversation
+        schema:
+          type: integer
+          minimum: 1
+      tags:
+      - deals
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Deal'
+          description: ''
+  /api/deals/{deal_id}/reviews/:
+    get:
+      operationId: deals_reviews_list
+      parameters:
+      - in: path
+        name: deal_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - deals
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review'
+          description: ''
+    post:
+      operationId: deals_reviews_create
+      parameters:
+      - in: path
+        name: deal_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - deals
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReviewCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReviewCreateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+          description: ''
+  /api/deals/{id}/:
+    get:
+      operationId: deals_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - deals
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+          description: ''
+  /api/deals/{id}/accept/:
+    post:
+      operationId: deals_accept_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - deals
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+          description: ''
+  /api/deals/{id}/cancel/:
+    post:
+      operationId: deals_cancel_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - deals
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+          description: ''
+  /api/deals/{id}/confirm-handoff/:
+    post:
+      operationId: deals_confirm_handoff_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - deals
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+          description: ''
+  /api/deals/{id}/counter/:
+    post:
+      operationId: deals_counter_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - deals
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AmountRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AmountRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AmountRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+          description: ''
+  /api/deals/{id}/decline/:
+    post:
+      operationId: deals_decline_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - deals
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+          description: ''
   /api/listings/:
     get:
       operationId: listings_list
@@ -352,6 +559,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Listing'
+          description: ''
+  /api/listings/{listing_id}/deals/:
+    post:
+      operationId: listings_deals_create
+      parameters:
+      - in: path
+        name: listing_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - listings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDealRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateDealRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateDealRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
           description: ''
   /api/listings/{id}/:
     get:
@@ -650,6 +889,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/School'
           description: ''
+  /api/schools/{slug}/meeting-spots/:
+    get:
+      operationId: schools_meeting_spots_list
+      description: Public directory of schools known to Tanu and their marketplace
+        state.
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - schools
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MeetingSpot'
+          description: ''
   /api/users/:
     get:
       operationId: users_list
@@ -732,8 +996,52 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/users/{username}/listings/:
+    get:
+      operationId: users_listings_list
+      description: |-
+        A verified seller's Available, Pending and Sold items for their public profile.
+
+        Removed listings are never exposed here. Profiles can be visited across schools, so this
+        endpoint intentionally does not scope the seller or listings to the viewer's home school.
+      parameters:
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - available
+          - pending
+          - sold
+        description: Only public listings with this status.
+      - in: path
+        name: username
+        schema:
+          type: string
+        required: true
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ListingCard'
+          description: ''
 components:
   schemas:
+    AmountRequest:
+      type: object
+      properties:
+        amount_cents:
+          type: integer
+          minimum: 1
+      required:
+      - amount_cents
     BlankEnum:
       enum:
       - ''
@@ -841,6 +1149,16 @@ components:
       - latest_message
       - other_user
       - unread_count
+    CreateDealRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/DealKind'
+        amount_cents:
+          type: integer
+          minimum: 1
+      required:
+      - kind
     CurrentUser:
       type: object
       properties:
@@ -902,6 +1220,235 @@ components:
         profile_description:
           type: string
           maxLength: 300
+    Deal:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        listing:
+          allOf:
+          - $ref: '#/components/schemas/DealListing'
+          readOnly: true
+        buyer:
+          allOf:
+          - $ref: '#/components/schemas/DealUser'
+          readOnly: true
+        seller:
+          allOf:
+          - $ref: '#/components/schemas/DealUser'
+          readOnly: true
+        conversation:
+          type: integer
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/DealKind'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/DealStatus'
+          readOnly: true
+        current_amount_cents:
+          type: integer
+          readOnly: true
+        agreed_amount_cents:
+          type: integer
+          readOnly: true
+          nullable: true
+        currency:
+          type: string
+          readOnly: true
+        response_deadline:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        handoff_deadline:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        buyer_confirmed:
+          type: boolean
+          readOnly: true
+        seller_confirmed:
+          type: boolean
+          readOnly: true
+        my_role:
+          type: string
+          readOnly: true
+        awaiting_me:
+          type: boolean
+          readOnly: true
+        offers:
+          type: array
+          items:
+            $ref: '#/components/schemas/DealOffer'
+          readOnly: true
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/DealEvent'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - agreed_amount_cents
+      - awaiting_me
+      - buyer
+      - buyer_confirmed
+      - conversation
+      - created_at
+      - currency
+      - current_amount_cents
+      - events
+      - handoff_deadline
+      - id
+      - kind
+      - listing
+      - my_role
+      - offers
+      - response_deadline
+      - seller
+      - seller_confirmed
+      - status
+      - updated_at
+    DealEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        event_type:
+          type: string
+          readOnly: true
+        actor:
+          allOf:
+          - $ref: '#/components/schemas/DealUser'
+          readOnly: true
+          nullable: true
+        data:
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - actor
+      - created_at
+      - data
+      - event_type
+      - id
+    DealKind:
+      enum:
+      - buy_now
+      - offer
+      type: string
+      description: |-
+        * `buy_now` - Buy now
+        * `offer` - Offer
+    DealListing:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        status:
+          type: string
+          readOnly: true
+        price_cents:
+          type: integer
+          readOnly: true
+        currency:
+          type: string
+          readOnly: true
+        school_slug:
+          type: string
+          readOnly: true
+        school_name:
+          type: string
+          readOnly: true
+        cover_url:
+          type: string
+          nullable: true
+          readOnly: true
+      required:
+      - cover_url
+      - currency
+      - id
+      - price_cents
+      - school_name
+      - school_slug
+      - status
+      - title
+    DealOffer:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        offered_by:
+          allOf:
+          - $ref: '#/components/schemas/DealUser'
+          readOnly: true
+        amount_cents:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount_cents
+      - created_at
+      - id
+      - offered_by
+    DealStatus:
+      enum:
+      - awaiting_seller
+      - awaiting_buyer
+      - backup
+      - pending
+      - completed
+      - canceled
+      - declined
+      - expired
+      type: string
+      description: |-
+        * `awaiting_seller` - Awaiting seller
+        * `awaiting_buyer` - Awaiting buyer
+        * `backup` - Backup
+        * `pending` - Pending handoff
+        * `completed` - Completed
+        * `canceled` - Canceled
+        * `declined` - Declined
+        * `expired` - Expired
+    DealUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+        first_name:
+          type: string
+          readOnly: true
+      required:
+      - first_name
+      - id
+      - username
     ItemDetails:
       type: object
       properties:
@@ -1217,6 +1764,34 @@ components:
         * `waitlist` - Waitlist
         * `open` - Open
         * `paused` - Paused
+    MeetingSpot:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        directions:
+          type: string
+          readOnly: true
+        safety_note:
+          type: string
+          readOnly: true
+        is_indoor:
+          type: boolean
+          readOnly: true
+        accessibility_notes:
+          type: string
+          readOnly: true
+      required:
+      - accessibility_notes
+      - directions
+      - id
+      - is_indoor
+      - name
+      - safety_note
     Message:
       type: object
       properties:
@@ -1229,6 +1804,10 @@ components:
         sender:
           allOf:
           - $ref: '#/components/schemas/MessagingUser'
+          readOnly: true
+        listing:
+          allOf:
+          - $ref: '#/components/schemas/MessageListing'
           readOnly: true
         body:
           type: string
@@ -1246,7 +1825,25 @@ components:
       - created_at
       - id
       - is_mine
+      - listing
       - sender
+    MessageListing:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          readOnly: true
+      required:
+      - id
+      - status
+      - title
     MessagePage:
       type: object
       properties:
@@ -1381,6 +1978,70 @@ components:
       - seller
       - moderation
       type: string
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        deal:
+          type: integer
+          readOnly: true
+        author:
+          allOf:
+          - $ref: '#/components/schemas/ReviewUser'
+          readOnly: true
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/ReviewUser'
+          readOnly: true
+        rating:
+          type: integer
+          readOnly: true
+        comment:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - author
+      - comment
+      - created_at
+      - deal
+      - id
+      - rating
+      - subject
+    ReviewCreateRequest:
+      type: object
+      properties:
+        rating:
+          type: integer
+          maximum: 5
+          minimum: 1
+        comment:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - rating
+    ReviewUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+        first_name:
+          type: string
+          readOnly: true
+      required:
+      - first_name
+      - id
+      - username
     School:
       type: object
       properties:
@@ -1505,6 +2166,9 @@ components:
           type: string
           minLength: 1
           maxLength: 2000
+        listing_id:
+          type: integer
+          minimum: 1
       required:
       - body
     StartConversationRequest:

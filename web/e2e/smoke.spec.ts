@@ -6,8 +6,9 @@ import { TEST_USER } from "./test-user";
 // Each page proves it rendered (a level-1 heading, or the signed-in username on Profile) and
 // that the nav marks it current. Kept loose on purpose so page redesigns don't break it.
 const SHELL_PAGES = [
-  { path: "/", navLabel: "Home" },
-  { path: "/sell", heading: "Sell an item", navLabel: "Sell" },
+  { path: "/" },
+  { path: "/sell", heading: "Sell an item" },
+  { path: "/deals", heading: "Deals", navLabel: "Deals" },
   { path: "/profile", text: `@${TEST_USER.username}` },
 ];
 

@@ -3,6 +3,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import pytest
+from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
@@ -17,6 +18,7 @@ from apps.schools.models import School
 CATEGORIES_URL = "/api/categories/"
 LISTINGS_URL = "/api/listings/"
 MY_LISTINGS_URL = "/api/listings/mine/"
+PUBLIC_LISTINGS_URL = "/api/users/{username}/listings/"
 # Departments in nav order (0007_seed_category_tree). Clothing (0004) is retired.
 SEEDED_DEPARTMENTS = [
     "women",
@@ -701,6 +703,59 @@ def test_my_listings_hides_seller_removed_and_shows_moderation_removed(seller_cl
     assert titles(response) == ["Prohibited", "Still for sale"]
     assert [listing["removed_by"] for listing in response.json()] == ["moderation", ""]
     assert titles(seller_client.get(MY_LISTINGS_URL, {"status": "removed"})) == ["Prohibited"]
+
+
+@pytest.mark.django_db
+def test_public_profile_listings_show_selling_and_sold_but_never_removed(client, seller, umd):
+    EmailAddress.objects.create(user=seller, email=seller.email, verified=True, primary=True)
+    viewer = User.objects.create_user(
+        "viewer@umd.edu", "pw-123456789", username="viewer", school=umd
+    )
+    client.force_login(viewer)
+    make_listing(seller, "Available", status="available")
+    make_listing(seller, "Pending", status="pending")
+    make_listing(seller, "Sold", status="sold")
+    services.remove_by_seller(make_listing(seller, "Removed"), seller)
+
+    response = client.get(PUBLIC_LISTINGS_URL.format(username="SELLER"))
+
+    assert response.status_code == 200
+    assert set(titles(response)) == {"Available", "Pending", "Sold"}
+    assert {listing["status"] for listing in response.json()} == {"available", "pending", "sold"}
+    assert all(
+        set(listing)
+        == {
+            "id",
+            "status",
+            "title",
+            "price_cents",
+            "currency",
+            "cover_url",
+            "condition",
+            "size",
+            "brand",
+            "school",
+            "seller",
+            "created_at",
+        }
+        for listing in response.json()
+    )
+
+
+@pytest.mark.django_db
+def test_public_profile_listings_filter_status_and_require_verified_seller(client, seller, umd):
+    viewer = User.objects.create_user(
+        "viewer@umd.edu", "pw-123456789", username="viewer", school=umd
+    )
+    client.force_login(viewer)
+    make_listing(seller, "Available", status="available")
+    make_listing(seller, "Sold", status="sold")
+    url = PUBLIC_LISTINGS_URL.format(username=seller.username)
+
+    assert client.get(url).status_code == 404
+    EmailAddress.objects.create(user=seller, email=seller.email, verified=True, primary=True)
+    assert titles(client.get(url, {"status": "sold"})) == ["Sold"]
+    assert client.get(url, {"status": "removed"}).status_code == 400
 
 
 # --- Editing ---

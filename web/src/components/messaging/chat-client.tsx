@@ -3,12 +3,15 @@
 import Link from "next/link";
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 
+import { DealPanel } from "@/components/deals/deal-panel";
+import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
 import { getConversation, listMessages, markConversationRead, sendMessage } from "@/lib/messaging";
 import { Avatar } from "./avatar";
 
 type ChatMessage = components["schemas"]["Message"];
 type Conversation = components["schemas"]["Conversation"];
+type Listing = components["schemas"]["Listing"];
 
 const MAX_LENGTH = 2000;
 // A new timestamp divider appears when messages are this far apart.
@@ -31,7 +34,7 @@ function mergeMessages(current: ChatMessage[], incoming: ChatMessage[]) {
   return [...byId.values()].sort((left, right) => left.id - right.id);
 }
 
-export function ChatClient({ conversationId }: { conversationId: number }) {
+export function ChatClient({ conversationId, listingId }: { conversationId: number; listingId?: number }) {
   const [conversation, setConversation] = useState<Conversation | null>();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [body, setBody] = useState("");
@@ -39,19 +42,24 @@ export function ChatClient({ conversationId }: { conversationId: number }) {
   const [error, setError] = useState("");
   const [hasMore, setHasMore] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
+  const [attachedListing, setAttachedListing] = useState<Listing | null>(null);
   const threadRef = useRef<HTMLDivElement>(null);
   const latestMessageIdRef = useRef(0);
   const lastMarkedReadIdRef = useRef(0);
-  const refreshingRef = useRef(false);
   const loadingOlderRef = useRef(false);
   const stickToBottomRef = useRef(true);
   const prependAnchorRef = useRef<{ height: number; top: number } | null>(null);
 
   useEffect(() => {
     let active = true;
+    // Keep the request lock scoped to this effect instance. React development mode
+    // intentionally mounts, cleans up, and mounts effects again; a component-level
+    // ref can stay locked by the discarded first request and prevent the second
+    // mount from ever loading the conversation.
+    let refreshing = false;
     async function refresh(initial = false) {
-      if (refreshingRef.current) return;
-      refreshingRef.current = true;
+      if (refreshing) return;
+      refreshing = true;
       try {
         // Later ticks only ask for messages newer than the latest one; the conversation itself
         // is re-fetched (below) only when that returns something new.
@@ -88,13 +96,22 @@ export function ChatClient({ conversationId }: { conversationId: number }) {
       } catch {
         if (active && initial) setConversation(null);
       } finally {
-        refreshingRef.current = false;
+        refreshing = false;
       }
     }
     refresh(true);
     const timer = window.setInterval(() => refresh(false), 4_000);
     return () => { active = false; window.clearInterval(timer); };
   }, [conversationId]);
+
+  useEffect(() => {
+    if (!listingId || !Number.isFinite(listingId)) return;
+    let active = true;
+    api.GET("/api/listings/{id}/", { params: { path: { id: listingId } } })
+      .then(({ data }) => { if (active && data) setAttachedListing(data); })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, [listingId]);
 
   // Scroll the thread itself, not the page, so the header stays in view.
   useEffect(() => {
@@ -141,11 +158,12 @@ export function ChatClient({ conversationId }: { conversationId: number }) {
     if (!text || pending) return;
     setPending(true); setError("");
     try {
-      const message = await sendMessage(conversationId, text);
+      const message = await sendMessage(conversationId, text, attachedListing?.id);
       latestMessageIdRef.current = Math.max(latestMessageIdRef.current, message.id);
       lastMarkedReadIdRef.current = Math.max(lastMarkedReadIdRef.current, message.id);
       stickToBottomRef.current = true;
-      setMessages((current) => mergeMessages(current, [message])); setBody("");
+      setMessages((current) => mergeMessages(current, [message])); setBody(""); setAttachedListing(null);
+      window.history.replaceState(null, "", `/inbox/${conversationId}`);
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Message not sent. Try again."); }
     finally { setPending(false); }
   }
@@ -172,6 +190,8 @@ export function ChatClient({ conversationId }: { conversationId: number }) {
       </Link>
     </header>
 
+    <DealPanel conversationId={conversationId} listingId={listingId} />
+
     <div ref={threadRef} onScroll={onThreadScroll} className="flex flex-1 flex-col overflow-y-auto px-4 py-5 sm:px-6" aria-live="polite">
       {hasMore && <button type="button" onClick={loadOlder} disabled={loadingOlder} className="mx-auto mb-4 text-xs font-semibold text-brand hover:underline disabled:text-muted">{loadingOlder ? "Loading older messages…" : "Load older messages"}</button>}
       {messages.length ? messages.map((message, index) => {
@@ -183,7 +203,13 @@ export function ChatClient({ conversationId }: { conversationId: number }) {
         return <div key={message.id}>
           {newBlock && <p className={`mb-3 text-center text-xs font-medium text-muted ${index === 0 ? "" : "mt-5"}`}>{stamp(message.created_at)}</p>}
           <div className={`flex ${message.is_mine ? "justify-end" : "justify-start"} ${sameSenderAsPrev ? "mt-1" : newBlock ? "" : "mt-3"}`}>
-            <p title={stamp(message.created_at)} className={`max-w-[78%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[15px] leading-snug ${tail} ${message.is_mine ? "bg-brand text-white" : "bg-surface text-ink"}`}>{message.body}</p>
+            <div className="max-w-[78%]">
+              {message.listing && <Link href={`/listings/${message.listing.id}`} className="mb-1 block rounded-lg border border-line bg-background px-3 py-2 text-sm text-ink shadow-sm hover:border-brand">
+                <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted">Listing</span>
+                <span className="block truncate font-bold">{message.listing.title}</span>
+              </Link>}
+              <p title={stamp(message.created_at)} className={`whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[15px] leading-snug ${tail} ${message.is_mine ? "bg-brand text-white" : "bg-surface text-ink"}`}>{message.body}</p>
+            </div>
           </div>
         </div>;
       }) : <div className="m-auto max-w-xs text-center"><Avatar user={user} /><p className="mt-3 font-bold">Say hi to {user.first_name || `@${user.username}`}</p><p className="mt-1 text-sm text-muted">Ask about an item, make an offer, or pick a place to meet on campus.</p></div>}
@@ -191,6 +217,10 @@ export function ChatClient({ conversationId }: { conversationId: number }) {
 
     <form onSubmit={submit} className="border-t border-line px-3 py-3 sm:px-4">
       {error && <p role="alert" className="mb-2 text-sm text-[var(--danger)]">{error}</p>}
+      {attachedListing && <div className="mb-2 flex items-center gap-3 rounded-lg border border-line bg-surface px-3 py-2">
+        <div className="min-w-0 flex-1"><p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Messaging about</p><p className="truncate text-sm font-bold">{attachedListing.title}</p></div>
+        <button type="button" onClick={() => setAttachedListing(null)} className="text-xs font-semibold text-muted hover:text-ink">Remove</button>
+      </div>}
       <div className="flex items-end gap-2">
         <textarea value={body} onChange={(event) => setBody(event.target.value)} onKeyDown={onKeyDown} maxLength={MAX_LENGTH} rows={1} placeholder="Message" aria-label="Message" className="field max-h-36 min-h-11 flex-1 resize-none rounded-[1.375rem] px-4 py-2.5 text-[15px] leading-snug [field-sizing:content]" />
         <button disabled={pending || !body.trim()} aria-label={pending ? "Sending" : "Send message"} className="grid size-11 shrink-0 place-items-center rounded-full bg-brand text-white transition hover:bg-brand-strong disabled:bg-surface disabled:text-muted">
