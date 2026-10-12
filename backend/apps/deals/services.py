@@ -30,6 +30,7 @@ from .models import (
 SELLER_RESPONSE_TIME = timedelta(hours=24)
 HANDOFF_TIME = timedelta(hours=72)
 MAX_AMOUNT_CENTS = 1_000_000
+MAX_TRADE_ITEMS = 5
 MEETUP_SLOT = timedelta(minutes=30)
 MEETUP_NOTICE = timedelta(hours=1)
 LATE_MINUTES = {5, 10, 15}
@@ -275,6 +276,11 @@ def _schedule_expiry(deal: Deal, deadline, expected_status: str) -> None:
     )
 
 
+def _dollars(amount_cents: int) -> str:
+    dollars, cents = divmod(amount_cents, 100)
+    return f"${dollars:,}.{cents:02d}"
+
+
 def _validate_amount(amount_cents: int) -> None:
     if not 1 <= amount_cents <= MAX_AMOUNT_CENTS:
         raise ValidationError(
@@ -291,6 +297,7 @@ def create_deal(
     amount_cents: int | None = None,
     meeting_spot: MeetingSpot | None = None,
     proposed_starts_at: list[datetime] | None = None,
+    asap: bool = False,
 ) -> Deal:
     listing = Listing.objects.select_for_update().select_related("seller").get(pk=listing.pk)
     if listing.status != Listing.Status.AVAILABLE:
@@ -300,12 +307,15 @@ def create_deal(
     if not verified_users().filter(pk=buyer.pk).exists():
         raise PermissionDenied("Your account must be active and verified to make a request.")
     if kind not in Deal.Kind.values:
-        raise ValidationError({"kind": "Choose Buy now or Make offer."})
+        raise ValidationError({"kind": "Choose Buy now, Make offer, or Trade."})
     if Deal.objects.filter(listing=listing, buyer=buyer, status__in=OPEN_STATUSES).exists():
         raise ValidationError("You already have an active request for this item.")
 
     if kind == Deal.Kind.BUY_NOW:
         amount_cents = listing.price_cents
+    elif kind == Deal.Kind.TRADE:
+        # The seller builds the first package from the buyer's listings.
+        amount_cents = 0
     elif amount_cents is None:
         raise ValidationError({"amount_cents": "Enter your offer amount."})
     if kind == Deal.Kind.OFFER:
@@ -322,17 +332,23 @@ def create_deal(
         status=Deal.Status.AWAITING_SELLER,
         current_amount_cents=amount_cents,
         currency=listing.currency,
+        asap=asap,
         response_deadline=deadline,
     )
-    DealOffer.objects.create(deal=deal, offered_by=buyer, amount_cents=amount_cents)
-    _event(deal, "request_created", buyer, amount_cents=amount_cents, kind=kind)
-    dollars, cents = divmod(amount_cents, 100)
-    amount = f"${dollars:,}.{cents:02d}"
-    message = (
-        f"Made an offer of {amount} for this item."
-        if kind == Deal.Kind.OFFER
-        else f"Sent a request to buy this item for {amount}."
-    )
+    if kind != Deal.Kind.TRADE:
+        DealOffer.objects.create(deal=deal, offered_by=buyer, amount_cents=amount_cents)
+    _event(deal, "request_created", buyer, amount_cents=amount_cents, kind=kind, asap=asap)
+    amount = _dollars(amount_cents)
+    if kind == Deal.Kind.TRADE:
+        message = (
+            "Wants to trade for this item. Look through their listings and pick what you'd take."
+        )
+    elif kind == Deal.Kind.OFFER:
+        message = f"Made an offer of {amount} for this item."
+    else:
+        message = f"Sent a request to buy this item for {amount}."
+    if asap:
+        message += " They'd like to meet as soon as possible."
     send_message(
         conversation=conversation,
         sender=buyer,
@@ -399,16 +415,10 @@ def counter_offer(
         raise DealStateError(locked, "counter")
     if actor.pk != _recipient(locked):
         raise PermissionDenied("Only the person responding to the current offer can counter it.")
+    if locked.kind == Deal.Kind.TRADE:
+        raise ValidationError("Counter a trade with a new trade offer.")
     _validate_amount(amount_cents)
-    # A price counter keeps one proposed time on the table, so accepting the price later
-    # also confirms the meetup.
-    fresh = _fresh_pending_meetups(locked)
-    if meetup_proposal is not None:
-        if meetup_proposal.pk not in {proposal.pk for proposal in fresh}:
-            raise ValidationError("That meetup time is no longer available. Suggest a new time.")
-        _close_pending_meetups(locked, MeetupProposal.Status.SUPERSEDED, exclude=meetup_proposal)
-    elif len(fresh) > 1:
-        raise ValidationError("Choose which proposed meetup time to keep with your counter.")
+    _keep_one_meetup(locked, meetup_proposal)
 
     locked.current_amount_cents = amount_cents
     locked.status = (
@@ -420,6 +430,106 @@ def counter_offer(
     _event(locked, "countered", actor, amount_cents=amount_cents)
     _schedule_expiry(locked, locked.response_deadline, locked.status)
     return locked
+
+
+def _keep_one_meetup(deal: Deal, meetup_proposal: MeetupProposal | None) -> None:
+    """A counter keeps one proposed time on the table, so accepting it later also confirms
+    the meetup."""
+    fresh = _fresh_pending_meetups(deal)
+    if meetup_proposal is not None:
+        if meetup_proposal.pk not in {proposal.pk for proposal in fresh}:
+            raise ValidationError("That meetup time is no longer available. Suggest a new time.")
+        _close_pending_meetups(deal, MeetupProposal.Status.SUPERSEDED, exclude=meetup_proposal)
+    elif len(fresh) > 1:
+        raise ValidationError("Choose which proposed meetup time to keep with your counter.")
+
+
+def trade_items(deal: Deal) -> list[Listing]:
+    """The buyer's items in a trade's latest package (empty before the seller picks)."""
+    if deal.kind != Deal.Kind.TRADE:
+        return []
+    offer = deal.offers.order_by("-created_at", "-id").first()
+    return list(offer.trade_items.all()) if offer else []
+
+
+def tradable_listings(deal: Deal):
+    """The buyer's listings that can go into a trade package for this deal."""
+    return Listing.objects.filter(
+        seller_id=deal.buyer_id, kind=deal.listing.kind, status=Listing.Status.AVAILABLE
+    ).exclude(pk=deal.listing_id)
+
+
+@transaction.atomic
+def counter_trade(
+    *,
+    deal: Deal,
+    actor,
+    item_ids: list[int],
+    cash_cents: int = 0,
+    cash_payer: str = "",
+    meetup_proposal: MeetupProposal | None = None,
+) -> Deal:
+    """Offer a trade package: some of the buyer's items, plus cash from either side. The seller
+    sends the first one; after that each side can counter with a different package."""
+    locked = _lock_deal(deal)
+    _require_party(locked, actor)
+    if locked.kind != Deal.Kind.TRADE:
+        raise ValidationError("Only trade requests take a trade offer.")
+    if locked.status not in {Deal.Status.AWAITING_SELLER, Deal.Status.AWAITING_BUYER}:
+        raise DealStateError(locked, "counter")
+    if actor.pk != _recipient(locked):
+        raise PermissionDenied("Only the person responding to the current offer can counter it.")
+
+    item_ids = list(dict.fromkeys(item_ids))
+    if not item_ids:
+        raise ValidationError({"trade_item_ids": "Choose at least one item for the trade."})
+    if len(item_ids) > MAX_TRADE_ITEMS:
+        raise ValidationError(
+            {"trade_item_ids": f"A trade can include up to {MAX_TRADE_ITEMS} items."}
+        )
+    items = list(tradable_listings(locked).filter(pk__in=item_ids))
+    if len(items) != len(item_ids):
+        raise ValidationError({"trade_item_ids": "Choose items the buyer still has available."})
+    if cash_cents < 0 or cash_cents > MAX_AMOUNT_CENTS:
+        raise ValidationError({"cash_cents": "Enter an amount between $0 and $10,000."})
+    if cash_cents and cash_payer not in DealOffer.CashPayer.values:
+        raise ValidationError({"cash_payer": "Choose who adds the cash."})
+    cash_payer = cash_payer if cash_cents else ""
+    _keep_one_meetup(locked, meetup_proposal)
+
+    locked.current_amount_cents = cash_cents
+    locked.status = (
+        Deal.Status.AWAITING_BUYER if actor.pk == locked.seller_id else Deal.Status.AWAITING_SELLER
+    )
+    locked.response_deadline = timezone.now() + SELLER_RESPONSE_TIME
+    locked.save(update_fields=["current_amount_cents", "status", "response_deadline", "updated_at"])
+    offer = DealOffer.objects.create(
+        deal=locked, offered_by=actor, amount_cents=cash_cents, cash_payer=cash_payer
+    )
+    offer.trade_items.set(items)
+    _event(
+        locked,
+        "trade_offered",
+        actor,
+        trade_item_ids=[item.pk for item in items],
+        cash_cents=cash_cents,
+        cash_payer=cash_payer,
+    )
+    _schedule_expiry(locked, locked.response_deadline, locked.status)
+    return locked
+
+
+def _move_open_requests_to_backup(listing: Listing, *, exclude: Deal) -> None:
+    alternatives = (
+        Deal.objects.filter(listing=listing)
+        .exclude(pk=exclude.pk)
+        .filter(Q(status=Deal.Status.AWAITING_SELLER) | Q(status=Deal.Status.AWAITING_BUYER))
+    )
+    for alternative in alternatives.select_for_update():
+        alternative.status = Deal.Status.BACKUP
+        alternative.response_deadline = None
+        alternative.save(update_fields=["status", "response_deadline", "updated_at"])
+        _event(alternative, "moved_to_backup")
 
 
 @transaction.atomic
@@ -436,6 +546,15 @@ def accept_deal(*, deal: Deal, actor, meetup_proposal: MeetupProposal | None = N
         raise PermissionDenied("Only the person responding to this request can accept it.")
     if locked.listing.status != Listing.Status.AVAILABLE:
         raise ValidationError("This listing already has a pending buyer.")
+    items = trade_items(locked)
+    if locked.kind == Deal.Kind.TRADE:
+        if not items:
+            raise ValidationError("Choose items for the trade before accepting.")
+        locked_items = Listing.objects.select_for_update().filter(pk__in=[i.pk for i in items])
+        if any(item.status != Listing.Status.AVAILABLE for item in locked_items):
+            raise ValidationError(
+                "One of the trade items is no longer available. Send a new trade offer."
+            )
     # Accepting the price confirms the meetup. Any pending time from the person accepting
     # was already answered by the other side with a price counter, so it counts as agreed.
     if meetup_proposal is None:
@@ -450,6 +569,8 @@ def accept_deal(*, deal: Deal, actor, meetup_proposal: MeetupProposal | None = N
             )
 
     listing_services.mark_pending(locked.listing)
+    for item in items:
+        listing_services.mark_pending(item)
     locked.status = Deal.Status.PENDING
     locked.agreed_amount_cents = locked.current_amount_cents
     locked.response_deadline = None
@@ -468,16 +589,9 @@ def accept_deal(*, deal: Deal, actor, meetup_proposal: MeetupProposal | None = N
     if meetup_proposal is not None:
         _accept_meetup(deal=locked, proposal=meetup_proposal, actor=actor, allow_own=True)
 
-    alternatives = (
-        Deal.objects.filter(listing=locked.listing)
-        .exclude(pk=locked.pk)
-        .filter(Q(status=Deal.Status.AWAITING_SELLER) | Q(status=Deal.Status.AWAITING_BUYER))
-    )
-    for alternative in alternatives.select_for_update():
-        alternative.status = Deal.Status.BACKUP
-        alternative.response_deadline = None
-        alternative.save(update_fields=["status", "response_deadline", "updated_at"])
-        _event(alternative, "moved_to_backup")
+    # Every item changing hands is now spoken for, including the buyer's trade items.
+    for listing in [locked.listing, *items]:
+        _move_open_requests_to_backup(listing, exclude=locked)
 
     _schedule_expiry(locked, locked.handoff_deadline, Deal.Status.PENDING)
     return locked
@@ -514,7 +628,8 @@ def cancel_deal(*, deal: Deal, actor) -> Deal:
             raise ValidationError(
                 "This handoff already has a confirmation, so it cannot be canceled automatically."
             )
-        listing_services.return_to_available(locked.listing)
+        for listing in [locked.listing, *trade_items(locked)]:
+            listing_services.return_to_available(listing)
     locked.status = Deal.Status.CANCELED
     locked.response_deadline = None
     locked.handoff_deadline = None
@@ -534,14 +649,17 @@ def confirm_handoff(*, deal: Deal, actor) -> Deal:
     if created:
         _event(locked, "handoff_confirmed", actor)
     if locked.confirmations.count() == 2:
-        listing_services.mark_sold(locked.listing)
+        # A trade's items change hands too, so they're sold along with the listing.
+        sold = [locked.listing, *trade_items(locked)]
+        for listing in sold:
+            listing_services.mark_sold(listing)
         locked.status = Deal.Status.COMPLETED
         locked.handoff_deadline = None
         locked.save(update_fields=["status", "handoff_deadline", "updated_at"])
         _close_pending_meetups(locked)
         _event(locked, "completed")
         backups = Deal.objects.select_for_update().filter(
-            listing=locked.listing, status=Deal.Status.BACKUP
+            listing__in=sold, status=Deal.Status.BACKUP
         )
         for backup in backups:
             backup.status = Deal.Status.EXPIRED
@@ -573,7 +691,8 @@ def expire(*, deal_id: int, expected_status: str) -> None:
             locked.save(update_fields=["handoff_deadline", "updated_at"])
             _event(locked, "confirmation_stalled")
             return
-        listing_services.return_to_available(locked.listing)
+        for listing in [locked.listing, *trade_items(locked)]:
+            listing_services.return_to_available(listing)
     locked.status = Deal.Status.EXPIRED
     locked.response_deadline = None
     locked.handoff_deadline = None

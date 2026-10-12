@@ -19,6 +19,7 @@ from .serializers import (
     AcceptDealSerializer,
     CounterOfferSerializer,
     CreateDealSerializer,
+    DealListingSerializer,
     DealQuerySerializer,
     DealSerializer,
     MeetupOptionsSerializer,
@@ -29,6 +30,7 @@ from .serializers import (
     MeetupProposalSerializer,
     MeetupStatusCreateSerializer,
     MeetupStatusUpdateSerializer,
+    TradeOfferSerializer,
 )
 
 
@@ -58,6 +60,8 @@ def deal_queryset(user):
         .prefetch_related(
             Prefetch("listing__photos", queryset=cover, to_attr="deal_cover_photos"),
             "offers__offered_by",
+            "offers__trade_items__school",
+            Prefetch("offers__trade_items__photos", queryset=cover, to_attr="deal_cover_photos"),
             "events__actor",
             "confirmations",
             "meetup_proposals__proposed_by",
@@ -311,4 +315,52 @@ class MeetupStatusCreateView(GenericAPIView):
         return Response(
             MeetupStatusUpdateSerializer(update).data,
             status=status.HTTP_201_CREATED,
+        )
+
+
+class TradeOfferView(GenericAPIView):
+    """Offer a trade package (some of the buyer's items, plus optional cash from either side)
+    on a trade request. The seller sends the first one; after that each side can counter."""
+
+    serializer_class = TradeOfferSerializer
+
+    @extend_schema(responses={200: DealSerializer})
+    def post(self, request, pk):
+        deal = get_object_or_404(deal_queryset(request.user), pk=pk)
+        payload = self.get_serializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        proposal_id = payload.validated_data.get("meetup_proposal_id")
+        proposal = (
+            get_object_or_404(deal.meetup_proposals, pk=proposal_id)
+            if proposal_id is not None
+            else None
+        )
+        with service_errors():
+            services.counter_trade(
+                deal=deal,
+                actor=request.user,
+                item_ids=payload.validated_data["trade_item_ids"],
+                cash_cents=payload.validated_data["cash_cents"],
+                cash_payer=payload.validated_data["cash_payer"],
+                meetup_proposal=proposal,
+            )
+        refreshed = deal_queryset(request.user).get(pk=deal.pk)
+        return Response(DealSerializer(refreshed, context={"request": request}).data)
+
+
+class TradeOptionsView(ListAPIView):
+    """The buyer's Available items that can go into a trade package. Only the two people in
+    the deal can see it."""
+
+    serializer_class = DealListingSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        deal = get_object_or_404(deal_queryset(self.request.user), pk=self.kwargs["pk"])
+        cover = ListingPhoto.objects.filter(position=0)
+        return (
+            services.tradable_listings(deal)
+            .select_related("school")
+            .prefetch_related(Prefetch("photos", queryset=cover, to_attr="deal_cover_photos"))
+            .order_by("-created_at", "-id")
         )

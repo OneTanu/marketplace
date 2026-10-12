@@ -61,8 +61,9 @@ test("posts jeans into Men › Jeans with a waist and length", async ({ context,
   await page.getByLabel("Subcategory").selectOption({ label: "Jeans" });
   await page.getByLabel("Price").fill("26");
   await page.getByLabel("Condition").selectOption({ label: "Good" });
-  // Jeans are sized by waist and length instead of the free-text size.
+  // Jeans can use either letter sizing or exact waist and length measurements.
   await expect(page.getByLabel("Size", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Waist × length" }).click();
   await page.getByLabel("Waist").selectOption("32");
   await page.getByLabel("Length").selectOption("30");
   await page.getByRole("button", { name: "Post listing" }).click();
@@ -73,4 +74,26 @@ test("posts jeans into Men › Jeans with a waist and length", async ({ context,
   const details = page.getByRole("list", { name: "Details" });
   await expect(details).toContainText("Size 32x30");
   await expect(details).toContainText("Jeans");
+});
+
+test("posts pants with a letter size", async ({ context, page, baseURL }) => {
+  await signIn(context, baseURL!);
+  await setMeetupPreferences(context, baseURL!);
+  const title = `E2E joggers ${randomUUID().slice(0, 8)}`;
+
+  await page.goto("/sell");
+  await page.getByLabel("Add photos").setInputFiles(PHOTO);
+  await page.getByLabel("Title").fill(title);
+  await page.getByLabel("Category", { exact: true }).selectOption({ label: "Men" });
+  await page.getByLabel("Subcategory").selectOption({ label: "Pants" });
+  await page.getByLabel("Price").fill("20");
+  await page.getByLabel("Condition").selectOption({ label: "Good" });
+  await page.getByLabel("Letter size").selectOption("M");
+  await page.getByRole("button", { name: "Post listing" }).click();
+
+  await expect(page).toHaveURL("/listings/mine", { timeout: 15_000 });
+  await page.getByRole("listitem").filter({ hasText: title }).getByRole("link", { name: "View" }).click();
+  const details = page.getByRole("list", { name: "Details" });
+  await expect(details).toContainText("Size M");
+  await expect(details).toContainText("Pants");
 });

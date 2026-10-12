@@ -210,7 +210,10 @@ const actionButton = "btn min-w-0 flex-1 px-2";
 function BuyerActions({ listing }: { listing: Listing }) {
   const router = useRouter();
   const [starting, setStarting] = useState(false);
-  const [mode, setMode] = useState<"offer" | "buy_now" | null>(null);
+  const [mode, setMode] = useState<"offer" | "buy_now" | "trade" | null>(null);
+  const [asap, setAsap] = useState(false);
+  // How many of the buyer's own listings a seller could pick from; undefined while loading.
+  const [tradable, setTradable] = useState<number | null>();
   const [offer, setOffer] = useState("");
   const [error, setError] = useState("");
   const [meetup, setMeetup] = useState<MeetupSelection>({
@@ -232,6 +235,18 @@ function BuyerActions({ listing }: { listing: Listing }) {
       setStarting(false);
     }
   }
+
+  useEffect(() => {
+    if (mode !== "trade") return;
+    let active = true;
+    api
+      .GET("/api/listings/mine/")
+      .then(({ data }) => active && setTradable(data ? data.filter((item) => item.status === "available").length : null))
+      .catch(() => active && setTradable(null));
+    return () => {
+      active = false;
+    };
+  }, [mode]);
 
   async function requestDeal() {
     if (!mode) return;
@@ -256,8 +271,8 @@ function BuyerActions({ listing }: { listing: Listing }) {
       await createDeal(
         listing.id,
         mode === "offer"
-          ? { kind: "offer", amount_cents: amountCents, ...meetupFields }
-          : { kind: "buy_now", ...meetupFields },
+          ? { kind: "offer", amount_cents: amountCents, asap, ...meetupFields }
+          : { kind: mode, asap, ...meetupFields },
       );
       router.push("/deals");
     } catch (caught) {
@@ -270,11 +285,18 @@ function BuyerActions({ listing }: { listing: Listing }) {
     return (
       <div className={actionBarClass}>
         <p className="font-semibold">
-          {mode === "offer" ? "Make an offer" : `Request to buy for ${centsToDollars(listing.price_cents)}`}
+          {mode === "offer" ? "Make an offer" : mode === "trade" ? "Propose a trade" : `Request to buy for ${centsToDollars(listing.price_cents)}`}
         </p>
         <p className="mt-1 text-sm leading-5 text-muted">
-          No money moves through Tanu. The seller must accept, then you arrange a public-campus handoff.
+          {mode === "trade"
+            ? "The seller looks through your listings and picks what they'd take, maybe with some cash. You can accept, counter, or cancel anytime."
+            : "No money moves through Tanu. The seller must accept, then you arrange a public-campus handoff."}
         </p>
+        {mode === "trade" && tradable === 0 && (
+          <p className="mt-3 rounded-lg border border-line bg-surface p-3 text-sm">
+            You don&apos;t have any available listings to trade yet. <Link href="/sell" className="font-semibold underline">List an item</Link> first.
+          </p>
+        )}
         {mode === "offer" && (
           <label className="field mt-3 flex h-11 items-center px-3">
             <span className="text-muted">$</span>
@@ -288,9 +310,16 @@ function BuyerActions({ listing }: { listing: Listing }) {
             />
           </label>
         )}
+        <label className="mt-3 flex items-start gap-3 rounded-lg border border-line p-3 text-sm">
+          <input type="checkbox" checked={asap} onChange={(event) => setAsap(event.target.checked)} className="mt-0.5 size-4 accent-[var(--brand)]" />
+          <span>
+            <span className="block font-semibold">I want this as soon as possible</span>
+            <span className="block text-muted">Lets the seller know the earliest meetup works best for you.</span>
+          </span>
+        </label>
         <MeetupPicker
           listingId={listing.id}
-          allowTwo={mode === "offer"}
+          allowTwo={mode !== "buy_now"}
           onChange={setMeetup}
         />
         {error && <p role="alert" className="mt-2 text-sm text-[var(--danger)]">{error}</p>}
@@ -298,7 +327,7 @@ function BuyerActions({ listing }: { listing: Listing }) {
           <button type="button" onClick={() => { setMode(null); setError(""); }} disabled={starting} className="btn btn-secondary flex-1">
             Back
           </button>
-          <button type="button" onClick={requestDeal} disabled={starting || meetup.loading} className="btn btn-primary flex-1">
+          <button type="button" onClick={requestDeal} disabled={starting || meetup.loading || (mode === "trade" && !tradable)} className="btn btn-primary flex-1">
             {starting ? "Sending…" : "Send request"}
           </button>
         </div>
@@ -324,6 +353,11 @@ function BuyerActions({ listing }: { listing: Listing }) {
           Buy now
         </button>
       </div>
+      {canBuy && (
+        <button type="button" onClick={() => setMode("trade")} disabled={starting} className="mt-2 w-full text-center text-sm font-semibold text-brand hover:underline">
+          Or propose a trade with your items
+        </button>
+      )}
       <p className="mt-2 text-center text-xs text-muted">
         {canBuy
           ? "The seller has 24 hours to respond. Payment happens when you meet."

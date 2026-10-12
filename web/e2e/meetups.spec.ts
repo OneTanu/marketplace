@@ -269,3 +269,69 @@ test("a second buyer waits as a backup and the seller can choose them when the f
   await secondContext.close();
   await buyerContext.close();
 });
+
+test("a trade: the buyer asks ASAP, the seller picks items plus cash, the buyer counters, and the seller accepts", async ({
+  browser,
+  context,
+  page,
+  baseURL,
+}) => {
+  const { title, listingId, buyerContext, buyerPage } = await sellerAndBuyer(browser, context, baseURL!);
+  const suffix = randomUUID().slice(0, 8);
+  const lamp = `E2E trade lamp ${suffix}`;
+  const speaker = `E2E trade speaker ${suffix}`;
+  await postListing(buyerContext, baseURL!, { title: lamp, category: "electronics", priceCents: 2000 });
+  const speakerId = await postListing(buyerContext, baseURL!, { title: speaker, category: "electronics", priceCents: 2500 });
+
+  // The buyer asks to trade, flagged ASAP, with a meetup time.
+  await buyerPage.goto(`/listings/${listingId}`);
+  await buyerPage.getByRole("button", { name: "Or propose a trade with your items" }).click();
+  await buyerPage.getByRole("checkbox", { name: /I want this as soon as possible/ }).check();
+  await pickMeetupTimes(buyerPage.locator("body"), 1);
+  await buyerPage.getByRole("button", { name: "Send request" }).click();
+  await expect(buyerPage).toHaveURL("/deals");
+  await expect(dealCard(buyerPage, title)).toContainText(`Waiting for @${TEST_USER.username} to pick items`);
+
+  // The seller sees an ASAP trade request and picks the lamp plus $10 from the buyer.
+  await openDeals(page, "Selling");
+  const sellerCard = dealCard(page, title);
+  await expect(sellerCard).toContainText("ASAP");
+  await expect(sellerCard).toContainText("Trade request — pick items");
+  await sellerCard.getByRole("button", { name: "Pick items" }).click();
+  // Item cards hide their checkbox behind a checkmark badge, so click the card like a user.
+  await sellerCard.locator("label").filter({ hasText: lamp }).click();
+  await expect(sellerCard.getByRole("checkbox", { name: new RegExp(lamp) })).toBeChecked();
+  await sellerCard.getByLabel("Cash amount").fill("10");
+  await sellerCard.getByRole("button", { name: `@${TEST_BUYER.username} adds it` }).click();
+  await sellerCard.getByRole("button", { name: "Send trade offer" }).click();
+  await expect(sellerCard).toContainText("Waiting for buyer");
+  await expect(sellerCard).toContainText(lamp);
+
+  // The buyer counters: the speaker instead, no cash.
+  await openDeals(buyerPage, "Buying");
+  const buyerCard = dealCard(buyerPage, title);
+  await expect(buyerCard).toContainText("Trade offer — your response");
+  await expect(buyerCard).toContainText("You add $10");
+  await buyerCard.getByRole("button", { name: "Counter", exact: true }).click();
+  await buyerCard.locator("label").filter({ hasText: lamp }).click();
+  await buyerCard.locator("label").filter({ hasText: speaker }).click();
+  await expect(buyerCard.getByRole("checkbox", { name: new RegExp(speaker) })).toBeChecked();
+  await expect(buyerCard.getByRole("checkbox", { name: new RegExp(lamp) })).not.toBeChecked();
+  await buyerCard.getByLabel("Cash amount").fill("");
+  await buyerCard.getByRole("button", { name: "Send trade offer" }).click();
+  await expect(buyerCard).toContainText("Waiting for seller");
+
+  // The seller accepts: both items are now spoken for, and the meetup is confirmed.
+  await page.reload();
+  await page.getByRole("tab", { name: /^Selling/ }).click();
+  await expect(sellerCard).toContainText(speaker);
+  await expect(sellerCard).not.toContainText(lamp);
+  await sellerCard.getByRole("button", { name: "Accept", exact: true }).click();
+  await expect(sellerCard).toContainText("Handoff pending");
+  await expect(sellerCard).toContainText("Agreed trade");
+  await expect(sellerCard).not.toContainText("Meetup time still needs to be confirmed");
+  const speakerListing = await buyerContext.request.get(`/api/listings/${speakerId}/`);
+  expect(((await speakerListing.json()) as { status: string }).status).toBe("pending");
+
+  await buyerContext.close();
+});

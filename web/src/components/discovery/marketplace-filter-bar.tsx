@@ -152,8 +152,13 @@ export function MarketplaceFilterBar({
         <button type="button" onClick={() => toggle("size")} aria-expanded={open === "size"} className={buttonClass}>Size <Chevron open={open === "size"} /></button>
         {open === "size" && <div className={`${panelClass} p-4`}>
           {pantSizing ? <>
+            <p className="text-sm font-bold">Letter size</p>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {GENERAL_SIZES.filter((value) => value !== "One size").map((value) => <button type="button" key={value} aria-pressed={feed.size === value} onClick={() => { setWaist(""); setLength(""); choose({ size: feed.size === value ? "" : value }); }} className="chip justify-center">{value}</button>)}
+            </div>
+            <div className="my-4 border-t border-line" />
             <p className="text-sm font-bold">Waist and length</p>
-            <p className="mt-1 text-xs leading-5 text-muted">Pick both to match listings with exactly that size.</p>
+            <p className="mt-1 text-xs leading-5 text-muted">Or pick both measurements to match an exact size.</p>
             <div className="mt-3 grid grid-cols-2 gap-3">
               <label className="text-xs font-bold">Waist<select value={waist} onChange={(event) => pickPants(event.target.value, length)} className="field mt-2 h-11 px-3 text-sm font-normal"><option value="">Any</option>{WAIST_SIZES.map((w) => <option key={w} value={w}>W{w}</option>)}</select></label>
               <label className="text-xs font-bold">Length<select value={length} onChange={(event) => pickPants(waist, event.target.value)} className="field mt-2 h-11 px-3 text-sm font-normal"><option value="">Any</option>{LENGTH_SIZES.map((l) => <option key={l} value={l}>L{l}</option>)}</select></label>
