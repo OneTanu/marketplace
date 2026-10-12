@@ -5,18 +5,14 @@ import { useEffect, useState } from "react";
 
 import type { components } from "@/lib/api/schema";
 import { listConversations } from "@/lib/messaging";
+import { formatShortDate, formatTime, isSameCampusDay } from "@/lib/time";
 import { Avatar } from "./avatar";
 
 type Conversation = components["schemas"]["Conversation"];
 
 function time(value: string | null) {
   if (!value) return "";
-  const date = new Date(value);
-  const today = new Date();
-  if (date.toDateString() === today.toDateString()) {
-    return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(date);
-  }
-  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(date);
+  return isSameCampusDay(value, Date.now()) ? formatTime(value) : formatShortDate(value);
 }
 
 export function InboxClient() {

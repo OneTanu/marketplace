@@ -1,6 +1,16 @@
 from django.contrib import admin
 
-from .models import Deal, DealEvent, DealOffer, HandoffConfirmation
+from .models import (
+    Deal,
+    DealEvent,
+    DealOffer,
+    HandoffConfirmation,
+    MeetupAvailabilityOverride,
+    MeetupAvailabilityWindow,
+    MeetupPreference,
+    MeetupProposal,
+    MeetupStatusUpdate,
+)
 
 
 class DealOfferInline(admin.TabularInline):
@@ -27,3 +37,34 @@ class DealAdmin(admin.ModelAdmin):
     list_filter = ["status", "kind", "currency"]
     search_fields = ["listing__title", "buyer__username", "seller__username"]
     inlines = [DealOfferInline, HandoffConfirmationInline, DealEventInline]
+
+
+class MeetupAvailabilityInline(admin.TabularInline):
+    model = MeetupAvailabilityWindow
+    extra = 0
+
+
+class MeetupOverrideInline(admin.TabularInline):
+    model = MeetupAvailabilityOverride
+    extra = 0
+
+
+@admin.register(MeetupPreference)
+class MeetupPreferenceAdmin(admin.ModelAdmin):
+    list_display = ["user", "updated_at"]
+    search_fields = ["user__username", "user__email"]
+    filter_horizontal = ["meeting_spots"]
+    inlines = [MeetupAvailabilityInline, MeetupOverrideInline]
+
+
+@admin.register(MeetupProposal)
+class MeetupProposalAdmin(admin.ModelAdmin):
+    list_display = ["id", "deal", "meeting_spot", "starts_at", "status", "proposed_by"]
+    list_filter = ["status", "meeting_spot__school"]
+    search_fields = ["deal__listing__title", "proposed_by__username"]
+
+
+@admin.register(MeetupStatusUpdate)
+class MeetupStatusUpdateAdmin(admin.ModelAdmin):
+    list_display = ["deal", "actor", "kind", "minutes_late", "created_at"]
+    list_filter = ["kind"]

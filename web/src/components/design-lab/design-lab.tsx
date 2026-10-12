@@ -11,6 +11,7 @@ import { schoolPalette } from "@/lib/school-colors";
 import { HoldSlip, RequestRow } from "./deal-timers";
 import { atSchool, LAB_LISTINGS } from "./lab-listings";
 import { LAB_SCHOOLS, labSchool, type LabSchool } from "./lab-schools";
+import { MeetupSchedulerMock } from "./meetup-scheduler";
 
 const HOUR = 60 * 60 * 1000;
 // Fixed so server and client render the same times. Thu Oct 8 2026, 6 PM Eastern.
@@ -124,6 +125,13 @@ export function DesignLab() {
             </div>
           </div>
         </div>
+      </Section>
+
+      <Section
+        title="Guided meetup scheduling"
+        note="A buyer chooses from the seller's preferred approved locations and automatically suggested times. The seller only has to confirm or suggest a change; chat stays available for exceptions."
+      >
+        <MeetupSchedulerMock />
       </Section>
     </div>
   );

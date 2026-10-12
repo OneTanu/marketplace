@@ -2,7 +2,8 @@
 # Starts the Django API for Playwright end-to-end tests (started by web/playwright.config.ts).
 # Recreates its own database on every run, so the dev database is never touched.
 #
-# Env: POSTGRES_DB (must end in "_e2e"), PORT, E2E_USER_EMAIL, E2E_BUYER_EMAIL, E2E_USER_PASSWORD,
+# Env: POSTGRES_DB (must end in "_e2e"), PORT, E2E_USER_EMAIL, E2E_BUYER_EMAIL,
+# E2E_SECOND_BUYER_EMAIL, E2E_USER_PASSWORD,
 # WEB_APP_URL (the E2E web app's origin, trusted for CSRF), plus the usual POSTGRES_* settings.
 # E2E_DISABLE_RATE_LIMITS=1 turns off allauth login limits (see config/settings/dev.py).
 set -eu
@@ -33,4 +34,6 @@ python manage.py migrate --noinput --verbosity 0
 python manage.py create_verified_user "$E2E_USER_EMAIL" --password "$E2E_USER_PASSWORD"
 # A second student, for tests where one student looks at another's listing.
 python manage.py create_verified_user "$E2E_BUYER_EMAIL" --password "$E2E_USER_PASSWORD"
+# A third, for two buyers competing for one listing.
+python manage.py create_verified_user "$E2E_SECOND_BUYER_EMAIL" --password "$E2E_USER_PASSWORD"
 exec python manage.py runserver "0.0.0.0:${PORT}" --noreload

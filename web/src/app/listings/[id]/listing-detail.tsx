@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { refusalMessage, toFieldErrors } from "@/components/listings/listing-form";
 import { PhotoGallery } from "@/components/listings/photo-gallery";
+import { MeetupPicker, type MeetupSelection } from "@/components/deals/meetup-picker";
 import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
 import { createDeal } from "@/lib/deals";
@@ -17,6 +18,7 @@ import {
 } from "@/lib/listing-options";
 import { startConversation } from "@/lib/messaging";
 import { centsToDollars } from "@/lib/money";
+import { formatShortDate } from "@/lib/time";
 
 type Listing = components["schemas"]["Listing"];
 
@@ -116,12 +118,6 @@ export function ListingDetail({ listingId }: { listingId: number }) {
   );
 }
 
-const listedDate = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  timeZone: "America/New_York",
-});
-
 function ListingView({
   listing,
   isSeller,
@@ -182,7 +178,7 @@ function ListingView({
               @{listing.seller.username}
             </Link>
             <p className="text-muted">
-              {listing.school.short_name} · Listed {listedDate.format(new Date(listing.created_at))}
+              {listing.school.short_name} · Listed {formatShortDate(listing.created_at)}
             </p>
           </div>
           <ShareButton title={listing.title} />
@@ -217,6 +213,12 @@ function BuyerActions({ listing }: { listing: Listing }) {
   const [mode, setMode] = useState<"offer" | "buy_now" | null>(null);
   const [offer, setOffer] = useState("");
   const [error, setError] = useState("");
+  const [meetup, setMeetup] = useState<MeetupSelection>({
+    meetingSpotId: null,
+    startsAt: [],
+    configured: false,
+    loading: true,
+  });
   const canBuy = listing.status === "available";
 
   async function message() {
@@ -238,12 +240,24 @@ function BuyerActions({ listing }: { listing: Listing }) {
       setError("Enter an offer of at least $0.01.");
       return;
     }
+    // Sellers who haven't set meetup preferences yet agree on a time in chat instead.
+    const needsMeetup = meetup.configured;
+    if (needsMeetup && (meetup.meetingSpotId === null || meetup.startsAt.length === 0)) {
+      setError("Choose a meetup location and time before sending your request.");
+      return;
+    }
+    const meetupFields =
+      needsMeetup && meetup.meetingSpotId !== null
+        ? { meeting_spot_id: meetup.meetingSpotId, proposed_starts_at: meetup.startsAt }
+        : {};
     setStarting(true);
     setError("");
     try {
       await createDeal(
         listing.id,
-        mode === "offer" ? { kind: "offer", amount_cents: amountCents } : { kind: "buy_now" },
+        mode === "offer"
+          ? { kind: "offer", amount_cents: amountCents, ...meetupFields }
+          : { kind: "buy_now", ...meetupFields },
       );
       router.push("/deals");
     } catch (caught) {
@@ -274,12 +288,17 @@ function BuyerActions({ listing }: { listing: Listing }) {
             />
           </label>
         )}
+        <MeetupPicker
+          listingId={listing.id}
+          allowTwo={mode === "offer"}
+          onChange={setMeetup}
+        />
         {error && <p role="alert" className="mt-2 text-sm text-[var(--danger)]">{error}</p>}
         <div className="mt-3 flex gap-2">
           <button type="button" onClick={() => { setMode(null); setError(""); }} disabled={starting} className="btn btn-secondary flex-1">
             Back
           </button>
-          <button type="button" onClick={requestDeal} disabled={starting} className="btn btn-primary flex-1">
+          <button type="button" onClick={requestDeal} disabled={starting || meetup.loading} className="btn btn-primary flex-1">
             {starting ? "Sending…" : "Send request"}
           </button>
         </div>

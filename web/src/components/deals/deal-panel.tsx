@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { actOnDeal, counterDeal, listConversationDeals } from "@/lib/deals";
+import { actOnDeal, counterDeal, listConversationDeals, meetupState } from "@/lib/deals";
 import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
 import { centsToDollars } from "@/lib/money";
 import { createReview, listDealReviews } from "@/lib/reviews";
+import { formatDateTime } from "@/lib/time";
 
 type Deal = components["schemas"]["Deal"];
 type MeetingSpot = components["schemas"]["MeetingSpot"];
@@ -25,13 +26,7 @@ const statusText: Record<Deal["status"], string> = {
 };
 
 function deadlineText(value: string | null | undefined) {
-  if (!value) return "";
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(value));
+  return value ? formatDateTime(value) : "";
 }
 
 export function DealPanel({ conversationId, listingId }: { conversationId: number; listingId?: number }) {
@@ -46,6 +41,8 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
   const [reviews, setReviews] = useState<Review[]>([]);
   const [rating, setRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
+  const [chosenProposalId, setMeetupProposalId] = useState<number | undefined>();
+  const [now] = useState(() => Date.now());
 
   useEffect(() => {
     let active = true;
@@ -102,6 +99,12 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
 
   if (loading || !deal) return null;
 
+  const meetups = meetupState(deal, now);
+  // Fall back to the first time on offer if the chosen one was replaced.
+  const meetupProposalId = meetups.fromOther.some((proposal) => proposal.id === chosenProposalId)
+    ? chosenProposalId
+    : meetups.fromOther[0]?.id;
+
   const mineConfirmed = deal.my_role === "buyer" ? deal.buyer_confirmed : deal.seller_confirmed;
   const open = ["awaiting_seller", "awaiting_buyer", "backup", "pending"].includes(deal.status);
   const canCancel = open && !(deal.status === "pending" && (deal.buyer_confirmed || deal.seller_confirmed));
@@ -110,7 +113,13 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
     setWorking(true);
     setError("");
     try {
-      setDeal(await actOnDeal(deal!.id, action));
+      setDeal(
+        await actOnDeal(
+          deal!.id,
+          action,
+          action === "accept" ? meetupProposalId : undefined,
+        ),
+      );
       setConfirmingHandoff(false);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "That action did not go through.");
@@ -128,7 +137,7 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
     setWorking(true);
     setError("");
     try {
-      setDeal(await counterDeal(deal!.id, amount));
+      setDeal(await counterDeal(deal!.id, amount, meetupProposalId));
       setCountering(false);
       setCounter("");
     } catch (caught) {
@@ -154,6 +163,8 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
 
   const myUsername = deal.my_role === "buyer" ? deal.buyer.username : deal.seller.username;
   const myReview = reviews.find((review) => review.author.username === myUsername);
+  const acceptedMeetup = meetups.accepted;
+  const latestMeetupUpdate = deal.meetup_updates[0];
 
   return (
     <section className="border-b border-line bg-surface/60 px-4 py-3 sm:px-6" aria-label="Purchase status">
@@ -181,11 +192,41 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
       {deal.status === "pending" && (
         <div className="mt-2 text-xs leading-5 text-muted">
           <p>Meet in a public campus location. Inspect the item and exchange payment in person.</p>
+          {acceptedMeetup && (
+            <p className="mt-1 font-semibold text-ink">
+              {acceptedMeetup.meeting_spot.name} · {deadlineText(acceptedMeetup.starts_at)}
+            </p>
+          )}
           <p className="mt-1">
             Buyer {deal.buyer_confirmed ? "confirmed" : "not confirmed"} · Seller {deal.seller_confirmed ? "confirmed" : "not confirmed"}
             {deal.handoff_deadline ? ` · Complete by ${deadlineText(deal.handoff_deadline)}` : ""}
           </p>
         </div>
+      )}
+      {latestMeetupUpdate && deal.status === "pending" && (
+        <p className="mt-2 text-sm font-semibold text-ink">
+          @{latestMeetupUpdate.actor.username} {latestMeetupUpdate.kind === "arrived" ? "is here." : `is running about ${latestMeetupUpdate.minutes_late} minutes late.`}
+        </p>
+      )}
+      {deal.awaiting_me && meetups.allStale && (
+        <p className="mt-2 text-xs leading-5 text-ink">
+          The proposed meetup times have passed. <Link href="/deals" className="font-semibold underline">Suggest a new time</Link> before accepting.
+        </p>
+      )}
+      {deal.awaiting_me && meetups.fromOther.length > 0 && (
+        <fieldset className="mt-2">
+          <legend className="text-xs font-bold text-muted">
+            {meetups.fromOther.length > 1 ? "Choose a meetup time" : "Proposed meetup"} · <Link href="/deals" className="underline">suggest another</Link>
+          </legend>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {meetups.fromOther.map((proposal) => (
+              <button key={proposal.id} type="button" onClick={() => setMeetupProposalId(proposal.id)} aria-pressed={meetupProposalId === proposal.id} className={`rounded-lg border px-3 py-2 text-left text-xs ${meetupProposalId === proposal.id ? "border-ink bg-background ring-1 ring-ink" : "border-line"}`}>
+                <span className="block font-bold text-ink">{deadlineText(proposal.starts_at)}</span>
+                <span className="block text-muted">{proposal.meeting_spot.name}</span>
+              </button>
+            ))}
+          </div>
+        </fieldset>
       )}
       {deal.status === "pending" && meetingSpots.length > 0 && (
         <details className="mt-2 rounded-lg border border-line bg-background px-3 py-2 text-sm">

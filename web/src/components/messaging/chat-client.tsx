@@ -7,6 +7,7 @@ import { DealPanel } from "@/components/deals/deal-panel";
 import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
 import { getConversation, listMessages, markConversationRead, sendMessage } from "@/lib/messaging";
+import { formatDateTime, formatTime, isSameCampusDay } from "@/lib/time";
 import { Avatar } from "./avatar";
 
 type ChatMessage = components["schemas"]["Message"];
@@ -18,9 +19,7 @@ const MAX_LENGTH = 2000;
 const GAP_MS = 15 * 60 * 1000;
 
 function stamp(value: string) {
-  const date = new Date(value);
-  const sameDay = date.toDateString() === new Date().toDateString();
-  return new Intl.DateTimeFormat(undefined, sameDay ? { hour: "numeric", minute: "2-digit" } : { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(date);
+  return isSameCampusDay(value, Date.now()) ? formatTime(value) : formatDateTime(value);
 }
 
 function startsNewBlock(messages: ChatMessage[], index: number) {
@@ -101,7 +100,13 @@ export function ChatClient({ conversationId, listingId }: { conversationId: numb
     }
     refresh(true);
     const timer = window.setInterval(() => refresh(false), 4_000);
-    return () => { active = false; window.clearInterval(timer); };
+    const refreshOnFocus = () => void refresh(true);
+    window.addEventListener("focus", refreshOnFocus);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshOnFocus);
+    };
   }, [conversationId]);
 
   useEffect(() => {
@@ -203,12 +208,12 @@ export function ChatClient({ conversationId, listingId }: { conversationId: numb
         return <div key={message.id}>
           {newBlock && <p className={`mb-3 text-center text-xs font-medium text-muted ${index === 0 ? "" : "mt-5"}`}>{stamp(message.created_at)}</p>}
           <div className={`flex ${message.is_mine ? "justify-end" : "justify-start"} ${sameSenderAsPrev ? "mt-1" : newBlock ? "" : "mt-3"}`}>
-            <div className="max-w-[78%]">
+            <div className={`flex max-w-[78%] flex-col ${message.is_mine ? "items-end" : "items-start"}`}>
               {message.listing && <Link href={`/listings/${message.listing.id}`} className="mb-1 block rounded-lg border border-line bg-background px-3 py-2 text-sm text-ink shadow-sm hover:border-brand">
                 <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted">Listing</span>
                 <span className="block truncate font-bold">{message.listing.title}</span>
               </Link>}
-              <p title={stamp(message.created_at)} className={`whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[15px] leading-snug ${tail} ${message.is_mine ? "bg-brand text-white" : "bg-surface text-ink"}`}>{message.body}</p>
+              <p title={stamp(message.created_at)} className={`w-fit max-w-full whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[15px] leading-snug ${tail} ${message.is_mine ? "bg-brand text-white" : "bg-surface text-ink"}`}>{message.body}</p>
             </div>
           </div>
         </div>;
