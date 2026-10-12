@@ -22,7 +22,7 @@ function Icon({ d }: { d: string }) {
 export const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Home", icon: <Icon d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z" /> },
   { href: "/search", label: "Search", icon: <Icon d="m21 21-4.3-4.3M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z" /> },
-  { href: "/sell", label: "Sell", icon: <Icon d="M12 5v14M5 12h14" /> },
+  { href: "/deals", label: "Deals", icon: <Icon d="M7 7h10v10H7zM4 10h3m10 0h3M4 14h3m10 0h3" /> },
   { href: "/inbox", label: "Inbox", icon: <Icon d="M4 5h16v11H8l-4 4z" /> },
   { href: "/profile", label: "Profile", icon: <Icon d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0" /> },
 ];

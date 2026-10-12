@@ -71,6 +71,13 @@ class Message(models.Model):
         on_delete=models.PROTECT,
         related_name="sent_messages",
     )
+    listing = models.ForeignKey(
+        "listings.Listing",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="shared_messages",
+    )
     body = models.TextField(max_length=MESSAGE_MAX_LENGTH)
     created_at = models.DateTimeField(auto_now_add=True)
 

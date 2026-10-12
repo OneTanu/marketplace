@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import School
+from .models import MeetingSpot, School
 
 
 class SchoolSerializer(serializers.ModelSerializer):
@@ -20,3 +20,17 @@ class SchoolSerializer(serializers.ModelSerializer):
             "colors",
             "domains",
         ]
+
+
+class MeetingSpotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MeetingSpot
+        fields = [
+            "id",
+            "name",
+            "directions",
+            "safety_note",
+            "is_indoor",
+            "accessibility_notes",
+        ]
+        read_only_fields = fields

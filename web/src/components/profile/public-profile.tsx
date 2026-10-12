@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { getPublicUser, setFollowing } from "@/lib/platform";
+import { ListingCard } from "@/components/discovery/listing-card";
+import type { ListingCard as Card } from "@/lib/discovery";
+import { getPublicUser, getPublicUserListings, setFollowing } from "@/lib/platform";
 import { startConversation } from "@/lib/messaging";
 import type { components } from "@/lib/api/schema";
 
@@ -18,9 +20,12 @@ export function PublicProfile({ username }: { username: string }) {
   const [user, setUser] = useState<PublicUser | null>();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [listingTab, setListingTab] = useState<"selling" | "sold">("selling");
+  const [listings, setListings] = useState<Card[] | null>();
 
   useEffect(() => {
     getPublicUser(username).then(setUser).catch(() => setUser(null));
+    getPublicUserListings(username).then(setListings).catch(() => setListings(null));
   }, [username]);
 
   async function toggleFollow() {
@@ -78,6 +83,26 @@ export function PublicProfile({ username }: { username: string }) {
         {error && <p className="mt-3 text-sm text-[var(--danger)]">{error}</p>}
       </div>
     </section>
-    <section className="mt-8"><h2 className="text-xl font-black">Items for sale</h2><div className="mt-4 grid min-h-56 place-items-center rounded-3xl border border-dashed border-line bg-white/45 p-8 text-center"><div><p className="font-bold">No active listings yet</p><p className="mt-2 text-sm text-muted">This seller’s available items will appear here after the Listings API is connected.</p></div></div></section>
+    <section className="mt-8">
+      <div className="mb-5 flex gap-1 overflow-x-auto border-b border-line" role="tablist" aria-label="Seller listings">
+        <button type="button" role="tab" aria-selected={listingTab === "selling"} onClick={() => setListingTab("selling")} className="relative min-w-max px-5 py-3 text-sm font-bold text-muted transition hover:text-foreground aria-[selected=true]:text-foreground after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-brand after:opacity-0 aria-[selected=true]:after:opacity-100">Selling</button>
+        <button type="button" role="tab" aria-selected={listingTab === "sold"} onClick={() => setListingTab("sold")} className="relative min-w-max px-5 py-3 text-sm font-bold text-muted transition hover:text-foreground aria-[selected=true]:text-foreground after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-brand after:opacity-0 aria-[selected=true]:after:opacity-100">Sold</button>
+      </div>
+      <PublicListings tab={listingTab} listings={listings} />
+    </section>
   </main>;
+}
+
+function PublicListings({ tab, listings }: { tab: "selling" | "sold"; listings: Card[] | null | undefined }) {
+  if (listings === undefined) {
+    return <div aria-busy="true" aria-label="Loading listings" className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="aspect-[4/5] animate-pulse rounded-md bg-surface" />)}</div>;
+  }
+  if (listings === null) {
+    return <p className="rounded-xl bg-surface px-5 py-8 text-center text-sm text-muted">Couldn’t load this seller’s listings. Refresh to try again.</p>;
+  }
+  const shown = listings.filter((listing) => tab === "sold" ? listing.status === "sold" : listing.status === "available" || listing.status === "pending");
+  if (!shown.length) {
+    return <div className="grid min-h-56 place-items-center rounded-3xl border border-dashed border-line bg-white/45 p-8 text-center"><div><p className="font-bold">{tab === "sold" ? "No sold items yet" : "No active listings"}</p><p className="mt-2 text-sm text-muted">{tab === "sold" ? "Completed sales will appear here." : "This student is not currently selling anything."}</p></div></div>;
+  }
+  return <ul aria-label={tab === "sold" ? "Sold listings" : "Listings for sale"} className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-8 lg:grid-cols-4">{shown.map((listing) => <li key={listing.id}><ListingCard listing={listing} /></li>)}</ul>;
 }

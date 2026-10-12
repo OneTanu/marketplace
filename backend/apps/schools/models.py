@@ -63,3 +63,25 @@ class SchoolDomain(models.Model):
     def save(self, *args, **kwargs):
         self.domain = self.domain.strip().lower()
         super().save(*args, **kwargs)
+
+
+class MeetingSpot(models.Model):
+    """A school-curated public place that is suitable for marketplace handoffs."""
+
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name="meeting_spots")
+    name = models.CharField(max_length=120)
+    directions = models.CharField(max_length=300)
+    safety_note = models.CharField(max_length=300, blank=True)
+    is_indoor = models.BooleanField(default=False)
+    accessibility_notes = models.CharField(max_length=300, blank=True)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["sort_order", "name"]
+        constraints = [
+            models.UniqueConstraint(fields=["school", "name"], name="schools_meeting_spot_name")
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.school.short_name})"

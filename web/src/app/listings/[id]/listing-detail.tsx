@@ -8,6 +8,7 @@ import { refusalMessage, toFieldErrors } from "@/components/listings/listing-for
 import { PhotoGallery } from "@/components/listings/photo-gallery";
 import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
+import { createDeal } from "@/lib/deals";
 import {
   STATUS_BADGE_CLASSES,
   STATUS_LABELS,
@@ -213,6 +214,8 @@ const actionButton = "btn min-w-0 flex-1 px-2";
 function BuyerActions({ listing }: { listing: Listing }) {
   const router = useRouter();
   const [starting, setStarting] = useState(false);
+  const [mode, setMode] = useState<"offer" | "buy_now" | null>(null);
+  const [offer, setOffer] = useState("");
   const [error, setError] = useState("");
   const canBuy = listing.status === "available";
 
@@ -221,11 +224,67 @@ function BuyerActions({ listing }: { listing: Listing }) {
     setError("");
     try {
       const conversation = await startConversation(listing.seller.username);
-      router.push(`/inbox/${conversation.id}`);
+      router.push(`/inbox/${conversation.id}?listing=${listing.id}`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : OFFLINE);
       setStarting(false);
     }
+  }
+
+  async function requestDeal() {
+    if (!mode) return;
+    const amountCents = Math.round(Number(offer) * 100);
+    if (mode === "offer" && (!Number.isFinite(amountCents) || amountCents < 1)) {
+      setError("Enter an offer of at least $0.01.");
+      return;
+    }
+    setStarting(true);
+    setError("");
+    try {
+      await createDeal(
+        listing.id,
+        mode === "offer" ? { kind: "offer", amount_cents: amountCents } : { kind: "buy_now" },
+      );
+      router.push("/deals");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : OFFLINE);
+      setStarting(false);
+    }
+  }
+
+  if (mode) {
+    return (
+      <div className={actionBarClass}>
+        <p className="font-semibold">
+          {mode === "offer" ? "Make an offer" : `Request to buy for ${centsToDollars(listing.price_cents)}`}
+        </p>
+        <p className="mt-1 text-sm leading-5 text-muted">
+          No money moves through Tanu. The seller must accept, then you arrange a public-campus handoff.
+        </p>
+        {mode === "offer" && (
+          <label className="field mt-3 flex h-11 items-center px-3">
+            <span className="text-muted">$</span>
+            <input
+              value={offer}
+              onChange={(event) => setOffer(event.target.value.replace(/[^0-9.]/g, ""))}
+              inputMode="decimal"
+              autoFocus
+              aria-label="Offer amount"
+              className="min-w-0 flex-1 bg-transparent pl-1 outline-none"
+            />
+          </label>
+        )}
+        {error && <p role="alert" className="mt-2 text-sm text-[var(--danger)]">{error}</p>}
+        <div className="mt-3 flex gap-2">
+          <button type="button" onClick={() => { setMode(null); setError(""); }} disabled={starting} className="btn btn-secondary flex-1">
+            Back
+          </button>
+          <button type="button" onClick={requestDeal} disabled={starting} className="btn btn-primary flex-1">
+            {starting ? "Sending…" : "Send request"}
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -239,17 +298,16 @@ function BuyerActions({ listing }: { listing: Listing }) {
         <button type="button" onClick={message} disabled={starting} className={`${actionButton} btn-secondary`}>
           {starting ? "Opening…" : "Message"}
         </button>
-        {/* Offers and Buy now arrive with Deals. Shown now so the layout doesn't shift. */}
-        <button type="button" disabled className={`${actionButton} btn-secondary`}>
+        <button type="button" onClick={() => setMode("offer")} disabled={!canBuy || starting} className={`${actionButton} btn-secondary`}>
           Make offer
         </button>
-        <button type="button" disabled className={`${actionButton} btn-primary`}>
+        <button type="button" onClick={() => setMode("buy_now")} disabled={!canBuy || starting} className={`${actionButton} btn-primary`}>
           Buy now
         </button>
       </div>
       <p className="mt-2 text-center text-xs text-muted">
         {canBuy
-          ? "Offers and Buy now are coming soon. Message the seller to arrange a handoff."
+          ? "The seller has 24 hours to respond. Payment happens when you meet."
           : `This item is ${STATUS_LABELS[listing.status].toLowerCase()}.`}
       </p>
     </div>

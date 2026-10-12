@@ -32,10 +32,10 @@ export async function listMessages(id: number, cursor: { beforeId?: number; afte
   return data ?? failed(error, response);
 }
 
-export async function sendMessage(id: number, body: string) {
+export async function sendMessage(id: number, body: string, listingId?: number) {
   const { data, error, response } = await api.POST("/api/conversations/{id}/messages/", {
     params: { path: { id } },
-    body: { body },
+    body: { body, ...(listingId ? { listing_id: listingId } : {}) },
   });
   return data ?? failed(error, response);
 }

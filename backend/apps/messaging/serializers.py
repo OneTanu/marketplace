@@ -2,6 +2,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.accounts.models import User
+from apps.listings.models import Listing
 from apps.schools.serializers import SchoolSerializer
 
 from .models import MESSAGE_MAX_LENGTH, Conversation, Message
@@ -16,13 +17,21 @@ class MessagingUserSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class MessageListingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Listing
+        fields = ["id", "title", "status"]
+        read_only_fields = fields
+
+
 class MessageSerializer(serializers.ModelSerializer):
     sender = MessagingUserSerializer(read_only=True)
+    listing = MessageListingSerializer(read_only=True)
     is_mine = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
-        fields = ["id", "conversation", "sender", "body", "created_at", "is_mine"]
+        fields = ["id", "conversation", "sender", "listing", "body", "created_at", "is_mine"]
         read_only_fields = fields
 
     def get_is_mine(self, message) -> bool:
@@ -93,6 +102,7 @@ class StartConversationSerializer(serializers.Serializer):
 
 class SendMessageSerializer(serializers.Serializer):
     body = serializers.CharField(max_length=MESSAGE_MAX_LENGTH, trim_whitespace=True)
+    listing_id = serializers.IntegerField(required=False, min_value=1)
 
 
 class MarkReadSerializer(serializers.Serializer):

@@ -22,7 +22,9 @@ export function SiteNav() {
   const isAccountPage = pathname.startsWith("/account/");
   const schoolMatch = pathname.match(/^\/schools\/([^/]+)/);
   const schoolSlug = schoolMatch?.[1];
-  const showMarketplaceSearch = Boolean(schoolSlug) || pathname === "/search";
+  // Keep the search bar mounted across marketplace navigation so the header does
+  // not shift when moving between Home, Search, Sell, Inbox, and Profile.
+  const showMarketplaceSearch = !isAccountPage;
   const showDepartments = Boolean(schoolSlug) || pathname === "/search";
 
   return <>
@@ -40,7 +42,7 @@ export function SiteNav() {
           </div>
         </form>}
         {!schoolSlug && <nav className="hidden items-center gap-6 desktop:flex" aria-label="Main">
-          {NAV_ITEMS.slice(0, 4).map((item) => <Link key={item.href} href={item.href} aria-current={isActive(pathname, item.href) ? "page" : undefined} className="relative py-5 text-sm font-semibold text-muted transition hover:text-ink aria-[current=page]:text-ink aria-[current=page]:after:absolute aria-[current=page]:after:inset-x-0 aria-[current=page]:after:-bottom-px aria-[current=page]:after:h-0.5 aria-[current=page]:after:bg-ink">{item.label}{item.href === "/inbox" && <UnreadBadge />}</Link>)}
+          {NAV_ITEMS.filter((item) => item.href !== "/" && item.href !== "/profile").map((item) => <Link key={item.href} href={item.href} aria-current={isActive(pathname, item.href) ? "page" : undefined} className="relative py-5 text-sm font-semibold text-muted transition hover:text-ink aria-[current=page]:text-ink aria-[current=page]:after:absolute aria-[current=page]:after:inset-x-0 aria-[current=page]:after:-bottom-px aria-[current=page]:after:h-0.5 aria-[current=page]:after:bg-ink">{item.label}{item.href === "/inbox" && <UnreadBadge />}</Link>)}
         </nav>}
         <AuthActions />
       </div>
@@ -48,9 +50,6 @@ export function SiteNav() {
     </header>
     {!isAccountPage && <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl desktop:hidden">
       <ul className="grid grid-cols-5">{NAV_ITEMS.map((item) => {
-        if (item.href === "/sell") {
-          return <li key={item.href} className="grid place-items-center"><Link href={item.href} aria-label="Sell an item" aria-current={isActive(pathname, item.href) ? "page" : undefined} className="grid size-12 place-items-center rounded-xl bg-brand text-white transition active:bg-brand-strong">{item.icon}</Link></li>;
-        }
         return <li key={item.href}><Link href={item.href} aria-current={isActive(pathname, item.href) ? "page" : undefined} className="flex min-h-16 flex-col items-center justify-center gap-1 text-[11px] font-semibold text-muted transition aria-[current=page]:text-ink">{item.icon}<span>{item.label}{item.href === "/inbox" && <UnreadBadge />}</span></Link></li>;
       })}</ul>
     </nav>}
