@@ -13,4 +13,11 @@ export const TEST_BUYER = {
   password: TEST_USER.password,
 };
 
+/** A third student, for two buyers competing for one listing. */
+export const TEST_SECOND_BUYER = {
+  email: "e2e-buyer-two@umd.edu",
+  username: "e2e_buyer_two",
+  password: TEST_USER.password,
+};
+
 export type TestUser = typeof TEST_USER;

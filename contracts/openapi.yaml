@@ -305,6 +305,17 @@ paths:
         required: true
       tags:
       - deals
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcceptDealRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AcceptDealRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AcceptDealRequest'
       security:
       - cookieAuth: []
       responses:
@@ -369,13 +380,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AmountRequest'
+              $ref: '#/components/schemas/CounterOfferRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/AmountRequest'
+              $ref: '#/components/schemas/CounterOfferRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/AmountRequest'
+              $ref: '#/components/schemas/CounterOfferRequest'
         required: true
       security:
       - cookieAuth: []
@@ -405,6 +416,102 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Deal'
+          description: ''
+  /api/deals/{id}/meetup-proposals/:
+    post:
+      operationId: deals_meetup_proposals_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - deals
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MeetupProposalCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MeetupProposalCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MeetupProposalCreateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetupProposal'
+          description: ''
+  /api/deals/{id}/meetup-proposals/accept/:
+    post:
+      operationId: deals_meetup_proposals_accept_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - deals
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MeetupProposalAcceptRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MeetupProposalAcceptRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MeetupProposalAcceptRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetupProposal'
+          description: ''
+  /api/deals/{id}/meetup-status/:
+    post:
+      operationId: deals_meetup_status_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - deals
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MeetupStatusCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MeetupStatusCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MeetupStatusCreateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetupStatusUpdate'
           description: ''
   /api/listings/:
     get:
@@ -591,6 +698,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Deal'
+          description: ''
+  /api/listings/{listing_id}/meetup-options/:
+    get:
+      operationId: listings_meetup_options_retrieve
+      parameters:
+      - in: path
+        name: listing_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - listings
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetupOptions'
           description: ''
   /api/listings/{id}/:
     get:
@@ -847,6 +974,45 @@ paths:
               schema:
                 $ref: '#/components/schemas/CurrentUser'
           description: ''
+  /api/meetup-preferences/:
+    get:
+      operationId: meetup_preferences_retrieve
+      tags:
+      - meetup-preferences
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetupPreference'
+          description: ''
+    put:
+      operationId: meetup_preferences_update
+      tags:
+      - meetup-preferences
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MeetupPreferenceUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MeetupPreferenceUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MeetupPreferenceUpdateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetupPreference'
+          description: ''
   /api/schools/:
     get:
       operationId: schools_list
@@ -1034,14 +1200,90 @@ paths:
           description: ''
 components:
   schemas:
-    AmountRequest:
+    AcceptDealRequest:
       type: object
       properties:
-        amount_cents:
+        meetup_proposal_id:
           type: integer
           minimum: 1
+    AvailabilityOverride:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        date:
+          type: string
+          format: date
+        is_unavailable:
+          type: boolean
+        start_time:
+          type: string
+          format: time
+          nullable: true
+        end_time:
+          type: string
+          format: time
+          nullable: true
       required:
-      - amount_cents
+      - date
+      - id
+    AvailabilityOverrideRequest:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        is_unavailable:
+          type: boolean
+        start_time:
+          type: string
+          format: time
+          nullable: true
+        end_time:
+          type: string
+          format: time
+          nullable: true
+      required:
+      - date
+    AvailabilityWindow:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        weekday:
+          type: integer
+          maximum: 6
+          minimum: 0
+        start_time:
+          type: string
+          format: time
+        end_time:
+          type: string
+          format: time
+      required:
+      - end_time
+      - id
+      - start_time
+      - weekday
+    AvailabilityWindowRequest:
+      type: object
+      properties:
+        weekday:
+          type: integer
+          maximum: 6
+          minimum: 0
+        start_time:
+          type: string
+          format: time
+        end_time:
+          type: string
+          format: time
+      required:
+      - end_time
+      - start_time
+      - weekday
     BlankEnum:
       enum:
       - ''
@@ -1149,6 +1391,17 @@ components:
       - latest_message
       - other_user
       - unread_count
+    CounterOfferRequest:
+      type: object
+      properties:
+        amount_cents:
+          type: integer
+          minimum: 1
+        meetup_proposal_id:
+          type: integer
+          minimum: 1
+      required:
+      - amount_cents
     CreateDealRequest:
       type: object
       properties:
@@ -1157,6 +1410,18 @@ components:
         amount_cents:
           type: integer
           minimum: 1
+        meeting_spot_id:
+          type: integer
+          minimum: 1
+          writeOnly: true
+        proposed_starts_at:
+          type: array
+          items:
+            type: string
+            format: date-time
+          writeOnly: true
+          maxItems: 2
+          minItems: 1
       required:
       - kind
     CurrentUser:
@@ -1291,6 +1556,16 @@ components:
           items:
             $ref: '#/components/schemas/DealEvent'
           readOnly: true
+        meetup_proposals:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeetupProposal'
+          readOnly: true
+        meetup_updates:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeetupStatusUpdate'
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -1313,6 +1588,8 @@ components:
       - id
       - kind
       - listing
+      - meetup_proposals
+      - meetup_updates
       - my_role
       - offers
       - response_deadline
@@ -1487,6 +1764,14 @@ components:
           oneOf:
           - $ref: '#/components/schemas/ColorEnum'
           - $ref: '#/components/schemas/BlankEnum'
+    Kind2e0Enum:
+      enum:
+      - running_late
+      - arrived
+      type: string
+      description: |-
+        * `running_late` - Running late
+        * `arrived` - Arrived
     KindEnum:
       enum:
       - item
@@ -1792,6 +2077,194 @@ components:
       - is_indoor
       - name
       - safety_note
+    MeetupOptions:
+      type: object
+      properties:
+        seller_configured:
+          type: boolean
+          readOnly: true
+        meeting_spots:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeetingSpot'
+          readOnly: true
+        slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeetupSlot'
+          readOnly: true
+      required:
+      - meeting_spots
+      - seller_configured
+      - slots
+    MeetupPreference:
+      type: object
+      properties:
+        meeting_spots:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeetingSpot'
+          readOnly: true
+        availability_windows:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailabilityWindow'
+          readOnly: true
+        availability_overrides:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailabilityOverride'
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - availability_overrides
+      - availability_windows
+      - meeting_spots
+      - updated_at
+    MeetupPreferenceUpdateRequest:
+      type: object
+      properties:
+        meeting_spot_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+          minItems: 1
+        windows:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailabilityWindowRequest'
+        overrides:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailabilityOverrideRequest'
+      required:
+      - meeting_spot_ids
+      - windows
+    MeetupProposal:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        proposed_by:
+          allOf:
+          - $ref: '#/components/schemas/DealUser'
+          readOnly: true
+        meeting_spot:
+          allOf:
+          - $ref: '#/components/schemas/MeetingSpot'
+          readOnly: true
+        starts_at:
+          type: string
+          format: date-time
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/MeetupProposalStatusEnum'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        responded_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - created_at
+      - id
+      - meeting_spot
+      - proposed_by
+      - responded_at
+      - starts_at
+      - status
+    MeetupProposalAcceptRequest:
+      type: object
+      properties:
+        proposal_id:
+          type: integer
+          minimum: 1
+      required:
+      - proposal_id
+    MeetupProposalCreateRequest:
+      type: object
+      properties:
+        meeting_spot_id:
+          type: integer
+          minimum: 1
+        starts_at:
+          type: string
+          format: date-time
+      required:
+      - meeting_spot_id
+      - starts_at
+    MeetupProposalStatusEnum:
+      enum:
+      - pending
+      - accepted
+      - declined
+      - superseded
+      - withdrawn
+      type: string
+      description: |-
+        * `pending` - Pending
+        * `accepted` - Accepted
+        * `declined` - Declined
+        * `superseded` - Superseded
+        * `withdrawn` - Withdrawn
+    MeetupSlot:
+      type: object
+      properties:
+        starts_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - starts_at
+    MeetupStatusCreateRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/Kind2e0Enum'
+        minutes_late:
+          type: integer
+          nullable: true
+      required:
+      - kind
+    MeetupStatusUpdate:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        actor:
+          allOf:
+          - $ref: '#/components/schemas/DealUser'
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/Kind2e0Enum'
+          readOnly: true
+        minutes_late:
+          type: integer
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - actor
+      - created_at
+      - id
+      - kind
+      - minutes_late
     Message:
       type: object
       properties:

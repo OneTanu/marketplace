@@ -229,6 +229,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/deals/{id}/meetup-proposals/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["deals_meetup_proposals_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/deals/{id}/meetup-proposals/accept/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["deals_meetup_proposals_accept_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/deals/{id}/meetup-status/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["deals_meetup_status_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/listings/": {
         parameters: {
             query?: never;
@@ -264,6 +312,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["listings_deals_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/listings/{listing_id}/meetup-options/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listings_meetup_options_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -391,6 +455,22 @@ export interface paths {
         patch: operations["me_partial_update"];
         trace?: never;
     };
+    "/api/meetup-preferences/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["meetup_preferences_retrieve"];
+        put: operations["meetup_preferences_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/schools/": {
         parameters: {
             query?: never;
@@ -516,8 +596,42 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        AmountRequest: {
-            amount_cents: number;
+        AcceptDealRequest: {
+            meetup_proposal_id?: number;
+        };
+        AvailabilityOverride: {
+            readonly id: number;
+            /** Format: date */
+            date: string;
+            is_unavailable?: boolean;
+            /** Format: time */
+            start_time?: string | null;
+            /** Format: time */
+            end_time?: string | null;
+        };
+        AvailabilityOverrideRequest: {
+            /** Format: date */
+            date: string;
+            is_unavailable?: boolean;
+            /** Format: time */
+            start_time?: string | null;
+            /** Format: time */
+            end_time?: string | null;
+        };
+        AvailabilityWindow: {
+            readonly id: number;
+            weekday: number;
+            /** Format: time */
+            start_time: string;
+            /** Format: time */
+            end_time: string;
+        };
+        AvailabilityWindowRequest: {
+            weekday: number;
+            /** Format: time */
+            start_time: string;
+            /** Format: time */
+            end_time: string;
         };
         /** @enum {unknown} */
         BlankEnum: "";
@@ -565,9 +679,15 @@ export interface components {
             /** Format: date-time */
             readonly last_message_at: string | null;
         };
+        CounterOfferRequest: {
+            amount_cents: number;
+            meetup_proposal_id?: number;
+        };
         CreateDealRequest: {
             kind: components["schemas"]["DealKind"];
             amount_cents?: number;
+            meeting_spot_id?: number;
+            proposed_starts_at?: string[];
         };
         CurrentUser: {
             readonly id: number;
@@ -610,6 +730,8 @@ export interface components {
             readonly awaiting_me: boolean;
             readonly offers: components["schemas"]["DealOffer"][];
             readonly events: components["schemas"]["DealEvent"][];
+            readonly meetup_proposals: components["schemas"]["MeetupProposal"][];
+            readonly meetup_updates: components["schemas"]["MeetupStatusUpdate"][];
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -675,6 +797,12 @@ export interface components {
             brand?: string;
             color?: components["schemas"]["ColorEnum"] | components["schemas"]["BlankEnum"];
         };
+        /**
+         * @description * `running_late` - Running late
+         *     * `arrived` - Arrived
+         * @enum {string}
+         */
+        Kind2e0Enum: "running_late" | "arrived";
         /**
          * @description * `item` - Item
          *     * `service` - Service
@@ -783,6 +911,68 @@ export interface components {
             readonly safety_note: string;
             readonly is_indoor: boolean;
             readonly accessibility_notes: string;
+        };
+        MeetupOptions: {
+            readonly seller_configured: boolean;
+            readonly meeting_spots: components["schemas"]["MeetingSpot"][];
+            readonly slots: components["schemas"]["MeetupSlot"][];
+        };
+        MeetupPreference: {
+            readonly meeting_spots: components["schemas"]["MeetingSpot"][];
+            readonly availability_windows: components["schemas"]["AvailabilityWindow"][];
+            readonly availability_overrides: components["schemas"]["AvailabilityOverride"][];
+            /** Format: date-time */
+            readonly updated_at: string | null;
+        };
+        MeetupPreferenceUpdateRequest: {
+            meeting_spot_ids: number[];
+            windows: components["schemas"]["AvailabilityWindowRequest"][];
+            overrides?: components["schemas"]["AvailabilityOverrideRequest"][];
+        };
+        MeetupProposal: {
+            readonly id: number;
+            readonly proposed_by: components["schemas"]["DealUser"];
+            readonly meeting_spot: components["schemas"]["MeetingSpot"];
+            /** Format: date-time */
+            readonly starts_at: string;
+            readonly status: components["schemas"]["MeetupProposalStatusEnum"];
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly responded_at: string | null;
+        };
+        MeetupProposalAcceptRequest: {
+            proposal_id: number;
+        };
+        MeetupProposalCreateRequest: {
+            meeting_spot_id: number;
+            /** Format: date-time */
+            starts_at: string;
+        };
+        /**
+         * @description * `pending` - Pending
+         *     * `accepted` - Accepted
+         *     * `declined` - Declined
+         *     * `superseded` - Superseded
+         *     * `withdrawn` - Withdrawn
+         * @enum {string}
+         */
+        MeetupProposalStatusEnum: "pending" | "accepted" | "declined" | "superseded" | "withdrawn";
+        MeetupSlot: {
+            /** Format: date-time */
+            readonly starts_at: string;
+        };
+        MeetupStatusCreateRequest: {
+            kind: components["schemas"]["Kind2e0Enum"];
+            minutes_late?: number | null;
+        };
+        MeetupStatusUpdate: {
+            readonly id: number;
+            readonly actor: components["schemas"]["DealUser"];
+            readonly kind: components["schemas"]["Kind2e0Enum"];
+            readonly minutes_late: number | null;
+            /** Format: date-time */
+            readonly created_at: string;
         };
         Message: {
             readonly id: number;
@@ -1215,7 +1405,13 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AcceptDealRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AcceptDealRequest"];
+                "multipart/form-data": components["schemas"]["AcceptDealRequest"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -1280,9 +1476,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AmountRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["AmountRequest"];
-                "multipart/form-data": components["schemas"]["AmountRequest"];
+                "application/json": components["schemas"]["CounterOfferRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CounterOfferRequest"];
+                "multipart/form-data": components["schemas"]["CounterOfferRequest"];
             };
         };
         responses: {
@@ -1313,6 +1509,87 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Deal"];
+                };
+            };
+        };
+    };
+    deals_meetup_proposals_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetupProposalCreateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MeetupProposalCreateRequest"];
+                "multipart/form-data": components["schemas"]["MeetupProposalCreateRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetupProposal"];
+                };
+            };
+        };
+    };
+    deals_meetup_proposals_accept_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetupProposalAcceptRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MeetupProposalAcceptRequest"];
+                "multipart/form-data": components["schemas"]["MeetupProposalAcceptRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetupProposal"];
+                };
+            };
+        };
+    };
+    deals_meetup_status_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetupStatusCreateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MeetupStatusCreateRequest"];
+                "multipart/form-data": components["schemas"]["MeetupStatusCreateRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetupStatusUpdate"];
                 };
             };
         };
@@ -1405,6 +1682,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Deal"];
+                };
+            };
+        };
+    };
+    listings_meetup_options_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                listing_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetupOptions"];
                 };
             };
         };
@@ -1669,6 +1967,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CurrentUser"];
+                };
+            };
+        };
+    };
+    meetup_preferences_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetupPreference"];
+                };
+            };
+        };
+    };
+    meetup_preferences_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetupPreferenceUpdateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MeetupPreferenceUpdateRequest"];
+                "multipart/form-data": components["schemas"]["MeetupPreferenceUpdateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetupPreference"];
                 };
             };
         };

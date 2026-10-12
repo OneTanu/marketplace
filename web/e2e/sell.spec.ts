@@ -3,12 +3,15 @@ import path from "node:path";
 
 import { expect, test } from "@playwright/test";
 
+import { setMeetupPreferences } from "./meetups";
 import { signIn } from "./sign-in";
 
 const PHOTO = path.join(__dirname, "fixtures", "photo.jpg");
 
 test("posts a listing with a photo and sees it in My listings", async ({ context, page, baseURL }) => {
   await signIn(context, baseURL!);
+  // Selling is locked until the seller has meetup preferences.
+  await setMeetupPreferences(context, baseURL!);
 
   // The test user is shared across tests and retries, so find this run's listing by a title
   // nothing else uses.
@@ -47,6 +50,8 @@ test("posts a listing with a photo and sees it in My listings", async ({ context
 
 test("posts jeans into Men › Jeans with a waist and length", async ({ context, page, baseURL }) => {
   await signIn(context, baseURL!);
+  // Selling is locked until the seller has meetup preferences.
+  await setMeetupPreferences(context, baseURL!);
   const title = `E2E Levi's ${randomUUID().slice(0, 8)}`;
 
   await page.goto("/sell");

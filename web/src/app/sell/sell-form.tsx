@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 
@@ -23,6 +24,7 @@ import {
 import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
 import { MAX_PHOTOS } from "@/lib/listing-options";
+import { getMeetupPreferences } from "@/lib/deals";
 
 type ListingCreateRequest = components["schemas"]["ListingCreateRequest"];
 type Photo = { file: File; url: string };
@@ -41,6 +43,17 @@ export function SellForm() {
   const [price, setPrice] = useState("");
   const [errors, setErrors] = useState<Errors>({});
   const [submitting, setSubmitting] = useState(false);
+  const [meetupReady, setMeetupReady] = useState<boolean>();
+
+  useEffect(() => {
+    let active = true;
+    getMeetupPreferences()
+      .then((preference) => {
+        if (active) setMeetupReady(preference.meeting_spots.length > 0 && preference.availability_windows.length > 0);
+      })
+      .catch(() => active && setMeetupReady(false));
+    return () => { active = false; };
+  }, []);
 
   // Every preview URL ever created, so they can be released when the form goes away.
   const previewUrls = useRef(new Set<string>());
@@ -120,6 +133,20 @@ export function SellForm() {
 
   if (loadError) {
     return <p className="mt-4 text-sm text-foreground/70">{loadError}</p>;
+  }
+
+  if (meetupReady === undefined) {
+    return <div className="mt-4 h-40 animate-pulse rounded-2xl bg-surface" aria-label="Checking seller setup" />;
+  }
+
+  if (!meetupReady) {
+    return (
+      <div className="mt-6 rounded-2xl border border-line bg-surface p-6 text-center">
+        <h2 className="type-wide text-xl font-black">Set up safe meetups before selling</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted">Choose approved campus locations and your usual availability so buyers can include a meetup with their request.</p>
+        <Link href="/profile/meetup" className="btn btn-primary mt-5">Set meetup preferences</Link>
+      </div>
+    );
   }
 
   function clearErrorFor(event: ChangeEvent<HTMLFormElement>) {

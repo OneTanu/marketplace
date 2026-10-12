@@ -115,3 +115,150 @@ class DealEvent(models.Model):
 
     def __str__(self):
         return f"{self.event_type} on deal {self.deal_id}"
+
+
+class MeetupPreference(models.Model):
+    """A seller's reusable handoff settings. Locations remain school-curated."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="meetup_preference",
+    )
+    meeting_spots = models.ManyToManyField(
+        "schools.MeetingSpot",
+        related_name="preferred_by",
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Meetup preferences for {self.user_id}"
+
+
+class MeetupAvailabilityWindow(models.Model):
+    """A recurring local-time availability window for a seller."""
+
+    preference = models.ForeignKey(
+        MeetupPreference,
+        on_delete=models.CASCADE,
+        related_name="availability_windows",
+    )
+    weekday = models.PositiveSmallIntegerField()  # Monday=0, Sunday=6.
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+
+    class Meta:
+        ordering = ["weekday", "start_time", "id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(weekday__gte=0, weekday__lte=6),
+                name="deals_availability_valid_weekday",
+            ),
+            models.CheckConstraint(
+                condition=Q(end_time__gt=models.F("start_time")),
+                name="deals_availability_positive_window",
+            ),
+            models.UniqueConstraint(
+                fields=["preference", "weekday", "start_time", "end_time"],
+                name="deals_availability_unique_window",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.preference_id}: {self.weekday} {self.start_time}-{self.end_time}"
+
+
+class MeetupAvailabilityOverride(models.Model):
+    """A one-day replacement for the recurring schedule."""
+
+    preference = models.ForeignKey(
+        MeetupPreference,
+        on_delete=models.CASCADE,
+        related_name="availability_overrides",
+    )
+    date = models.DateField()
+    is_unavailable = models.BooleanField(default=False)
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["date", "start_time", "id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(is_unavailable=True, start_time__isnull=True, end_time__isnull=True)
+                    | Q(
+                        is_unavailable=False,
+                        start_time__isnull=False,
+                        end_time__isnull=False,
+                        end_time__gt=models.F("start_time"),
+                    )
+                ),
+                name="deals_override_valid_window",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.preference_id}: override {self.date}"
+
+
+class MeetupProposal(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        ACCEPTED = "accepted", "Accepted"
+        DECLINED = "declined", "Declined"
+        SUPERSEDED = "superseded", "Superseded"
+        WITHDRAWN = "withdrawn", "Withdrawn"
+
+    deal = models.ForeignKey(Deal, on_delete=models.CASCADE, related_name="meetup_proposals")
+    proposed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="meetup_proposals",
+    )
+    meeting_spot = models.ForeignKey(
+        "schools.MeetingSpot",
+        on_delete=models.PROTECT,
+        related_name="meetup_proposals",
+    )
+    starts_at = models.DateTimeField()
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["deal"],
+                condition=Q(status="accepted"),
+                name="deals_one_accepted_meetup",
+            ),
+        ]
+
+    def __str__(self):
+        return f"Meetup proposal {self.pk} for deal {self.deal_id}"
+
+
+class MeetupStatusUpdate(models.Model):
+    class Kind(models.TextChoices):
+        RUNNING_LATE = "running_late", "Running late"
+        ARRIVED = "arrived", "Arrived"
+
+    deal = models.ForeignKey(Deal, on_delete=models.CASCADE, related_name="meetup_updates")
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="meetup_status_updates",
+    )
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    minutes_late = models.PositiveSmallIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return f"{self.kind} on deal {self.deal_id}"

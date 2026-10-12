@@ -3,9 +3,20 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { MeetupPicker, type MeetupSelection } from "@/components/deals/meetup-picker";
 import type { components } from "@/lib/api/schema";
-import { actOnDeal, counterDeal, listDeals } from "@/lib/deals";
+import {
+  acceptMeetup,
+  actOnDeal,
+  counterDeal,
+  getDeal,
+  listDeals,
+  meetupState,
+  proposeMeetup,
+  updateMeetupStatus,
+} from "@/lib/deals";
 import { centsToDollars } from "@/lib/money";
+import { formatDateTime } from "@/lib/time";
 
 type Deal = components["schemas"]["Deal"];
 type Role = "buyer" | "seller";
@@ -29,13 +40,7 @@ const STATUS_LABELS: Record<Deal["status"], string> = {
 };
 
 function deadline(value: string | null | undefined) {
-  if (!value) return "";
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(value));
+  return value ? formatDateTime(value) : "";
 }
 
 function statusLabel(deal: Deal) {
@@ -54,6 +59,20 @@ function DealCard({ deal, onChange }: { deal: Deal; onChange: (deal: Deal) => vo
   const [countering, setCountering] = useState(false);
   const [counter, setCounter] = useState("");
   const [error, setError] = useState("");
+  const [rescheduling, setRescheduling] = useState(false);
+  const [meetupSelection, setMeetupSelection] = useState<MeetupSelection>({ meetingSpotId: null, startsAt: [], configured: false, loading: true });
+  const [now] = useState(() => Date.now());
+  const meetups = meetupState(deal, now);
+  const acceptedMeetup = meetups.accepted;
+  const pendingFromOther = meetups.fromOther[0];
+  const pendingFromMe = meetups.fromMe[0];
+  const [chosenProposalId, setMeetupProposalId] = useState<number | undefined>();
+  // Fall back to the first time on offer if the chosen one was replaced.
+  const meetupProposalId = meetups.fromOther.some((proposal) => proposal.id === chosenProposalId)
+    ? chosenProposalId
+    : pendingFromOther?.id;
+  const negotiating = deal.status === "awaiting_seller" || deal.status === "awaiting_buyer";
+  const latestMeetupUpdate = deal.meetup_updates[0];
   const counterpart = deal.my_role === "seller" ? deal.buyer : deal.seller;
   const mineConfirmed = deal.my_role === "buyer" ? deal.buyer_confirmed : deal.seller_confirmed;
   const open = ACTIVE_STATUSES.has(deal.status);
@@ -64,9 +83,76 @@ function DealCard({ deal, onChange }: { deal: Deal; onChange: (deal: Deal) => vo
     setWorking(true);
     setError("");
     try {
-      onChange(await actOnDeal(deal.id, action));
+      onChange(
+        await actOnDeal(
+          deal.id,
+          action,
+          action === "accept" ? meetupProposalId : undefined,
+        ),
+      );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "That action did not go through.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function setMeetupStatus(kind: "running_late" | "arrived", minutesLate?: number) {
+    setWorking(true);
+    setError("");
+    try {
+      const update = await updateMeetupStatus(deal.id, {
+        kind,
+        ...(minutesLate ? { minutes_late: minutesLate } : {}),
+      });
+      onChange({ ...deal, meetup_updates: [update, ...deal.meetup_updates] });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "That meetup update did not go through.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function submitReschedule() {
+    if (meetupSelection.meetingSpotId === null || meetupSelection.startsAt.length === 0) {
+      setError("Choose a meetup location and time.");
+      return;
+    }
+    setWorking(true);
+    setError("");
+    try {
+      await proposeMeetup(deal.id, {
+        meeting_spot_id: meetupSelection.meetingSpotId,
+        starts_at: meetupSelection.startsAt[0],
+      });
+      // Suggesting a time while it's your turn hands the turn over, so reload the deal.
+      onChange(await getDeal(deal.id));
+      setRescheduling(false);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The reschedule request did not go through.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function approveReschedule() {
+    if (!pendingFromOther) return;
+    setWorking(true);
+    setError("");
+    try {
+      const accepted = await acceptMeetup(deal.id, pendingFromOther.id);
+      onChange({
+        ...deal,
+        meetup_proposals: deal.meetup_proposals.map((proposal) =>
+          proposal.id === accepted.id
+            ? accepted
+            : proposal.status === "accepted"
+              ? { ...proposal, status: "superseded" }
+              : proposal,
+        ),
+      });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The new meetup time could not be accepted.");
     } finally {
       setWorking(false);
     }
@@ -81,7 +167,7 @@ function DealCard({ deal, onChange }: { deal: Deal; onChange: (deal: Deal) => vo
     setWorking(true);
     setError("");
     try {
-      onChange(await counterDeal(deal.id, amountCents));
+      onChange(await counterDeal(deal.id, amountCents, meetupProposalId));
       setCountering(false);
       setCounter("");
     } catch (caught) {
@@ -121,9 +207,52 @@ function DealCard({ deal, onChange }: { deal: Deal; onChange: (deal: Deal) => vo
       </div>
 
       {deal.status === "pending" && (
-        <p className="mt-3 text-sm text-muted">
-          Buyer {deal.buyer_confirmed ? "confirmed" : "not confirmed"} · Seller {deal.seller_confirmed ? "confirmed" : "not confirmed"}
+        <div className="mt-3 rounded-lg bg-surface p-3 text-sm">
+          {acceptedMeetup ? (
+            <>
+              <p className="font-bold text-ink">{acceptedMeetup.meeting_spot.name}</p>
+              <p className="mt-0.5 text-muted">{deadline(acceptedMeetup.starts_at)} · {acceptedMeetup.meeting_spot.directions}</p>
+            </>
+          ) : (
+            <p className="font-semibold text-muted">Meetup time still needs to be confirmed.</p>
+          )}
+          <p className="mt-2 text-muted">Buyer {deal.buyer_confirmed ? "confirmed" : "not confirmed"} · Seller {deal.seller_confirmed ? "confirmed" : "not confirmed"}</p>
+        </div>
+      )}
+      {deal.status === "pending" && pendingFromOther && (
+        <div className="mt-3 rounded-lg border border-signal bg-[var(--brand-soft)]/35 p-3 text-sm">
+          <p className="font-bold">New meetup proposed</p>
+          <p className="mt-1 text-muted">{pendingFromOther.meeting_spot.name} · {deadline(pendingFromOther.starts_at)}</p>
+          <button type="button" onClick={approveReschedule} disabled={working} className="btn btn-primary btn-sm mt-3">Accept new meetup</button>
+        </div>
+      )}
+      {(deal.status === "pending" || (negotiating && !deal.awaiting_me)) && pendingFromMe && (
+        <p className="mt-3 rounded-lg bg-surface p-3 text-sm text-muted">Waiting for @{counterpart.username} to respond to your proposed meetup: {meetups.fromMe.map((proposal) => deadline(proposal.starts_at)).join(" or ")}.</p>
+      )}
+      {deal.status === "pending" && latestMeetupUpdate && (
+        <p className="mt-3 text-sm font-semibold text-ink">
+          @{latestMeetupUpdate.actor.username} {latestMeetupUpdate.kind === "arrived" ? "is here." : `is running about ${latestMeetupUpdate.minutes_late} minutes late.`}
         </p>
+      )}
+
+      {deal.awaiting_me && meetups.fromOther.length > 0 && (
+        <fieldset className="mt-3">
+          <legend className="text-sm font-bold">
+            {meetups.fromOther.length > 1 ? "Choose a meetup time" : "Proposed meetup"}
+          </legend>
+          {deal.status !== "backup" && <p className="mt-1 text-xs text-muted">Accepting or countering keeps this time.</p>}
+          <div className="mt-2 flex flex-wrap gap-2">
+            {meetups.fromOther.map((proposal) => (
+              <button key={proposal.id} type="button" onClick={() => setMeetupProposalId(proposal.id)} aria-pressed={meetupProposalId === proposal.id} className={`rounded-lg border px-3 py-2 text-left text-sm ${meetupProposalId === proposal.id ? "border-ink bg-surface ring-1 ring-ink" : "border-line"}`}>
+                <span className="block font-bold">{deadline(proposal.starts_at)}</span>
+                <span className="block text-xs text-muted">{proposal.meeting_spot.name}</span>
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      )}
+      {deal.awaiting_me && meetups.allStale && (
+        <p className="mt-3 rounded-lg border border-signal p-3 text-sm">The proposed meetup times have passed. Suggest a new time before accepting.</p>
       )}
       {error && <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{error}</p>}
 
@@ -136,6 +265,22 @@ function DealCard({ deal, onChange }: { deal: Deal; onChange: (deal: Deal) => vo
           <button type="button" onClick={submitCounter} disabled={working} className="btn btn-primary btn-sm">Send counter</button>
           <button type="button" onClick={() => setCountering(false)} disabled={working} className="btn btn-secondary btn-sm">Back</button>
         </div>
+      ) : rescheduling ? (
+        <div className="mt-3 border-t border-line pt-3">
+          <p className="font-bold">{acceptedMeetup ? "Propose a new meetup" : "Suggest a meetup time"}</p>
+          <p className="mt-1 text-sm text-muted">
+            {acceptedMeetup
+              ? "The current meetup stays confirmed until the other person accepts this change."
+              : negotiating && deal.awaiting_me
+                ? `This replaces the proposed times, and @${counterpart.username} will need to respond.`
+                : `@${counterpart.username} will need to accept this time.`}
+          </p>
+          <MeetupPicker listingId={deal.listing.id} allowTwo={false} onChange={setMeetupSelection} />
+          <div className="mt-3 flex gap-2">
+            <button type="button" onClick={() => setRescheduling(false)} disabled={working} className="btn btn-secondary flex-1">Back</button>
+            <button type="button" onClick={submitReschedule} disabled={working || meetupSelection.loading || !meetupSelection.configured} className="btn btn-primary flex-1">Send change</button>
+          </div>
+        </div>
       ) : (
         <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-3">
           {deal.awaiting_me && (
@@ -146,6 +291,17 @@ function DealCard({ deal, onChange }: { deal: Deal; onChange: (deal: Deal) => vo
             </>
           )}
           {deal.status === "pending" && !mineConfirmed && <button type="button" onClick={() => run("confirm-handoff")} disabled={working} className="btn btn-primary btn-sm">Confirm handoff</button>}
+          {deal.status === "pending" && acceptedMeetup && (
+            <>
+              {[5, 10, 15].map((minutes) => <button key={minutes} type="button" onClick={() => setMeetupStatus("running_late", minutes)} disabled={working} className="btn btn-quiet btn-sm">{minutes} min late</button>)}
+              <button type="button" onClick={() => setMeetupStatus("arrived")} disabled={working} className="btn btn-quiet btn-sm">I&apos;m here</button>
+            </>
+          )}
+          {((deal.status === "pending" && !pendingFromOther && !pendingFromMe) || negotiating) && (
+            <button type="button" onClick={() => setRescheduling(true)} disabled={working} className="btn btn-quiet btn-sm">
+              {acceptedMeetup ? "Reschedule" : negotiating && !deal.awaiting_me ? "Change my time" : "Suggest another time"}
+            </button>
+          )}
           {canCancel && <button type="button" onClick={() => run("cancel")} disabled={working} className="btn btn-secondary btn-sm">Cancel {deal.status === "pending" ? "purchase" : "request"}</button>}
           <Link href={`/inbox/${deal.conversation}?listing=${deal.listing.id}`} className="btn btn-quiet btn-sm">Message</Link>
         </div>
@@ -222,6 +378,9 @@ export function DealsClient() {
 
   function update(updated: Deal) {
     setDeals((current) => current?.map((deal) => deal.id === updated.id ? updated : deal) ?? [updated]);
+    // One deal's change can move others on the same listing (accepting one buyer makes the
+    // rest backups), so reload them all rather than wait for the next poll.
+    listDeals().then(setDeals, () => {});
   }
 
   if (deals === undefined) return <main className="mx-auto min-h-[70vh] max-w-5xl animate-pulse px-4 py-10 sm:px-6"><div className="h-9 w-36 rounded bg-surface" /><div className="mt-8 grid gap-3 lg:grid-cols-2"><div className="h-40 rounded-xl bg-surface" /><div className="h-40 rounded-xl bg-surface" /></div></main>;
