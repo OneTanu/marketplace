@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Block, Report, UserRestriction
+from .models import Appeal, Block, InfoRequest, ModerationAction, Report, UserRestriction
 
 
 class ReportCreateSerializer(serializers.Serializer):
@@ -51,3 +51,48 @@ class MyRestrictionSerializer(serializers.ModelSerializer):
         model = UserRestriction
         fields = ["kind", "kind_label", "expires_at"]
         read_only_fields = fields
+
+
+class MyAppealSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Appeal
+        fields = ["id", "status", "created_at", "decided_at"]
+        read_only_fields = fields
+
+
+class MyNoticeSerializer(serializers.Serializer):
+    """A decision about me: what happened and whether I can still appeal. The moderator's
+    internal reason is never included; `message` is what they chose to tell me."""
+
+    id = serializers.IntegerField(source="action.id", read_only=True)
+    kind = serializers.ChoiceField(
+        source="action.kind", choices=ModerationAction.Kind.choices, read_only=True
+    )
+    kind_label = serializers.CharField(source="action.get_kind_display", read_only=True)
+    message = serializers.CharField(source="action.user_message", read_only=True)
+    created_at = serializers.DateTimeField(source="action.created_at", read_only=True)
+    can_appeal = serializers.BooleanField(read_only=True)
+    appeal_deadline = serializers.DateTimeField(read_only=True)
+    appeal = MyAppealSerializer(read_only=True, allow_null=True)
+
+
+class MyInfoRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InfoRequest
+        fields = ["id", "question", "answer", "created_at", "answered_at"]
+        read_only_fields = fields
+
+
+class StandingSerializer(serializers.Serializer):
+    restrictions = MyRestrictionSerializer(many=True, read_only=True)
+    notices = MyNoticeSerializer(many=True, read_only=True)
+    info_requests = MyInfoRequestSerializer(many=True, read_only=True)
+
+
+class AppealCreateSerializer(serializers.Serializer):
+    action_id = serializers.IntegerField(min_value=1)
+    message = serializers.CharField(max_length=2000)
+
+
+class AnswerSerializer(serializers.Serializer):
+    answer = serializers.CharField(max_length=2000)

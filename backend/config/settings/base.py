@@ -154,5 +154,9 @@ SPECTACULAR_SETTINGS = {
         "ReportTargetType": "apps.trust.models.Report.TargetType",
         "ReportReason": "apps.trust.models.Report.Reason",
         "ProhibitedCategory": "apps.trust.models.Report.ProhibitedCategory",
+        "ModerationActionKind": "apps.trust.models.ModerationAction.Kind",
+        "AppealStatus": "apps.trust.models.Appeal.Status",
+        "CaseStatus": "apps.trust.models.ModerationCase.Status",
+        "NotificationKind": "apps.notifications.models.Notification.Kind",
     },
 }

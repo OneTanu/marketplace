@@ -3,7 +3,7 @@
 # Recreates its own database on every run, so the dev database is never touched.
 #
 # Env: POSTGRES_DB (must end in "_e2e"), PORT, E2E_USER_EMAIL, E2E_BUYER_EMAIL,
-# E2E_SECOND_BUYER_EMAIL, E2E_USER_PASSWORD,
+# E2E_SECOND_BUYER_EMAIL, E2E_MODERATOR_EMAIL, E2E_USER_PASSWORD,
 # WEB_APP_URL (the E2E web app's origin, trusted for CSRF), plus the usual POSTGRES_* settings.
 # E2E_DISABLE_RATE_LIMITS=1 turns off allauth login limits (see config/settings/dev.py).
 set -eu
@@ -36,4 +36,6 @@ python manage.py create_verified_user "$E2E_USER_EMAIL" --password "$E2E_USER_PA
 python manage.py create_verified_user "$E2E_BUYER_EMAIL" --password "$E2E_USER_PASSWORD"
 # A third, for two buyers competing for one listing.
 python manage.py create_verified_user "$E2E_SECOND_BUYER_EMAIL" --password "$E2E_USER_PASSWORD"
+# A senior moderator, for the /moderation portal.
+python manage.py create_verified_user "$E2E_MODERATOR_EMAIL" --password "$E2E_USER_PASSWORD" --role senior-moderator
 exec python manage.py runserver "0.0.0.0:${PORT}" --noreload

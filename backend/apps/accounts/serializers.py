@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from apps.listings.services import sold_count
 from apps.schools.serializers import SchoolSerializer
+from apps.trust.services import is_moderator, is_senior_moderator
 
 from .models import User
 from .services import update_profile
@@ -17,6 +18,9 @@ class CurrentUserSerializer(serializers.ModelSerializer):
         source="following_relationships.count", read_only=True
     )
     sold_count = serializers.SerializerMethodField()
+    # Staff roles, so the app can show the moderation portal link.
+    is_moderator = serializers.SerializerMethodField()
+    is_senior_moderator = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -33,6 +37,8 @@ class CurrentUserSerializer(serializers.ModelSerializer):
             "following_count",
             "sold_count",
             "date_joined",
+            "is_moderator",
+            "is_senior_moderator",
         ]
         read_only_fields = [
             "id",
@@ -46,6 +52,12 @@ class CurrentUserSerializer(serializers.ModelSerializer):
 
     def get_sold_count(self, user) -> int:
         return sold_count(user)
+
+    def get_is_moderator(self, user) -> bool:
+        return is_moderator(user)
+
+    def get_is_senior_moderator(self, user) -> bool:
+        return is_senior_moderator(user)
 
     def update(self, instance, validated_data):
         # Raises Django ValidationErrors; CurrentUserView turns them into 400s.

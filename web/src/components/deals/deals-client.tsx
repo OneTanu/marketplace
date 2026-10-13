@@ -47,6 +47,9 @@ function deadline(value: string | null | undefined) {
 }
 
 function statusLabel(deal: Deal) {
+  if (deal.status === "canceled" && deal.events.some((event) => event.event_type === "canceled_by_moderation")) {
+    return "Canceled by Tanu";
+  }
   if (deal.kind === "trade" && deal.awaiting_me && deal.status !== "backup") {
     return tradePackage(deal) ? "Trade offer — your response" : "Trade request — pick items";
   }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { authRequest } from "@/lib/auth";
 import { getCurrentUser } from "@/lib/platform";
 
@@ -27,6 +28,6 @@ export function AuthActions() {
   }
 
   if (!ready || authenticated === null) return <div className="h-9 w-28 animate-pulse rounded-[0.625rem] bg-surface" aria-hidden="true" />;
-  if (authenticated) return <div className="flex items-center gap-1"><Link href="/profile" className="btn btn-quiet btn-sm hidden desktop:inline-flex">Profile</Link><button onClick={logout} className="btn btn-quiet btn-sm">Log out</button><Link href="/sell" className="btn btn-primary btn-sm hidden desktop:inline-flex">Sell an item</Link></div>;
+  if (authenticated) return <div className="flex items-center gap-1"><NotificationBell /><Link href="/profile" className="btn btn-quiet btn-sm hidden desktop:inline-flex">Profile</Link><button onClick={logout} className="btn btn-quiet btn-sm">Log out</button><Link href="/sell" className="btn btn-primary btn-sm hidden desktop:inline-flex">Sell an item</Link></div>;
   return <div className="flex items-center gap-1"><Link href="/account/login" className="btn btn-quiet btn-sm hidden sm:inline-flex">Log in</Link><Link href="/account/signup" className="btn btn-primary btn-sm">Join Tanu</Link></div>;
 }

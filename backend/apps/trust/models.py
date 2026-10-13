@@ -208,6 +208,10 @@ class ModerationAction(models.Model):
         BAN = "ban", "Ban"
         LIFT_RESTRICTION = "lift_restriction", "Lift restriction"
         CONFLICT_OVERRIDE = "conflict_override", "Conflict of interest override"
+        REQUEST_INFO = "request_info", "Asked for more information"
+        INFO_RECEIVED = "info_received", "Answer received"
+        APPEAL_FILED = "appeal_filed", "Appeal filed"
+        APPEAL_DECIDED = "appeal_decided", "Appeal decided"
 
     case = models.ForeignKey(
         ModerationCase, on_delete=models.PROTECT, null=True, blank=True, related_name="actions"
@@ -221,7 +225,10 @@ class ModerationAction(models.Model):
         related_name="moderation_actions",
     )
     kind = models.CharField(max_length=30, choices=Kind.choices)
+    # Internal: why staff did it. Never shown to students.
     reason = models.TextField()
+    # What the affected student is told, for consequences (warnings, restrictions, removals).
+    user_message = models.TextField(blank=True)
     target_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -365,3 +372,58 @@ class ModeratorScope(models.Model):
 
     def __str__(self):
         return f"Moderation scope for {self.user_id}"
+
+
+class InfoRequest(models.Model):
+    """A moderator's follow-up question to someone in a case, and their answer."""
+
+    case = models.ForeignKey(ModerationCase, on_delete=models.PROTECT, related_name="info_requests")
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="info_requests"
+    )
+    asked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    question = models.TextField()
+    answer = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    answered_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return f"Question to {self.recipient_id} on case {self.case_id}"
+
+
+class Appeal(models.Model):
+    """A student asking for a consequence to be reviewed again. One per action, decided by a
+    different moderator from the one who took it."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        UPHELD = "upheld", "Upheld"
+        OVERTURNED = "overturned", "Overturned"
+
+    action = models.OneToOneField(ModerationAction, on_delete=models.PROTECT, related_name="appeal")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="appeals"
+    )
+    message = models.TextField()
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    decision_reason = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return f"Appeal of action {self.action_id}"

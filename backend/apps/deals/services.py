@@ -13,6 +13,7 @@ from apps.accounts.services import verified_users
 from apps.listings import services as listing_services
 from apps.listings.models import Listing
 from apps.messaging.services import send_message, start_direct_conversation
+from apps.notifications import services as notification_services
 from apps.schools.models import MeetingSpot
 from apps.trust import checks as trust_checks
 
@@ -725,9 +726,12 @@ def expire(*, deal_id: int, expected_status: str) -> None:
 
 
 @transaction.atomic
-def cancel_for_moderation(*, deal: Deal, reason: str) -> Deal:
+def cancel_for_moderation(*, deal: Deal, reason: str, announce: bool = True) -> Deal:
     """Cancel an open deal because of a moderation action, releasing every listing it holds.
-    Unlike cancel_deal, this also cancels a Pending deal after a handoff confirmation."""
+    Unlike cancel_deal, this also cancels a Pending deal after a handoff confirmation.
+
+    With `announce`, both students are told Tanu canceled it. A block passes False: the deal
+    just shows as canceled, so the blocked student isn't told they were blocked."""
     locked = _lock_deal(deal)
     if locked.status not in OPEN_STATUSES:
         return locked
@@ -740,7 +744,21 @@ def cancel_for_moderation(*, deal: Deal, reason: str) -> Deal:
     locked.handoff_deadline = None
     locked.save(update_fields=["status", "response_deadline", "handoff_deadline", "updated_at"])
     _close_pending_meetups(locked)
+    if not announce:
+        _event(locked, "canceled")
+        return locked
     _event(locked, "canceled_by_moderation", reason=reason)
+    for user in (locked.buyer, locked.seller):
+        notification_services.notify(
+            user,
+            kind=notification_services.Kind.DEAL,
+            title="A deal was canceled by Tanu",
+            body=(
+                f"Your deal for “{locked.listing.title}” was canceled after a moderation "
+                "review. Any items in it are available again."
+            ),
+            link="/deals",
+        )
     return locked
 
 
@@ -764,7 +782,7 @@ def cancel_deals_for_user(user, *, reason: str) -> None:
         cancel_for_moderation(deal=deal, reason=reason)
 
 
-def cancel_deals_between(first, second, *, reason: str) -> None:
+def cancel_deals_between(first, second, *, reason: str, announce: bool = True) -> None:
     pair = Q(buyer=first, seller=second) | Q(buyer=second, seller=first)
     for deal in Deal.objects.filter(pair, status__in=OPEN_STATUSES):
-        cancel_for_moderation(deal=deal, reason=reason)
+        cancel_for_moderation(deal=deal, reason=reason, announce=announce)
