@@ -28,6 +28,7 @@ docker compose exec backend pytest              # backend tests
 docker compose exec backend python manage.py makemigrations
 docker compose exec backend python manage.py createsuperuser   # then use /admin
 docker compose exec backend python manage.py create_verified_user terp@umd.edu --password <pw>   # dev student account, skips the verification email (DEBUG only)
+docker compose exec backend python manage.py create_verified_user mod@umd.edu --password <pw> --role senior-moderator   # dev moderator for /moderation (or --role moderator)
 cd backend && uv run python manage.py spectacular --file ../contracts/openapi.yaml   # regenerate contract
 cd web && pnpm install                          # web dependencies (pnpm, not npm; one-time: npm install -g pnpm@12.8.1)
 cd web && pnpm dev                              # web app at http://localhost:3000 (run natively, not in Docker)

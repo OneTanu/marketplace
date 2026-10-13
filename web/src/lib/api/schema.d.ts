@@ -529,6 +529,38 @@ export interface paths {
         patch: operations["me_partial_update"];
         trace?: never;
     };
+    "/api/me/appeals/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["me_appeals_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/info-requests/{id}/answer/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["me_info_requests_answer_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/restrictions/": {
         parameters: {
             query?: never;
@@ -546,6 +578,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/standing/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description My account status: what's paused, decisions about me (and whether I can appeal), and
+         *     questions from moderators.
+         */
+        get: operations["me_standing_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/meetup-preferences/": {
         parameters: {
             query?: never;
@@ -555,6 +607,157 @@ export interface paths {
         };
         get: operations["meetup_preferences_retrieve"];
         put: operations["meetup_preferences_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/cases/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The moderation queue: most urgent and oldest first, with filters. */
+        get: operations["moderation_cases_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/cases/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["moderation_cases_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/cases/{id}/actions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Take one action on a case. Every action needs a reason and is permanently recorded. */
+        post: operations["moderation_cases_actions_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/restrictions/{id}/lift/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["moderation_restrictions_lift_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/stats/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Moderation numbers for the schools I moderate: volume, speed, outcomes, appeals, and
+         *     patterns worth a look (repeat offenders, reporters whose reports are mostly dismissed).
+         */
+        get: operations["moderation_stats_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/summary/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["moderation_summary_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description My latest notifications, newest first. */
+        get: operations["notifications_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/read/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["notifications_read_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/unread-count/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["notifications_unread_count_retrieve"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -710,6 +913,51 @@ export interface components {
         AcceptDealRequest: {
             meetup_proposal_id?: number;
         };
+        Action: {
+            readonly id: number;
+            readonly kind: components["schemas"]["ModerationActionKind"];
+            readonly kind_label: string;
+            readonly actor: components["schemas"]["StaffUser"] | null;
+            readonly target_user: components["schemas"]["StaffUser"] | null;
+            readonly listing_id: number | null;
+            readonly case_id: number | null;
+            readonly reason: string;
+            readonly user_message: string;
+            readonly data: unknown;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        /**
+         * @description * `note` - Add a note
+         *     * `assign` - Assign
+         *     * `escalate` - Escalate to a senior moderator
+         *     * `request_info` - Ask for more information
+         *     * `decide_appeal` - Decide an appeal
+         *     * `dismiss` - Dismiss: no violation
+         *     * `resolve` - Resolve
+         *     * `remove_listing` - Remove listing
+         *     * `restore_listing` - Restore listing
+         *     * `warn` - Send warning
+         *     * `restrict` - Restrict a feature
+         *     * `suspend` - Suspend account
+         *     * `ban` - Ban account
+         * @enum {string}
+         */
+        ActionEnum: "note" | "assign" | "escalate" | "request_info" | "decide_appeal" | "dismiss" | "resolve" | "remove_listing" | "restore_listing" | "warn" | "restrict" | "suspend" | "ban";
+        AnswerRequest: {
+            answer: string;
+        };
+        AppealCreateRequest: {
+            action_id: number;
+            message: string;
+        };
+        /**
+         * @description * `pending` - Pending
+         *     * `upheld` - Upheld
+         *     * `overturned` - Overturned
+         * @enum {string}
+         */
+        AppealStatus: "pending" | "upheld" | "overturned";
         AvailabilityOverride: {
             readonly id: number;
             /** Format: date */
@@ -755,6 +1003,90 @@ export interface components {
             /** Format: date-time */
             readonly created_at: string;
         };
+        CaseActionRequest: {
+            action: components["schemas"]["ActionEnum"];
+            reason: string;
+            user_id?: number;
+            assignee_id?: number;
+            restriction_kind?: components["schemas"]["RestrictionKindEnum"];
+            /** Format: date-time */
+            until?: string | null;
+            /** @default  */
+            user_message: string;
+            appeal_id?: number;
+            decision?: components["schemas"]["DecisionEnum"];
+            /** @default  */
+            override_reason: string;
+        };
+        CaseDetail: {
+            readonly case: components["schemas"]["CaseRow"];
+            readonly legal_hold: boolean;
+            readonly reports: components["schemas"]["CaseReport"][];
+            readonly actions: components["schemas"]["Action"][];
+            readonly appeals: components["schemas"]["StaffAppeal"][];
+            readonly info_requests: components["schemas"]["StaffInfoRequest"][];
+            readonly subject: components["schemas"]["SubjectHistory"];
+            readonly involved_users: components["schemas"]["StaffUser"][];
+            readonly reporter_records: components["schemas"]["ReporterRecord"][];
+            readonly eligible_assignees: components["schemas"]["StaffUser"][];
+            readonly viewer: components["schemas"]["Viewer"];
+        };
+        CaseListing: {
+            readonly id: number;
+            readonly title: string;
+            readonly status: string;
+            readonly removed_by: string;
+        };
+        CaseReport: {
+            readonly id: number;
+            readonly reporter: components["schemas"]["StaffUser"];
+            readonly target_type: components["schemas"]["ReportTargetType"];
+            readonly reason: components["schemas"]["ReportReason"];
+            readonly reason_label: string;
+            readonly prohibited_category: components["schemas"]["ProhibitedCategory"];
+            readonly details: string;
+            readonly listing_id: number | null;
+            readonly conversation_id: number | null;
+            readonly message_id: number | null;
+            readonly deal_id: number | null;
+            readonly review_id: number | null;
+            readonly evidence: components["schemas"]["Evidence"][];
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        /** @description One line in the moderation queue. */
+        CaseRow: {
+            readonly id: number;
+            readonly status: components["schemas"]["CaseStatus"];
+            readonly priority: components["schemas"]["PriorityEnum"];
+            readonly priority_label: string;
+            readonly escalated: boolean;
+            readonly subject_user: components["schemas"]["StaffUser"];
+            readonly listing: components["schemas"]["CaseListing"] | null;
+            /** @default  */
+            readonly school_name: string;
+            readonly assigned_to: components["schemas"]["StaffUser"] | null;
+            readonly report_count: number;
+            readonly reporter_count: number;
+            readonly prior_case_count: number;
+            readonly recent_consequences: number;
+            /** Format: date-time */
+            readonly latest_report_at: string | null;
+            readonly reasons: string[];
+            readonly target_types: string[];
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        /**
+         * @description * `open` - Open
+         *     * `investigating` - Investigating
+         *     * `resolved` - Resolved
+         *     * `appealed` - Appealed
+         * @enum {string}
+         */
+        CaseStatus: "open" | "investigating" | "resolved" | "appealed";
         /**
          * @description * `buyer` - Buyer
          *     * `seller` - Seller
@@ -805,6 +1137,11 @@ export interface components {
             /** Format: date-time */
             readonly last_message_at: string | null;
         };
+        CountRow: {
+            readonly key: string;
+            readonly label: string;
+            readonly count: number;
+        };
         CounterOfferRequest: {
             amount_cents: number;
             meetup_proposal_id?: number;
@@ -832,6 +1169,8 @@ export interface components {
             readonly sold_count: number;
             /** Format: date-time */
             readonly date_joined: string;
+            readonly is_moderator: boolean;
+            readonly is_senior_moderator: boolean;
         };
         CurrentUserRequest: {
             instagram_handle?: string;
@@ -917,6 +1256,26 @@ export interface components {
             readonly username: string;
             readonly first_name: string;
         };
+        /**
+         * @description * `uphold` - Uphold
+         *     * `overturn` - Overturn
+         * @enum {string}
+         */
+        DecisionEnum: "uphold" | "overturn";
+        Evidence: {
+            readonly id: number;
+            readonly kind: string;
+            readonly source_id: number;
+            readonly data: unknown;
+            readonly files: string[];
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        FalseReporter: {
+            readonly user: components["schemas"]["StaffUser"];
+            readonly reviewed: number;
+            readonly upheld: number;
+        };
         ItemDetails: {
             readonly condition: components["schemas"]["ConditionEnum"];
             readonly size: string;
@@ -941,6 +1300,10 @@ export interface components {
          * @enum {string}
          */
         KindEnum: "item" | "service";
+        LiftRestrictionRequest: {
+            reason: string;
+            case_id?: number;
+        };
         /** @description A listing as returned by the API. */
         Listing: {
             readonly id: number;
@@ -1132,6 +1495,82 @@ export interface components {
             readonly school: components["schemas"]["School"] | null;
         };
         /**
+         * @description * `note` - Note
+         *     * `assign` - Assign
+         *     * `escalate` - Escalate
+         *     * `dismiss` - Dismiss
+         *     * `resolve` - Resolve
+         *     * `remove_listing` - Remove listing
+         *     * `auto_hide_listing` - Hide listing pending review
+         *     * `restore_listing` - Restore listing
+         *     * `warn` - Warning
+         *     * `restrict` - Restrict
+         *     * `suspend` - Suspend
+         *     * `ban` - Ban
+         *     * `lift_restriction` - Lift restriction
+         *     * `conflict_override` - Conflict of interest override
+         *     * `request_info` - Asked for more information
+         *     * `info_received` - Answer received
+         *     * `appeal_filed` - Appeal filed
+         *     * `appeal_decided` - Appeal decided
+         * @enum {string}
+         */
+        ModerationActionKind: "note" | "assign" | "escalate" | "dismiss" | "resolve" | "remove_listing" | "auto_hide_listing" | "restore_listing" | "warn" | "restrict" | "suspend" | "ban" | "lift_restriction" | "conflict_override" | "request_info" | "info_received" | "appeal_filed" | "appeal_decided";
+        ModerationStats: {
+            readonly days: number;
+            readonly cases_opened: number;
+            readonly cases_resolved: number;
+            readonly open_now: number;
+            readonly urgent_open: number;
+            /** Format: double */
+            readonly median_hours_to_first_action: number | null;
+            /** Format: double */
+            readonly median_hours_to_resolve: number | null;
+            readonly reports: number;
+            readonly reports_by_reason: components["schemas"]["CountRow"][];
+            readonly reports_by_school: components["schemas"]["CountRow"][];
+            readonly outcomes: components["schemas"]["CountRow"][];
+            readonly appeals_filed: number;
+            readonly appeals_overturned: number;
+            readonly appeals_upheld: number;
+            readonly appeals_pending: number;
+            readonly repeat_offenders: components["schemas"]["Offender"][];
+            readonly possible_false_reporters: components["schemas"]["FalseReporter"][];
+        };
+        MyAppeal: {
+            readonly id: number;
+            readonly status: components["schemas"]["AppealStatus"];
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly decided_at: string | null;
+        };
+        MyInfoRequest: {
+            readonly id: number;
+            readonly question: string;
+            readonly answer: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly answered_at: string | null;
+        };
+        /**
+         * @description A decision about me: what happened and whether I can still appeal. The moderator's
+         *     internal reason is never included; `message` is what they chose to tell me.
+         */
+        MyNotice: {
+            readonly id: number;
+            readonly kind: components["schemas"]["ModerationActionKind"];
+            readonly kind_label: string;
+            readonly message: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            readonly can_appeal: boolean;
+            /** Format: date-time */
+            readonly appeal_deadline: string;
+            readonly appeal: components["schemas"]["MyAppeal"] | null;
+        };
+        /**
          * @description A student's own active restriction: what it stops and until when. The moderator's
          *     reasoning stays internal.
          */
@@ -1141,8 +1580,39 @@ export interface components {
             /** Format: date-time */
             readonly expires_at: string | null;
         };
+        Notification: {
+            readonly id: number;
+            readonly kind: components["schemas"]["NotificationKind"];
+            readonly title: string;
+            readonly body: string;
+            readonly link: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly read_at: string | null;
+        };
+        /**
+         * @description * `deal` - Deal
+         *     * `moderation_notice` - Moderation notice
+         *     * `report_update` - Report update
+         *     * `info_request` - Moderator question
+         *     * `appeal_update` - Appeal update
+         *     * `staff_alert` - Staff alert
+         * @enum {string}
+         */
+        NotificationKind: "deal" | "moderation_notice" | "report_update" | "info_request" | "appeal_update" | "staff_alert";
+        NotificationMarkReadRequest: {
+            ids?: number[];
+        };
+        NotificationUnreadCount: {
+            readonly unread: number;
+        };
         /** @enum {unknown} */
         NullEnum: null;
+        Offender: {
+            readonly user: components["schemas"]["StaffUser"];
+            readonly count: number;
+        };
         PatchedCurrentUserRequest: {
             instagram_handle?: string;
             profile_description?: string;
@@ -1160,6 +1630,13 @@ export interface components {
             price_cents?: number;
             item_details?: components["schemas"]["ItemDetailsUpdateRequest"];
         };
+        /**
+         * @description * `1` - Urgent
+         *     * `2` - High
+         *     * `3` - Normal
+         * @enum {integer}
+         */
+        PriorityEnum: 1 | 2 | 3;
         /**
          * @description * `weapon` - Weapon
          *     * `drugs` - Drugs or prescriptions
@@ -1186,6 +1663,12 @@ export interface components {
             readonly date_joined: string;
             readonly is_following: boolean;
             readonly is_self: boolean;
+        };
+        QueueSummary: {
+            readonly open: number;
+            readonly urgent: number;
+            readonly assigned_to_me: number;
+            readonly escalated: number;
         };
         /** @enum {string} */
         RemovedByEnum: "seller" | "moderation";
@@ -1231,6 +1714,13 @@ export interface components {
          * @enum {string}
          */
         ReportTargetType: "listing" | "user" | "message" | "conversation" | "deal" | "review";
+        /** @description How often a reporter's reviewed reports led to action. */
+        ReporterRecord: {
+            readonly user: components["schemas"]["StaffUser"];
+            readonly reviewed: number;
+            readonly upheld: number;
+            readonly possible_false_reporter: boolean;
+        };
         /**
          * @description * `selling` - Selling
          *     * `messaging` - Messaging
@@ -1240,6 +1730,13 @@ export interface components {
          * @enum {string}
          */
         RestrictionKind: "selling" | "messaging" | "deals" | "suspension" | "ban";
+        /**
+         * @description * `selling` - Selling
+         *     * `messaging` - Messaging
+         *     * `deals` - Buying and deals
+         * @enum {string}
+         */
+        RestrictionKindEnum: "selling" | "messaging" | "deals";
         Review: {
             readonly id: number;
             readonly deal: number;
@@ -1296,6 +1793,50 @@ export interface components {
             body: string;
             listing_id?: number;
         };
+        StaffAppeal: {
+            readonly id: number;
+            readonly action: components["schemas"]["Action"];
+            readonly user: components["schemas"]["StaffUser"];
+            readonly message: string;
+            readonly status: components["schemas"]["AppealStatus"];
+            readonly decided_by: components["schemas"]["StaffUser"] | null;
+            readonly decision_reason: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly decided_at: string | null;
+        };
+        StaffInfoRequest: {
+            readonly id: number;
+            readonly recipient: components["schemas"]["StaffUser"];
+            readonly asked_by: components["schemas"]["StaffUser"];
+            readonly question: string;
+            readonly answer: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly answered_at: string | null;
+        };
+        StaffRestriction: {
+            readonly id: number;
+            readonly kind: components["schemas"]["RestrictionKind"];
+            readonly kind_label: string;
+            readonly reason: string;
+            /** Format: date-time */
+            readonly expires_at: string | null;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        StaffUser: {
+            readonly id: number;
+            readonly username: string;
+            readonly first_name: string;
+        };
+        Standing: {
+            readonly restrictions: components["schemas"]["MyRestriction"][];
+            readonly notices: components["schemas"]["MyNotice"][];
+            readonly info_requests: components["schemas"]["MyInfoRequest"][];
+        };
         StartConversationRequest: {
             username: string;
         };
@@ -1307,6 +1848,23 @@ export interface components {
          * @enum {string}
          */
         StatusEnum: "available" | "pending" | "sold" | "removed";
+        /** @description The reported student's record, so a moderator can see whether this is a pattern. */
+        SubjectHistory: {
+            readonly user: components["schemas"]["StaffUser"];
+            /** Format: email */
+            readonly email: string;
+            readonly is_active: boolean;
+            /** Format: date-time */
+            readonly date_joined: string;
+            readonly school_name: string;
+            readonly active_restrictions: components["schemas"]["StaffRestriction"][];
+            readonly past_actions: components["schemas"]["Action"][];
+            readonly other_cases: components["schemas"]["CaseRow"][];
+            readonly reports_received: number;
+            readonly reports_made: number;
+            readonly recent_consequences: number;
+            readonly repeat_offender: boolean;
+        };
         TradeOfferRequest: {
             trade_item_ids: number[];
             /** @default 0 */
@@ -1317,6 +1875,12 @@ export interface components {
         };
         UnreadCount: {
             readonly unread_count: number;
+        };
+        Viewer: {
+            readonly can_act: boolean;
+            readonly is_senior: boolean;
+            readonly conflict: string | null;
+            readonly conflict_overridable: boolean;
         };
     };
     responses: never;
@@ -2295,6 +2859,58 @@ export interface operations {
             };
         };
     };
+    me_appeals_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppealCreateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AppealCreateRequest"];
+                "multipart/form-data": components["schemas"]["AppealCreateRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyAppeal"];
+                };
+            };
+        };
+    };
+    me_info_requests_answer_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswerRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AnswerRequest"];
+                "multipart/form-data": components["schemas"]["AnswerRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyInfoRequest"];
+                };
+            };
+        };
+    };
     me_restrictions_list: {
         parameters: {
             query?: never;
@@ -2310,6 +2926,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MyRestriction"][];
+                };
+            };
+        };
+    };
+    me_standing_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Standing"];
                 };
             };
         };
@@ -2354,6 +2989,253 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeetupPreference"];
+                };
+            };
+        };
+    };
+    moderation_cases_list: {
+        parameters: {
+            query?: {
+                /**
+                 * @description * `me` - Assigned to me
+                 *     * `none` - Unassigned
+                 */
+                assigned?: "me" | "none";
+                /**
+                 * @description * `1` - Urgent
+                 *     * `2` - High
+                 *     * `3` - Normal
+                 */
+                priority?: 1 | 2 | 3;
+                /**
+                 * @description * `prohibited_item` - Prohibited item
+                 *     * `counterfeit` - Counterfeit item
+                 *     * `scam` - Scam or payment concern
+                 *     * `harassment` - Harassment
+                 *     * `spam` - Spam
+                 *     * `unsafe_meetup` - Unsafe meetup behavior
+                 *     * `no_show` - No-show
+                 *     * `misleading_listing` - Misleading listing
+                 *     * `inappropriate` - Inappropriate profile or message
+                 *     * `other` - Other
+                 */
+                reason?: "prohibited_item" | "counterfeit" | "scam" | "harassment" | "spam" | "unsafe_meetup" | "no_show" | "misleading_listing" | "inappropriate" | "other";
+                repeat?: boolean;
+                school?: string;
+                /**
+                 * @description * `active` - Open, investigating, or appealed
+                 *     * `open` - Open
+                 *     * `investigating` - Investigating
+                 *     * `resolved` - Resolved
+                 *     * `appealed` - Appealed
+                 */
+                status?: "active" | "open" | "investigating" | "resolved" | "appealed";
+                /**
+                 * @description * `listing` - Listing
+                 *     * `user` - Profile
+                 *     * `message` - Message
+                 *     * `conversation` - Conversation
+                 *     * `deal` - Deal or meetup
+                 *     * `review` - Review
+                 */
+                target_type?: "listing" | "user" | "message" | "conversation" | "deal" | "review";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseRow"][];
+                };
+            };
+        };
+    };
+    moderation_cases_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseDetail"];
+                };
+            };
+        };
+    };
+    moderation_cases_actions_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaseActionRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CaseActionRequest"];
+                "multipart/form-data": components["schemas"]["CaseActionRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseDetail"];
+                };
+            };
+        };
+    };
+    moderation_restrictions_lift_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LiftRestrictionRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["LiftRestrictionRequest"];
+                "multipart/form-data": components["schemas"]["LiftRestrictionRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffRestriction"];
+                };
+            };
+        };
+    };
+    moderation_stats_retrieve: {
+        parameters: {
+            query?: {
+                /**
+                 * @description * `7` - 7
+                 *     * `30` - 30
+                 *     * `90` - 90
+                 */
+                days?: 7 | 30 | 90;
+                school?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationStats"];
+                };
+            };
+        };
+    };
+    moderation_summary_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueueSummary"];
+                };
+            };
+        };
+    };
+    notifications_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Notification"][];
+                };
+            };
+        };
+    };
+    notifications_read_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["NotificationMarkReadRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["NotificationMarkReadRequest"];
+                "multipart/form-data": components["schemas"]["NotificationMarkReadRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationUnreadCount"];
+                };
+            };
+        };
+    };
+    notifications_unread_count_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationUnreadCount"];
                 };
             };
         };

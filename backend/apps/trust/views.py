@@ -10,11 +10,16 @@ from apps.errors import service_validation_errors
 from . import checks, services
 from .models import Block
 from .serializers import (
+    AnswerSerializer,
+    AppealCreateSerializer,
     BlockCreateSerializer,
     BlockedUserSerializer,
+    MyAppealSerializer,
+    MyInfoRequestSerializer,
     MyRestrictionSerializer,
     ReportCreateSerializer,
     ReportReceiptSerializer,
+    StandingSerializer,
 )
 
 
@@ -74,3 +79,39 @@ class MyRestrictionsView(ListAPIView):
 
     def get_queryset(self):
         return checks.active_restrictions(self.request.user).order_by("expires_at")
+
+
+class MyStandingView(GenericAPIView):
+    """My account status: what's paused, decisions about me (and whether I can appeal), and
+    questions from moderators."""
+
+    serializer_class = StandingSerializer
+
+    def get(self, request):
+        return Response(StandingSerializer(services.my_standing(request.user)).data)
+
+
+class AppealCreateView(GenericAPIView):
+    serializer_class = AppealCreateSerializer
+
+    @extend_schema(responses={201: MyAppealSerializer})
+    def post(self, request):
+        payload = self.get_serializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        with service_validation_errors():
+            appeal = services.file_appeal(user=request.user, **payload.validated_data)
+        return Response(MyAppealSerializer(appeal).data, status=status.HTTP_201_CREATED)
+
+
+class AnswerInfoRequestView(GenericAPIView):
+    serializer_class = AnswerSerializer
+
+    @extend_schema(responses={200: MyInfoRequestSerializer})
+    def post(self, request, pk):
+        payload = self.get_serializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        with service_validation_errors():
+            info_request = services.answer_info_request(
+                user=request.user, info_request_id=pk, answer=payload.validated_data["answer"]
+            )
+        return Response(MyInfoRequestSerializer(info_request).data)

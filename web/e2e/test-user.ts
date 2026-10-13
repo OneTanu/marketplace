@@ -20,4 +20,11 @@ export const TEST_SECOND_BUYER = {
   password: TEST_USER.password,
 };
 
+/** A senior moderator (staff), for the /moderation portal. */
+export const TEST_MODERATOR = {
+  email: "e2e-moderator@umd.edu",
+  username: "e2e_moderator",
+  password: TEST_USER.password,
+};
+
 export type TestUser = typeof TEST_USER;

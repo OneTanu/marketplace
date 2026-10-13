@@ -221,6 +221,8 @@ export function ProfileClient() {
           <div className="mt-5 flex flex-wrap gap-2">
             <Link href="/listings/mine" className="btn btn-secondary">My listings</Link>
             <Link href="/profile/meetup" className="btn btn-secondary">Meetup preferences</Link>
+            <Link href="/profile/standing" className="btn btn-secondary">Account status</Link>
+            {user.is_moderator && <Link href="/moderation" className="btn btn-secondary">Moderation</Link>}
             <button onClick={() => { setEditing((value) => !value); setSaved(false); setErrors({}); }} className="btn btn-secondary">{editing ? "Cancel" : "Edit profile"}</button>
           </div>
         </div>

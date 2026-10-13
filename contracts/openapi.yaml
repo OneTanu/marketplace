@@ -1093,6 +1093,64 @@ paths:
               schema:
                 $ref: '#/components/schemas/CurrentUser'
           description: ''
+  /api/me/appeals/:
+    post:
+      operationId: me_appeals_create
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppealCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AppealCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AppealCreateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyAppeal'
+          description: ''
+  /api/me/info-requests/{id}/answer/:
+    post:
+      operationId: me_info_requests_answer_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnswerRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AnswerRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AnswerRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyInfoRequest'
+          description: ''
   /api/me/restrictions/:
     get:
       operationId: me_restrictions_list
@@ -1110,6 +1168,23 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/MyRestriction'
+          description: ''
+  /api/me/standing/:
+    get:
+      operationId: me_standing_retrieve
+      description: |-
+        My account status: what's paused, decisions about me (and whether I can appeal), and
+        questions from moderators.
+      tags:
+      - me
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Standing'
           description: ''
   /api/meetup-preferences/:
     get:
@@ -1149,6 +1224,316 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MeetupPreference'
+          description: ''
+  /api/moderation/cases/:
+    get:
+      operationId: moderation_cases_list
+      description: 'The moderation queue: most urgent and oldest first, with filters.'
+      parameters:
+      - in: query
+        name: assigned
+        schema:
+          enum:
+          - me
+          - none
+          type: string
+          minLength: 1
+        description: |-
+          * `me` - Assigned to me
+          * `none` - Unassigned
+      - in: query
+        name: priority
+        schema:
+          enum:
+          - 1
+          - 2
+          - 3
+          type: integer
+        description: |-
+          * `1` - Urgent
+          * `2` - High
+          * `3` - Normal
+      - in: query
+        name: reason
+        schema:
+          enum:
+          - prohibited_item
+          - counterfeit
+          - scam
+          - harassment
+          - spam
+          - unsafe_meetup
+          - no_show
+          - misleading_listing
+          - inappropriate
+          - other
+          type: string
+          minLength: 1
+        description: |-
+          * `prohibited_item` - Prohibited item
+          * `counterfeit` - Counterfeit item
+          * `scam` - Scam or payment concern
+          * `harassment` - Harassment
+          * `spam` - Spam
+          * `unsafe_meetup` - Unsafe meetup behavior
+          * `no_show` - No-show
+          * `misleading_listing` - Misleading listing
+          * `inappropriate` - Inappropriate profile or message
+          * `other` - Other
+      - in: query
+        name: repeat
+        schema:
+          type: boolean
+          default: false
+      - in: query
+        name: school
+        schema:
+          type: string
+          minLength: 1
+          pattern: ^[-a-zA-Z0-9_]+$
+      - in: query
+        name: status
+        schema:
+          enum:
+          - active
+          - open
+          - investigating
+          - resolved
+          - appealed
+          type: string
+          default: active
+          minLength: 1
+        description: |-
+          * `active` - Open, investigating, or appealed
+          * `open` - Open
+          * `investigating` - Investigating
+          * `resolved` - Resolved
+          * `appealed` - Appealed
+      - in: query
+        name: target_type
+        schema:
+          enum:
+          - listing
+          - user
+          - message
+          - conversation
+          - deal
+          - review
+          type: string
+          minLength: 1
+        description: |-
+          * `listing` - Listing
+          * `user` - Profile
+          * `message` - Message
+          * `conversation` - Conversation
+          * `deal` - Deal or meetup
+          * `review` - Review
+      tags:
+      - moderation
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CaseRow'
+          description: ''
+  /api/moderation/cases/{id}/:
+    get:
+      operationId: moderation_cases_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - moderation
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseDetail'
+          description: ''
+  /api/moderation/cases/{id}/actions/:
+    post:
+      operationId: moderation_cases_actions_create
+      description: Take one action on a case. Every action needs a reason and is permanently
+        recorded.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - moderation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaseActionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CaseActionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CaseActionRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseDetail'
+          description: ''
+  /api/moderation/restrictions/{id}/lift/:
+    post:
+      operationId: moderation_restrictions_lift_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - moderation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LiftRestrictionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LiftRestrictionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LiftRestrictionRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffRestriction'
+          description: ''
+  /api/moderation/stats/:
+    get:
+      operationId: moderation_stats_retrieve
+      description: |-
+        Moderation numbers for the schools I moderate: volume, speed, outcomes, appeals, and
+        patterns worth a look (repeat offenders, reporters whose reports are mostly dismissed).
+      parameters:
+      - in: query
+        name: days
+        schema:
+          enum:
+          - 7
+          - 30
+          - 90
+          type: integer
+          default: 30
+        description: |-
+          * `7` - 7
+          * `30` - 30
+          * `90` - 90
+      - in: query
+        name: school
+        schema:
+          type: string
+          minLength: 1
+          default: ''
+          pattern: ^[-a-zA-Z0-9_]+$
+      tags:
+      - moderation
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationStats'
+          description: ''
+  /api/moderation/summary/:
+    get:
+      operationId: moderation_summary_retrieve
+      tags:
+      - moderation
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueSummary'
+          description: ''
+  /api/notifications/:
+    get:
+      operationId: notifications_list
+      description: My latest notifications, newest first.
+      tags:
+      - notifications
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/notifications/read/:
+    post:
+      operationId: notifications_read_create
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationMarkReadRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationMarkReadRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationMarkReadRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationUnreadCount'
+          description: ''
+  /api/notifications/unread-count/:
+    get:
+      operationId: notifications_unread_count_retrieve
+      tags:
+      - notifications
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationUnreadCount'
           description: ''
   /api/reports/:
     post:
@@ -1372,6 +1757,123 @@ components:
         meetup_proposal_id:
           type: integer
           minimum: 1
+    Action:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/ModerationActionKind'
+          readOnly: true
+        kind_label:
+          type: string
+          readOnly: true
+        actor:
+          allOf:
+          - $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+          nullable: true
+        target_user:
+          allOf:
+          - $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+          nullable: true
+        listing_id:
+          type: integer
+          nullable: true
+          readOnly: true
+        case_id:
+          type: integer
+          nullable: true
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        user_message:
+          type: string
+          readOnly: true
+        data:
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - actor
+      - case_id
+      - created_at
+      - data
+      - id
+      - kind
+      - kind_label
+      - listing_id
+      - reason
+      - target_user
+      - user_message
+    ActionEnum:
+      enum:
+      - note
+      - assign
+      - escalate
+      - request_info
+      - decide_appeal
+      - dismiss
+      - resolve
+      - remove_listing
+      - restore_listing
+      - warn
+      - restrict
+      - suspend
+      - ban
+      type: string
+      description: |-
+        * `note` - Add a note
+        * `assign` - Assign
+        * `escalate` - Escalate to a senior moderator
+        * `request_info` - Ask for more information
+        * `decide_appeal` - Decide an appeal
+        * `dismiss` - Dismiss: no violation
+        * `resolve` - Resolve
+        * `remove_listing` - Remove listing
+        * `restore_listing` - Restore listing
+        * `warn` - Send warning
+        * `restrict` - Restrict a feature
+        * `suspend` - Suspend account
+        * `ban` - Ban account
+    AnswerRequest:
+      type: object
+      properties:
+        answer:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      required:
+      - answer
+    AppealCreateRequest:
+      type: object
+      properties:
+        action_id:
+          type: integer
+          minimum: 1
+        message:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      required:
+      - action_id
+      - message
+    AppealStatus:
+      enum:
+      - pending
+      - upheld
+      - overturned
+      type: string
+      description: |-
+        * `pending` - Pending
+        * `upheld` - Upheld
+        * `overturned` - Overturned
     AvailabilityOverride:
       type: object
       properties:
@@ -1479,6 +1981,304 @@ components:
       - created_at
       - first_name
       - username
+    CaseActionRequest:
+      type: object
+      properties:
+        action:
+          $ref: '#/components/schemas/ActionEnum'
+        reason:
+          type: string
+          maxLength: 2000
+        user_id:
+          type: integer
+          minimum: 1
+        assignee_id:
+          type: integer
+          minimum: 1
+        restriction_kind:
+          $ref: '#/components/schemas/RestrictionKindEnum'
+        until:
+          type: string
+          format: date-time
+          nullable: true
+        user_message:
+          type: string
+          default: ''
+          maxLength: 2000
+        appeal_id:
+          type: integer
+          minimum: 1
+        decision:
+          $ref: '#/components/schemas/DecisionEnum'
+        override_reason:
+          type: string
+          default: ''
+          maxLength: 2000
+      required:
+      - action
+      - reason
+    CaseDetail:
+      type: object
+      properties:
+        case:
+          allOf:
+          - $ref: '#/components/schemas/CaseRow'
+          readOnly: true
+        legal_hold:
+          type: boolean
+          readOnly: true
+        reports:
+          type: array
+          items:
+            $ref: '#/components/schemas/CaseReport'
+          readOnly: true
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Action'
+          readOnly: true
+        appeals:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffAppeal'
+          readOnly: true
+        info_requests:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffInfoRequest'
+          readOnly: true
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/SubjectHistory'
+          readOnly: true
+        involved_users:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+        reporter_records:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReporterRecord'
+          readOnly: true
+        eligible_assignees:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+        viewer:
+          allOf:
+          - $ref: '#/components/schemas/Viewer'
+          readOnly: true
+      required:
+      - actions
+      - appeals
+      - case
+      - eligible_assignees
+      - info_requests
+      - involved_users
+      - legal_hold
+      - reporter_records
+      - reports
+      - subject
+      - viewer
+    CaseListing:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        status:
+          type: string
+          readOnly: true
+        removed_by:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - removed_by
+      - status
+      - title
+    CaseReport:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        reporter:
+          allOf:
+          - $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+        target_type:
+          allOf:
+          - $ref: '#/components/schemas/ReportTargetType'
+          readOnly: true
+        reason:
+          allOf:
+          - $ref: '#/components/schemas/ReportReason'
+          readOnly: true
+        reason_label:
+          type: string
+          readOnly: true
+        prohibited_category:
+          allOf:
+          - $ref: '#/components/schemas/ProhibitedCategory'
+          readOnly: true
+        details:
+          type: string
+          readOnly: true
+        listing_id:
+          type: integer
+          nullable: true
+          readOnly: true
+        conversation_id:
+          type: integer
+          nullable: true
+          readOnly: true
+        message_id:
+          type: integer
+          nullable: true
+          readOnly: true
+        deal_id:
+          type: integer
+          nullable: true
+          readOnly: true
+        review_id:
+          type: integer
+          nullable: true
+          readOnly: true
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/Evidence'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - conversation_id
+      - created_at
+      - deal_id
+      - details
+      - evidence
+      - id
+      - listing_id
+      - message_id
+      - prohibited_category
+      - reason
+      - reason_label
+      - reporter
+      - review_id
+      - target_type
+    CaseRow:
+      type: object
+      description: One line in the moderation queue.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CaseStatus'
+          readOnly: true
+        priority:
+          allOf:
+          - $ref: '#/components/schemas/PriorityEnum'
+          readOnly: true
+        priority_label:
+          type: string
+          readOnly: true
+        escalated:
+          type: boolean
+          readOnly: true
+        subject_user:
+          allOf:
+          - $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+        listing:
+          allOf:
+          - $ref: '#/components/schemas/CaseListing'
+          readOnly: true
+          nullable: true
+        school_name:
+          type: string
+          readOnly: true
+          default: ''
+        assigned_to:
+          allOf:
+          - $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+          nullable: true
+        report_count:
+          type: integer
+          readOnly: true
+        reporter_count:
+          type: integer
+          readOnly: true
+        prior_case_count:
+          type: integer
+          readOnly: true
+        recent_consequences:
+          type: integer
+          readOnly: true
+        latest_report_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        reasons:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        target_types:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - assigned_to
+      - created_at
+      - escalated
+      - id
+      - latest_report_at
+      - listing
+      - prior_case_count
+      - priority
+      - priority_label
+      - reasons
+      - recent_consequences
+      - report_count
+      - reporter_count
+      - school_name
+      - status
+      - subject_user
+      - target_types
+      - updated_at
+    CaseStatus:
+      enum:
+      - open
+      - investigating
+      - resolved
+      - appealed
+      type: string
+      description: |-
+        * `open` - Open
+        * `investigating` - Investigating
+        * `resolved` - Resolved
+        * `appealed` - Appealed
     CashPayerEnum:
       enum:
       - buyer
@@ -1591,6 +2391,22 @@ components:
       - latest_message
       - other_user
       - unread_count
+    CountRow:
+      type: object
+      properties:
+        key:
+          type: string
+          readOnly: true
+        label:
+          type: string
+          readOnly: true
+        count:
+          type: integer
+          readOnly: true
+      required:
+      - count
+      - key
+      - label
     CounterOfferRequest:
       type: object
       properties:
@@ -1669,6 +2485,12 @@ components:
           type: string
           format: date-time
           readOnly: true
+        is_moderator:
+          type: boolean
+          readOnly: true
+        is_senior_moderator:
+          type: boolean
+          readOnly: true
       required:
       - date_joined
       - email
@@ -1676,6 +2498,8 @@ components:
       - follower_count
       - following_count
       - id
+      - is_moderator
+      - is_senior_moderator
       - last_name
       - school
       - sold_count
@@ -1946,6 +2770,61 @@ components:
       - first_name
       - id
       - username
+    DecisionEnum:
+      enum:
+      - uphold
+      - overturn
+      type: string
+      description: |-
+        * `uphold` - Uphold
+        * `overturn` - Overturn
+    Evidence:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        kind:
+          type: string
+          readOnly: true
+        source_id:
+          type: integer
+          readOnly: true
+        data:
+          readOnly: true
+        files:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - data
+      - files
+      - id
+      - kind
+      - source_id
+    FalseReporter:
+      type: object
+      properties:
+        user:
+          allOf:
+          - $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+        reviewed:
+          type: integer
+          readOnly: true
+        upheld:
+          type: integer
+          readOnly: true
+      required:
+      - reviewed
+      - upheld
+      - user
     ItemDetails:
       type: object
       properties:
@@ -2000,6 +2879,17 @@ components:
       description: |-
         * `item` - Item
         * `service` - Service
+    LiftRestrictionRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 2000
+        case_id:
+          type: integer
+          minimum: 1
+      required:
+      - reason
     Listing:
       type: object
       description: A listing as returned by the API.
@@ -2573,6 +3463,227 @@ components:
       - id
       - school
       - username
+    ModerationActionKind:
+      enum:
+      - note
+      - assign
+      - escalate
+      - dismiss
+      - resolve
+      - remove_listing
+      - auto_hide_listing
+      - restore_listing
+      - warn
+      - restrict
+      - suspend
+      - ban
+      - lift_restriction
+      - conflict_override
+      - request_info
+      - info_received
+      - appeal_filed
+      - appeal_decided
+      type: string
+      description: |-
+        * `note` - Note
+        * `assign` - Assign
+        * `escalate` - Escalate
+        * `dismiss` - Dismiss
+        * `resolve` - Resolve
+        * `remove_listing` - Remove listing
+        * `auto_hide_listing` - Hide listing pending review
+        * `restore_listing` - Restore listing
+        * `warn` - Warning
+        * `restrict` - Restrict
+        * `suspend` - Suspend
+        * `ban` - Ban
+        * `lift_restriction` - Lift restriction
+        * `conflict_override` - Conflict of interest override
+        * `request_info` - Asked for more information
+        * `info_received` - Answer received
+        * `appeal_filed` - Appeal filed
+        * `appeal_decided` - Appeal decided
+    ModerationStats:
+      type: object
+      properties:
+        days:
+          type: integer
+          readOnly: true
+        cases_opened:
+          type: integer
+          readOnly: true
+        cases_resolved:
+          type: integer
+          readOnly: true
+        open_now:
+          type: integer
+          readOnly: true
+        urgent_open:
+          type: integer
+          readOnly: true
+        median_hours_to_first_action:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+        median_hours_to_resolve:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+        reports:
+          type: integer
+          readOnly: true
+        reports_by_reason:
+          type: array
+          items:
+            $ref: '#/components/schemas/CountRow'
+          readOnly: true
+        reports_by_school:
+          type: array
+          items:
+            $ref: '#/components/schemas/CountRow'
+          readOnly: true
+        outcomes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CountRow'
+          readOnly: true
+        appeals_filed:
+          type: integer
+          readOnly: true
+        appeals_overturned:
+          type: integer
+          readOnly: true
+        appeals_upheld:
+          type: integer
+          readOnly: true
+        appeals_pending:
+          type: integer
+          readOnly: true
+        repeat_offenders:
+          type: array
+          items:
+            $ref: '#/components/schemas/Offender'
+          readOnly: true
+        possible_false_reporters:
+          type: array
+          items:
+            $ref: '#/components/schemas/FalseReporter'
+          readOnly: true
+      required:
+      - appeals_filed
+      - appeals_overturned
+      - appeals_pending
+      - appeals_upheld
+      - cases_opened
+      - cases_resolved
+      - days
+      - median_hours_to_first_action
+      - median_hours_to_resolve
+      - open_now
+      - outcomes
+      - possible_false_reporters
+      - repeat_offenders
+      - reports
+      - reports_by_reason
+      - reports_by_school
+      - urgent_open
+    MyAppeal:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/AppealStatus'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - created_at
+      - decided_at
+      - id
+      - status
+    MyInfoRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        question:
+          type: string
+          readOnly: true
+        answer:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        answered_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - answer
+      - answered_at
+      - created_at
+      - id
+      - question
+    MyNotice:
+      type: object
+      description: |-
+        A decision about me: what happened and whether I can still appeal. The moderator's
+        internal reason is never included; `message` is what they chose to tell me.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/ModerationActionKind'
+          readOnly: true
+        kind_label:
+          type: string
+          readOnly: true
+        message:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        can_appeal:
+          type: boolean
+          readOnly: true
+        appeal_deadline:
+          type: string
+          format: date-time
+          readOnly: true
+        appeal:
+          allOf:
+          - $ref: '#/components/schemas/MyAppeal'
+          readOnly: true
+          nullable: true
+      required:
+      - appeal
+      - appeal_deadline
+      - can_appeal
+      - created_at
+      - id
+      - kind
+      - kind_label
+      - message
     MyRestriction:
       type: object
       description: |-
@@ -2595,9 +3706,90 @@ components:
       - expires_at
       - kind
       - kind_label
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/NotificationKind'
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        body:
+          type: string
+          readOnly: true
+        link:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        read_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - body
+      - created_at
+      - id
+      - kind
+      - link
+      - read_at
+      - title
+    NotificationKind:
+      enum:
+      - deal
+      - moderation_notice
+      - report_update
+      - info_request
+      - appeal_update
+      - staff_alert
+      type: string
+      description: |-
+        * `deal` - Deal
+        * `moderation_notice` - Moderation notice
+        * `report_update` - Report update
+        * `info_request` - Moderator question
+        * `appeal_update` - Appeal update
+        * `staff_alert` - Staff alert
+    NotificationMarkReadRequest:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+    NotificationUnreadCount:
+      type: object
+      properties:
+        unread:
+          type: integer
+          readOnly: true
+      required:
+      - unread
     NullEnum:
       enum:
       - null
+    Offender:
+      type: object
+      properties:
+        user:
+          allOf:
+          - $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+        count:
+          type: integer
+          readOnly: true
+      required:
+      - count
+      - user
     PatchedCurrentUserRequest:
       type: object
       properties:
@@ -2629,6 +3821,16 @@ components:
           minimum: 0
         item_details:
           $ref: '#/components/schemas/ItemDetailsUpdateRequest'
+    PriorityEnum:
+      enum:
+      - 1
+      - 2
+      - 3
+      type: integer
+      description: |-
+        * `1` - Urgent
+        * `2` - High
+        * `3` - Normal
     ProhibitedCategory:
       enum:
       - weapon
@@ -2706,6 +3908,26 @@ components:
       - school
       - sold_count
       - username
+    QueueSummary:
+      type: object
+      properties:
+        open:
+          type: integer
+          readOnly: true
+        urgent:
+          type: integer
+          readOnly: true
+        assigned_to_me:
+          type: integer
+          readOnly: true
+        escalated:
+          type: integer
+          readOnly: true
+      required:
+      - assigned_to_me
+      - escalated
+      - open
+      - urgent
     RemovedByEnum:
       enum:
       - seller
@@ -2797,6 +4019,28 @@ components:
         * `conversation` - Conversation
         * `deal` - Deal or meetup
         * `review` - Review
+    ReporterRecord:
+      type: object
+      description: How often a reporter's reviewed reports led to action.
+      properties:
+        user:
+          allOf:
+          - $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+        reviewed:
+          type: integer
+          readOnly: true
+        upheld:
+          type: integer
+          readOnly: true
+        possible_false_reporter:
+          type: boolean
+          readOnly: true
+      required:
+      - possible_false_reporter
+      - reviewed
+      - upheld
+      - user
     RestrictionKind:
       enum:
       - selling
@@ -2811,6 +4055,16 @@ components:
         * `deals` - Buying and deals
         * `suspension` - Temporary suspension
         * `ban` - Permanent ban
+    RestrictionKindEnum:
+      enum:
+      - selling
+      - messaging
+      - deals
+      type: string
+      description: |-
+        * `selling` - Selling
+        * `messaging` - Messaging
+        * `deals` - Buying and deals
     Review:
       type: object
       properties:
@@ -3004,6 +4258,161 @@ components:
           minimum: 1
       required:
       - body
+    StaffAppeal:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        action:
+          allOf:
+          - $ref: '#/components/schemas/Action'
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+        message:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/AppealStatus'
+          readOnly: true
+        decided_by:
+          allOf:
+          - $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+          nullable: true
+        decision_reason:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - action
+      - created_at
+      - decided_at
+      - decided_by
+      - decision_reason
+      - id
+      - message
+      - status
+      - user
+    StaffInfoRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        recipient:
+          allOf:
+          - $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+        asked_by:
+          allOf:
+          - $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+        question:
+          type: string
+          readOnly: true
+        answer:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        answered_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - answer
+      - answered_at
+      - asked_by
+      - created_at
+      - id
+      - question
+      - recipient
+    StaffRestriction:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/RestrictionKind'
+          readOnly: true
+        kind_label:
+          type: string
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - expires_at
+      - id
+      - kind
+      - kind_label
+      - reason
+    StaffUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+        first_name:
+          type: string
+          readOnly: true
+      required:
+      - first_name
+      - id
+      - username
+    Standing:
+      type: object
+      properties:
+        restrictions:
+          type: array
+          items:
+            $ref: '#/components/schemas/MyRestriction'
+          readOnly: true
+        notices:
+          type: array
+          items:
+            $ref: '#/components/schemas/MyNotice'
+          readOnly: true
+        info_requests:
+          type: array
+          items:
+            $ref: '#/components/schemas/MyInfoRequest'
+          readOnly: true
+      required:
+      - info_requests
+      - notices
+      - restrictions
     StartConversationRequest:
       type: object
       properties:
@@ -3025,6 +4434,69 @@ components:
         * `pending` - Pending
         * `sold` - Sold
         * `removed` - Removed
+    SubjectHistory:
+      type: object
+      description: The reported student's record, so a moderator can see whether this
+        is a pattern.
+      properties:
+        user:
+          allOf:
+          - $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+        school_name:
+          type: string
+          readOnly: true
+        active_restrictions:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffRestriction'
+          readOnly: true
+        past_actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Action'
+          readOnly: true
+        other_cases:
+          type: array
+          items:
+            $ref: '#/components/schemas/CaseRow'
+          readOnly: true
+        reports_received:
+          type: integer
+          readOnly: true
+        reports_made:
+          type: integer
+          readOnly: true
+        recent_consequences:
+          type: integer
+          readOnly: true
+        repeat_offender:
+          type: boolean
+          readOnly: true
+      required:
+      - active_restrictions
+      - date_joined
+      - email
+      - is_active
+      - other_cases
+      - past_actions
+      - recent_consequences
+      - repeat_offender
+      - reports_made
+      - reports_received
+      - school_name
+      - user
     TradeOfferRequest:
       type: object
       properties:
@@ -3057,6 +4529,27 @@ components:
           readOnly: true
       required:
       - unread_count
+    Viewer:
+      type: object
+      properties:
+        can_act:
+          type: boolean
+          readOnly: true
+        is_senior:
+          type: boolean
+          readOnly: true
+        conflict:
+          type: string
+          readOnly: true
+          nullable: true
+        conflict_overridable:
+          type: boolean
+          readOnly: true
+      required:
+      - can_act
+      - conflict
+      - conflict_overridable
+      - is_senior
   securitySchemes:
     cookieAuth:
       type: apiKey

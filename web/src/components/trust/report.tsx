@@ -6,25 +6,13 @@ import { createPortal } from "react-dom";
 import {
   blockUser,
   listBlocks,
+  REASON_LABELS,
   submitReport,
   unblockUser,
   type ProhibitedCategory,
   type ReportReason,
   type ReportTargetType,
 } from "@/lib/trust";
-
-const REASON_LABELS: Record<ReportReason, string> = {
-  prohibited_item: "Prohibited item",
-  counterfeit: "Counterfeit item",
-  scam: "Scam or payment concern",
-  harassment: "Harassment",
-  spam: "Spam",
-  unsafe_meetup: "Unsafe meetup behavior",
-  no_show: "Didn't show up to the meetup",
-  misleading_listing: "Misleading listing",
-  inappropriate: "Inappropriate profile or message",
-  other: "Something else",
-};
 
 // The reasons that make sense for each kind of thing.
 const REASONS: Record<ReportTargetType, ReportReason[]> = {
