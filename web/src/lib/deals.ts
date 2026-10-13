@@ -1,22 +1,7 @@
-import { api, errorMessage } from "@/lib/api/client";
+import { api, requestFailed } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
 
-/** The first message in a DRF error body, which nests field errors in objects and lists. */
-function firstMessage(body: unknown): string | undefined {
-  if (typeof body === "string") return body;
-  const values = Array.isArray(body) ? body : body && typeof body === "object" ? Object.values(body) : [];
-  for (const value of values) {
-    const message = firstMessage(value);
-    if (message) return message;
-  }
-  return undefined;
-}
-
-function failed(error: unknown, response: Response): never {
-  throw new Error(
-    errorMessage(error, "detail") ?? firstMessage(error) ?? `Request failed with ${response.status}`,
-  );
-}
+const failed = requestFailed;
 
 export async function createDeal(
   listingId: number,

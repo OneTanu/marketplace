@@ -136,6 +136,7 @@ REST_FRAMEWORK = {
     # (DRF's default HTTP Basic auth would let an unverified account in with its password.)
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "EXCEPTION_HANDLER": "config.exceptions.exception_handler",
 }
 SPECTACULAR_SETTINGS = {
     "TITLE": "Tanu API",
@@ -149,5 +150,9 @@ SPECTACULAR_SETTINGS = {
         "StatusEnum": "apps.listings.models.Listing.Status",
         "DealKind": "apps.deals.models.Deal.Kind",
         "DealStatus": "apps.deals.models.Deal.Status",
+        "RestrictionKind": "apps.trust.models.UserRestriction.Kind",
+        "ReportTargetType": "apps.trust.models.Report.TargetType",
+        "ReportReason": "apps.trust.models.Report.Reason",
+        "ProhibitedCategory": "apps.trust.models.Report.ProhibitedCategory",
     },
 }

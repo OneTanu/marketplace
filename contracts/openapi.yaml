@@ -4,6 +4,65 @@ info:
   version: 0.1.0
   description: Marketplace API shared by the Tanu web and mobile apps.
 paths:
+  /api/blocks/:
+    get:
+      operationId: blocks_list
+      description: The students I've blocked, and blocking another one.
+      tags:
+      - blocks
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BlockedUser'
+          description: ''
+    post:
+      operationId: blocks_create
+      description: The students I've blocked, and blocking another one.
+      tags:
+      - blocks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BlockCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BlockCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BlockCreateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlockedUser'
+          description: ''
+  /api/blocks/{username}/:
+    delete:
+      operationId: blocks_destroy
+      parameters:
+      - in: path
+        name: username
+        schema:
+          type: string
+        required: true
+      tags:
+      - blocks
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/categories/:
     get:
       operationId: categories_list
@@ -1034,6 +1093,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/CurrentUser'
           description: ''
+  /api/me/restrictions/:
+    get:
+      operationId: me_restrictions_list
+      description: My account's active restrictions, so the app can explain what's
+        paused and until when.
+      tags:
+      - me
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MyRestriction'
+          description: ''
   /api/meetup-preferences/:
     get:
       operationId: meetup_preferences_retrieve
@@ -1072,6 +1149,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MeetupPreference'
+          description: ''
+  /api/reports/:
+    post:
+      operationId: reports_create
+      description: |-
+        Report a listing, profile, message, conversation, deal, or review. The reporter only
+        learns that the report was received.
+      tags:
+      - reports
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReportCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReportCreateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportReceipt'
           description: ''
   /api/schools/:
     get:
@@ -1347,6 +1453,32 @@ components:
     BlankEnum:
       enum:
       - ''
+    BlockCreateRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 30
+      required:
+      - username
+    BlockedUser:
+      type: object
+      properties:
+        username:
+          type: string
+          readOnly: true
+        first_name:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - first_name
+      - username
     CashPayerEnum:
       enum:
       - buyer
@@ -2441,6 +2573,28 @@ components:
       - id
       - school
       - username
+    MyRestriction:
+      type: object
+      description: |-
+        A student's own active restriction: what it stops and until when. The moderator's
+        reasoning stays internal.
+      properties:
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/RestrictionKind'
+          readOnly: true
+        kind_label:
+          type: string
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - expires_at
+      - kind
+      - kind_label
     NullEnum:
       enum:
       - null
@@ -2475,6 +2629,24 @@ components:
           minimum: 0
         item_details:
           $ref: '#/components/schemas/ItemDetailsUpdateRequest'
+    ProhibitedCategory:
+      enum:
+      - weapon
+      - drugs
+      - alcohol
+      - tobacco
+      - food
+      - stolen
+      - other
+      type: string
+      description: |-
+        * `weapon` - Weapon
+        * `drugs` - Drugs or prescriptions
+        * `alcohol` - Alcohol
+        * `tobacco` - Tobacco or vapes
+        * `food` - Food
+        * `stolen` - Stolen goods
+        * `other` - Something else
     PublicUser:
       type: object
       properties:
@@ -2539,6 +2711,106 @@ components:
       - seller
       - moderation
       type: string
+    ReportCreateRequest:
+      type: object
+      properties:
+        target_type:
+          $ref: '#/components/schemas/ReportTargetType'
+        target_id:
+          type: integer
+          minimum: 1
+        reason:
+          $ref: '#/components/schemas/ReportReason'
+        prohibited_category:
+          default: ''
+          oneOf:
+          - $ref: '#/components/schemas/ProhibitedCategory'
+          - $ref: '#/components/schemas/BlankEnum'
+        details:
+          type: string
+          default: ''
+          maxLength: 1000
+        message_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+          maxItems: 20
+        block:
+          type: boolean
+          default: false
+      required:
+      - reason
+      - target_id
+      - target_type
+    ReportReason:
+      enum:
+      - prohibited_item
+      - counterfeit
+      - scam
+      - harassment
+      - spam
+      - unsafe_meetup
+      - no_show
+      - misleading_listing
+      - inappropriate
+      - other
+      type: string
+      description: |-
+        * `prohibited_item` - Prohibited item
+        * `counterfeit` - Counterfeit item
+        * `scam` - Scam or payment concern
+        * `harassment` - Harassment
+        * `spam` - Spam
+        * `unsafe_meetup` - Unsafe meetup behavior
+        * `no_show` - No-show
+        * `misleading_listing` - Misleading listing
+        * `inappropriate` - Inappropriate profile or message
+        * `other` - Other
+    ReportReceipt:
+      type: object
+      description: All a reporter gets back. Moderator notes and outcomes stay private.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+    ReportTargetType:
+      enum:
+      - listing
+      - user
+      - message
+      - conversation
+      - deal
+      - review
+      type: string
+      description: |-
+        * `listing` - Listing
+        * `user` - Profile
+        * `message` - Message
+        * `conversation` - Conversation
+        * `deal` - Deal or meetup
+        * `review` - Review
+    RestrictionKind:
+      enum:
+      - selling
+      - messaging
+      - deals
+      - suspension
+      - ban
+      type: string
+      description: |-
+        * `selling` - Selling
+        * `messaging` - Messaging
+        * `deals` - Buying and deals
+        * `suspension` - Temporary suspension
+        * `ban` - Permanent ban
     Review:
       type: object
       properties:

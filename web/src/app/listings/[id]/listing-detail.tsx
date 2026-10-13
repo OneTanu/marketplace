@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { refusalMessage, toFieldErrors } from "@/components/listings/listing-form";
 import { PhotoGallery } from "@/components/listings/photo-gallery";
 import { MeetupPicker, type MeetupSelection } from "@/components/deals/meetup-picker";
+import { ReportButton } from "@/components/trust/report";
 import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
 import { createDeal } from "@/lib/deals";
@@ -358,6 +359,9 @@ function BuyerActions({ listing }: { listing: Listing }) {
           Or propose a trade with your items
         </button>
       )}
+      <div className="mt-1 text-center">
+        <ReportButton targetType="listing" targetId={listing.id} subject="this listing" username={listing.seller.username} label="Report listing" className="text-xs font-semibold text-muted hover:text-ink hover:underline" />
+      </div>
       <p className="mt-2 text-center text-xs text-muted">
         {canBuy
           ? "The seller has 24 hours to respond. Payment happens when you meet."

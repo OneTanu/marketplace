@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { MeetupPicker, type MeetupSelection } from "@/components/deals/meetup-picker";
 import { TradeBuilder, TradeSummary } from "@/components/deals/trade";
+import { ReportButton } from "@/components/trust/report";
 import type { components } from "@/lib/api/schema";
 import {
   acceptMeetup,
@@ -331,6 +332,7 @@ function DealCard({ deal, onChange }: { deal: Deal; onChange: (deal: Deal) => vo
           )}
           {canCancel && <button type="button" onClick={() => run("cancel")} disabled={working} className="btn btn-secondary btn-sm">Cancel {deal.status === "pending" ? "purchase" : "request"}</button>}
           <Link href={`/inbox/${deal.conversation}?listing=${deal.listing.id}`} className="btn btn-quiet btn-sm">Message</Link>
+          <ReportButton targetType="deal" targetId={deal.id} subject="this deal" username={counterpart.username} className="btn btn-quiet btn-sm" />
         </div>
       )}
     </article>

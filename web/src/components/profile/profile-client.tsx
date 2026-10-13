@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 
 import { ListingCard } from "@/components/discovery/listing-card";
+import { RestrictionNotice } from "@/components/trust/restriction-notice";
 import { api } from "@/lib/api/client";
 import type { ListingCard as Card } from "@/lib/discovery";
 import {
@@ -184,6 +185,7 @@ export function ProfileClient() {
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 pb-28 sm:px-6 sm:py-12 desktop:pb-12">
+      <RestrictionNotice />
       <section className="animate-in grid items-start gap-6 lg:grid-cols-[minmax(0,26rem)_1fr] lg:gap-8">
         <StudentIdCard firstName={user.first_name} lastInitial={user.last_name[0]?.toUpperCase() ?? ""} username={user.username} schoolName={user.school?.name} schoolColors={user.school?.colors} dateJoined={user.date_joined} soldCount={user.sold_count} />
         <div>

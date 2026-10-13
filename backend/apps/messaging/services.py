@@ -5,6 +5,7 @@ from django.utils import timezone
 from apps.accounts.models import User
 from apps.accounts.services import verified_users
 from apps.listings.models import Listing
+from apps.trust import checks as trust_checks
 
 from .models import MESSAGE_MAX_LENGTH, Conversation, ConversationParticipant, Message
 
@@ -18,6 +19,7 @@ def direct_key(first: User, second: User) -> str:
 def start_direct_conversation(*, sender: User, recipient: User) -> Conversation:
     if sender.pk == recipient.pk:
         raise ValidationError("You cannot message yourself.")
+    trust_checks.require_not_blocked(sender, recipient)
     if verified_users().filter(pk__in=[sender.pk, recipient.pk]).count() != 2:
         raise ValidationError("Both students must have active, verified accounts.")
     conversation, created = Conversation.objects.get_or_create(
@@ -36,8 +38,15 @@ def start_direct_conversation(*, sender: User, recipient: User) -> Conversation:
 
 @transaction.atomic
 def send_message(
-    *, conversation: Conversation, sender: User, body: str, listing: Listing | None = None
+    *,
+    conversation: Conversation,
+    sender: User,
+    body: str,
+    listing: Listing | None = None,
+    automated: bool = False,
 ) -> Message:
+    """Send a message. `automated` marks the notes Deals writes for a student ("Made an offer
+    of $20"), which still go out when the student can't send their own messages."""
     body = body.strip()
     if not body:
         raise ValidationError("Message cannot be empty.")
@@ -50,6 +59,10 @@ def send_message(
     ).first()
     if membership is None:
         raise ValidationError("You are not a participant in this conversation.")
+    if not automated:
+        trust_checks.require_can(sender, trust_checks.Kind.MESSAGING)
+    for other in conversation.participants.exclude(pk=sender.pk):
+        trust_checks.require_not_blocked(sender, other)
     if listing is not None:
         if listing.status == Listing.Status.REMOVED:
             raise ValidationError("This listing is no longer available.")

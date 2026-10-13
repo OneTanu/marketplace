@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { ListingCard } from "@/components/discovery/listing-card";
+import { BlockButton, ReportButton } from "@/components/trust/report";
 import type { ListingCard as Card } from "@/lib/discovery";
 import { getPublicUser, getPublicUserListings, setFollowing } from "@/lib/platform";
 import { startConversation } from "@/lib/messaging";
@@ -77,9 +78,15 @@ export function PublicProfile({ username }: { username: string }) {
           <div className="flex gap-6"><div><strong className="text-base">{user.follower_count}</strong> <span className="text-muted">Followers</span></div><div><strong className="text-base">{user.following_count}</strong> <span className="text-muted">Following</span></div></div>
           {user.instagram_handle && <InstagramLink handle={user.instagram_handle} />}
         </div>
-        <div className="mt-5 flex gap-2">
+        <div className="mt-5 flex flex-wrap items-start gap-2">
           {user.is_self ? <Link href="/profile" className="btn btn-secondary">Edit your profile</Link> : <><button onClick={toggleFollow} disabled={pending} className={`btn ${user.is_following ? "btn-secondary" : "btn-primary"}`}>{pending ? "Saving…" : user.is_following ? "Following" : "Follow"}</button><button onClick={messageUser} disabled={pending} className="btn btn-secondary">Message</button></>}
         </div>
+        {!user.is_self && (
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <ReportButton targetType="user" targetId={user.id} subject={`@${user.username}`} username={user.username} label="Report profile" />
+            <BlockButton username={user.username} className="text-sm font-semibold text-muted hover:text-ink hover:underline" />
+          </div>
+        )}
         {error && <p className="mt-3 text-sm text-[var(--danger)]">{error}</p>}
       </div>
     </section>

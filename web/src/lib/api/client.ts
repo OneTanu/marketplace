@@ -44,3 +44,23 @@ export function errorMessage(body: unknown, key: string): string | undefined {
   if (Array.isArray(value)) return String(value[0]);
   return typeof value === "string" ? value : undefined;
 }
+
+/** The first message anywhere in a DRF error body, which nests field errors in objects and
+ * lists. */
+export function firstErrorMessage(body: unknown): string | undefined {
+  if (typeof body === "string") return body;
+  const values = Array.isArray(body) ? body : body && typeof body === "object" ? Object.values(body) : [];
+  for (const value of values) {
+    const message = firstErrorMessage(value);
+    if (message) return message;
+  }
+  return undefined;
+}
+
+/** Throws the API's explanation for a failed request: its `detail`, else the first field
+ * error. */
+export function requestFailed(error: unknown, response: Response): never {
+  throw new Error(
+    errorMessage(error, "detail") ?? firstErrorMessage(error) ?? `Request failed with ${response.status}`,
+  );
+}

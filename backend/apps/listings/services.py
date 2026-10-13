@@ -31,6 +31,7 @@ from django.utils import timezone
 from PIL import Image, ImageOps
 
 from apps.schools.models import MarketplaceStatus
+from apps.trust import checks as trust_checks
 
 from . import tasks
 from .models import Category, ItemDetails, Listing, ListingKind, ListingPhoto
@@ -151,6 +152,7 @@ def create_item_listing(
     photos in order (the first is the cover)."""
     if seller.school_id is None:
         raise PermissionDenied("Your account isn't linked to a school, so it can't post listings.")
+    trust_checks.require_can(seller, trust_checks.Kind.SELLING)
     try:
         validate_item_category(category)
     except ValidationError as exc:
@@ -378,6 +380,17 @@ def remove_by_moderation(listing: Listing) -> Listing:
     )
 
 
+def restore_by_moderation(listing: Listing) -> Listing:
+    """Removed by moderation -> Available, when a review finds nothing wrong. Listings their
+    seller removed stay removed."""
+    if listing.removed_by != Listing.RemovedBy.MODERATION:
+        raise ListingStatusError(listing, "restore (moderation)")
+    _move(listing, "restore (moderation)", allowed_from={Status.REMOVED}, to=Status.AVAILABLE)
+    Listing.objects.filter(pk=listing.pk).update(removed_by="", removed_at=None)
+    listing.removed_by, listing.removed_at = "", None
+    return listing
+
+
 def _move(
     listing: Listing,
     action: str,
@@ -433,6 +446,7 @@ def update_item_listing(
     unknown |= set(item_details or {}) - ITEM_DETAIL_EDIT_FIELDS
     if unknown:
         raise TypeError(f"Can't edit {', '.join(sorted(unknown))} on a listing.")
+    trust_checks.require_can(editor, trust_checks.Kind.SELLING)
 
     with transaction.atomic():
         locked = _lock_for_edit(listing, editor, "edit")
@@ -638,7 +652,8 @@ def browse_listings(viewer, filters: FeedFilters):
         listings = listings.filter(item_details__size__iexact=filters.size)
     if filters.brand:
         listings = listings.filter(item_details__brand__iexact=filters.brand)
-    return listings
+    # Sellers who are restricted from selling, suspended, or banned drop out of browsing.
+    return listings.exclude(seller_id__in=trust_checks.hidden_seller_ids())
 
 
 def category_and_descendants(category: Category) -> list[int]:
