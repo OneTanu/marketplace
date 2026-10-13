@@ -4,6 +4,40 @@
  */
 
 export interface paths {
+    "/api/blocks/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The students I've blocked, and blocking another one. */
+        get: operations["blocks_list"];
+        put?: never;
+        /** @description The students I've blocked, and blocking another one. */
+        post: operations["blocks_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/blocks/{username}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["blocks_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/categories/": {
         parameters: {
             query?: never;
@@ -495,6 +529,23 @@ export interface paths {
         patch: operations["me_partial_update"];
         trace?: never;
     };
+    "/api/me/restrictions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description My account's active restrictions, so the app can explain what's paused and until when. */
+        get: operations["me_restrictions_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/meetup-preferences/": {
         parameters: {
             query?: never;
@@ -505,6 +556,26 @@ export interface paths {
         get: operations["meetup_preferences_retrieve"];
         put: operations["meetup_preferences_update"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Report a listing, profile, message, conversation, deal, or review. The reporter only
+         *     learns that the report was received.
+         */
+        post: operations["reports_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -675,6 +746,15 @@ export interface components {
         };
         /** @enum {unknown} */
         BlankEnum: "";
+        BlockCreateRequest: {
+            username: string;
+        };
+        BlockedUser: {
+            readonly username: string;
+            readonly first_name: string;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
         /**
          * @description * `buyer` - Buyer
          *     * `seller` - Seller
@@ -1051,6 +1131,16 @@ export interface components {
             readonly first_name: string;
             readonly school: components["schemas"]["School"] | null;
         };
+        /**
+         * @description A student's own active restriction: what it stops and until when. The moderator's
+         *     reasoning stays internal.
+         */
+        MyRestriction: {
+            readonly kind: components["schemas"]["RestrictionKind"];
+            readonly kind_label: string;
+            /** Format: date-time */
+            readonly expires_at: string | null;
+        };
         /** @enum {unknown} */
         NullEnum: null;
         PatchedCurrentUserRequest: {
@@ -1070,6 +1160,17 @@ export interface components {
             price_cents?: number;
             item_details?: components["schemas"]["ItemDetailsUpdateRequest"];
         };
+        /**
+         * @description * `weapon` - Weapon
+         *     * `drugs` - Drugs or prescriptions
+         *     * `alcohol` - Alcohol
+         *     * `tobacco` - Tobacco or vapes
+         *     * `food` - Food
+         *     * `stolen` - Stolen goods
+         *     * `other` - Something else
+         * @enum {string}
+         */
+        ProhibitedCategory: "weapon" | "drugs" | "alcohol" | "tobacco" | "food" | "stolen" | "other";
         PublicUser: {
             readonly id: number;
             readonly username: string;
@@ -1088,6 +1189,57 @@ export interface components {
         };
         /** @enum {string} */
         RemovedByEnum: "seller" | "moderation";
+        ReportCreateRequest: {
+            target_type: components["schemas"]["ReportTargetType"];
+            target_id: number;
+            reason: components["schemas"]["ReportReason"];
+            /** @default  */
+            prohibited_category: components["schemas"]["ProhibitedCategory"] | components["schemas"]["BlankEnum"];
+            /** @default  */
+            details: string;
+            message_ids?: number[];
+            /** @default false */
+            block: boolean;
+        };
+        /**
+         * @description * `prohibited_item` - Prohibited item
+         *     * `counterfeit` - Counterfeit item
+         *     * `scam` - Scam or payment concern
+         *     * `harassment` - Harassment
+         *     * `spam` - Spam
+         *     * `unsafe_meetup` - Unsafe meetup behavior
+         *     * `no_show` - No-show
+         *     * `misleading_listing` - Misleading listing
+         *     * `inappropriate` - Inappropriate profile or message
+         *     * `other` - Other
+         * @enum {string}
+         */
+        ReportReason: "prohibited_item" | "counterfeit" | "scam" | "harassment" | "spam" | "unsafe_meetup" | "no_show" | "misleading_listing" | "inappropriate" | "other";
+        /** @description All a reporter gets back. Moderator notes and outcomes stay private. */
+        ReportReceipt: {
+            readonly id: number;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        /**
+         * @description * `listing` - Listing
+         *     * `user` - Profile
+         *     * `message` - Message
+         *     * `conversation` - Conversation
+         *     * `deal` - Deal or meetup
+         *     * `review` - Review
+         * @enum {string}
+         */
+        ReportTargetType: "listing" | "user" | "message" | "conversation" | "deal" | "review";
+        /**
+         * @description * `selling` - Selling
+         *     * `messaging` - Messaging
+         *     * `deals` - Buying and deals
+         *     * `suspension` - Temporary suspension
+         *     * `ban` - Permanent ban
+         * @enum {string}
+         */
+        RestrictionKind: "selling" | "messaging" | "deals" | "suspension" | "ban";
         Review: {
             readonly id: number;
             readonly deal: number;
@@ -1175,6 +1327,70 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    blocks_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlockedUser"][];
+                };
+            };
+        };
+    };
+    blocks_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlockCreateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["BlockCreateRequest"];
+                "multipart/form-data": components["schemas"]["BlockCreateRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlockedUser"];
+                };
+            };
+        };
+    };
+    blocks_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     categories_list: {
         parameters: {
             query?: {
@@ -2079,6 +2295,25 @@ export interface operations {
             };
         };
     };
+    me_restrictions_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyRestriction"][];
+                };
+            };
+        };
+    };
     meetup_preferences_retrieve: {
         parameters: {
             query?: never;
@@ -2119,6 +2354,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeetupPreference"];
+                };
+            };
+        };
+    };
+    reports_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportCreateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReportCreateRequest"];
+                "multipart/form-data": components["schemas"]["ReportCreateRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportReceipt"];
                 };
             };
         };

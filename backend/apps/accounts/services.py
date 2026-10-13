@@ -53,3 +53,11 @@ def follow_user(*, follower: User, following: User) -> Follow:
 
 def unfollow_user(*, follower: User, following: User) -> None:
     Follow.objects.filter(follower=follower, following=following).delete()
+
+
+def set_account_active(user: User, active: bool) -> User:
+    """Switch an account off (a suspension or ban) or back on. Django won't sign an inactive
+    user in, and treats their existing sessions as signed out on the next request."""
+    User.objects.filter(pk=user.pk).update(is_active=active)
+    user.is_active = active
+    return user

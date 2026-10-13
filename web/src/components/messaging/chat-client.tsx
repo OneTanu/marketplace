@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import { DealPanel } from "@/components/deals/deal-panel";
+import { ReportButton } from "@/components/trust/report";
 import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
 import { getConversation, listMessages, markConversationRead, sendMessage } from "@/lib/messaging";
@@ -193,6 +194,15 @@ export function ChatClient({ conversationId, listingId }: { conversationId: numb
         <Avatar user={user} size="sm" />
         <div className="min-w-0"><p className="truncate font-bold leading-tight">{user.first_name || `@${user.username}`}</p><p className="truncate text-xs text-muted">@{user.username}{user.school ? `, ${user.school.short_name}` : ""}</p></div>
       </Link>
+      <div className="ml-auto pr-2">
+        <ReportButton
+          targetType="conversation"
+          targetId={conversationId}
+          subject="this conversation"
+          username={user.username}
+          messages={messages.slice(-30).map((message) => ({ id: message.id, body: message.body, from: message.is_mine ? "You" : `@${user.username}` }))}
+        />
+      </div>
     </header>
 
     <DealPanel conversationId={conversationId} listingId={listingId} />

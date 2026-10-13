@@ -14,6 +14,7 @@ from apps.listings import services as listing_services
 from apps.listings.models import Listing
 from apps.messaging.services import send_message, start_direct_conversation
 from apps.schools.models import MeetingSpot
+from apps.trust import checks as trust_checks
 
 from .models import (
     Deal,
@@ -174,6 +175,8 @@ def propose_meetup(
         Deal.Status.PENDING,
     }:
         raise DealStateError(locked, "schedule meetup for")
+    if locked.status != Deal.Status.PENDING:
+        _require_can_negotiate(locked, actor)
     _validate_meetup(deal=locked, actor=actor, meeting_spot=meeting_spot, starts_at=starts_at)
     _close_pending_meetups(locked, MeetupProposal.Status.SUPERSEDED)
     proposal = MeetupProposal.objects.create(
@@ -306,6 +309,10 @@ def create_deal(
         raise ValidationError("You cannot buy your own listing.")
     if not verified_users().filter(pk=buyer.pk).exists():
         raise PermissionDenied("Your account must be active and verified to make a request.")
+    trust_checks.require_can(buyer, trust_checks.Kind.DEALS)
+    trust_checks.require_not_blocked(buyer, listing.seller)
+    if listing.seller_id in set(trust_checks.hidden_seller_ids().values_list("user_id", flat=True)):
+        raise ValidationError("This listing isn't available right now.")
     if kind not in Deal.Kind.values:
         raise ValidationError({"kind": "Choose Buy now, Make offer, or Trade."})
     if Deal.objects.filter(listing=listing, buyer=buyer, status__in=OPEN_STATUSES).exists():
@@ -354,6 +361,7 @@ def create_deal(
         sender=buyer,
         body=message,
         listing=listing,
+        automated=True,
     )
     proposed_starts_at = proposed_starts_at or []
     if meeting_spot is not None:
@@ -390,6 +398,15 @@ def _lock_deal(deal: Deal) -> Deal:
     return locked
 
 
+def _require_can_negotiate(deal: Deal, actor) -> None:
+    """Making, answering, or countering a request needs deal privileges, and the seller side
+    also needs selling privileges. Finishing a Pending deal (meetup, handoff, cancel) doesn't,
+    so a restriction never strands the other student mid-handoff."""
+    trust_checks.require_can(actor, trust_checks.Kind.DEALS)
+    if actor.pk == deal.seller_id:
+        trust_checks.require_can(actor, trust_checks.Kind.SELLING)
+
+
 def _require_party(deal: Deal, user) -> None:
     if user.pk not in {deal.buyer_id, deal.seller_id}:
         raise PermissionDenied("Only this deal's buyer or seller can do that.")
@@ -415,6 +432,7 @@ def counter_offer(
         raise DealStateError(locked, "counter")
     if actor.pk != _recipient(locked):
         raise PermissionDenied("Only the person responding to the current offer can counter it.")
+    _require_can_negotiate(locked, actor)
     if locked.kind == Deal.Kind.TRADE:
         raise ValidationError("Counter a trade with a new trade offer.")
     _validate_amount(amount_cents)
@@ -479,6 +497,7 @@ def counter_trade(
         raise DealStateError(locked, "counter")
     if actor.pk != _recipient(locked):
         raise PermissionDenied("Only the person responding to the current offer can counter it.")
+    _require_can_negotiate(locked, actor)
 
     item_ids = list(dict.fromkeys(item_ids))
     if not item_ids:
@@ -544,6 +563,7 @@ def accept_deal(*, deal: Deal, actor, meetup_proposal: MeetupProposal | None = N
         raise DealStateError(locked, "accept")
     if actor.pk != _recipient(locked):
         raise PermissionDenied("Only the person responding to this request can accept it.")
+    _require_can_negotiate(locked, actor)
     if locked.listing.status != Listing.Status.AVAILABLE:
         raise ValidationError("This listing already has a pending buyer.")
     items = trade_items(locked)
@@ -699,3 +719,52 @@ def expire(*, deal_id: int, expected_status: str) -> None:
     locked.save(update_fields=["status", "response_deadline", "handoff_deadline", "updated_at"])
     _close_pending_meetups(locked)
     _event(locked, "expired")
+
+
+# --- Moderation (called by Trust, never by students) ---
+
+
+@transaction.atomic
+def cancel_for_moderation(*, deal: Deal, reason: str) -> Deal:
+    """Cancel an open deal because of a moderation action, releasing every listing it holds.
+    Unlike cancel_deal, this also cancels a Pending deal after a handoff confirmation."""
+    locked = _lock_deal(deal)
+    if locked.status not in OPEN_STATUSES:
+        return locked
+    if locked.status == Deal.Status.PENDING:
+        for listing in [locked.listing, *trade_items(locked)]:
+            if listing.status == Listing.Status.PENDING:
+                listing_services.return_to_available(listing)
+    locked.status = Deal.Status.CANCELED
+    locked.response_deadline = None
+    locked.handoff_deadline = None
+    locked.save(update_fields=["status", "response_deadline", "handoff_deadline", "updated_at"])
+    _close_pending_meetups(locked)
+    _event(locked, "canceled_by_moderation", reason=reason)
+    return locked
+
+
+def _open_deals_holding(listing: Listing):
+    """Open deals for this listing, plus open trades whose current package includes it."""
+    direct = list(Deal.objects.filter(listing=listing, status__in=OPEN_STATUSES))
+    trades = Deal.objects.filter(
+        kind=Deal.Kind.TRADE, status__in=OPEN_STATUSES, offers__trade_items=listing
+    ).distinct()
+    in_package = [deal for deal in trades if listing in trade_items(deal)]
+    return direct + [deal for deal in in_package if deal not in direct]
+
+
+def cancel_deals_for_listing(listing: Listing, *, reason: str) -> None:
+    for deal in _open_deals_holding(listing):
+        cancel_for_moderation(deal=deal, reason=reason)
+
+
+def cancel_deals_for_user(user, *, reason: str) -> None:
+    for deal in Deal.objects.filter(Q(buyer=user) | Q(seller=user), status__in=OPEN_STATUSES):
+        cancel_for_moderation(deal=deal, reason=reason)
+
+
+def cancel_deals_between(first, second, *, reason: str) -> None:
+    pair = Q(buyer=first, seller=second) | Q(buyer=second, seller=first)
+    for deal in Deal.objects.filter(pair, status__in=OPEN_STATUSES):
+        cancel_for_moderation(deal=deal, reason=reason)
