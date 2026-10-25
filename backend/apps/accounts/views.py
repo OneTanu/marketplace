@@ -8,15 +8,20 @@ from rest_framework.generics import (
     RetrieveAPIView,
     RetrieveUpdateAPIView,
 )
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from apps.errors import service_validation_errors
 from apps.listings.services import sold_count_annotation
 
 from .models import Follow, User
-from .serializers import CurrentUserSerializer, PublicUserSerializer
-from .services import follow_user, unfollow_user, verified_users
+from .serializers import (
+    CurrentUserSerializer,
+    PasswordResetKeyStatusRequestSerializer,
+    PasswordResetKeyStatusSerializer,
+    PublicUserSerializer,
+)
+from .services import follow_user, password_reset_key_status, unfollow_user, verified_users
 
 
 def follow_count(**filters):
@@ -122,3 +127,21 @@ class FollowUserView(GenericAPIView):
         target = self.get_target(username)
         unfollow_user(follower=request.user, following=target)
         return Response(status=204)
+
+
+class PasswordResetKeyStatusView(GenericAPIView):
+    """Explains a password reset link (valid, expired, used or invalid) so the reset page can
+    say why it doesn't work. Checking and using the key stays with allauth's
+    /api/auth/.../auth/password/reset. POST, so keys stay out of URLs and access logs."""
+
+    serializer_class = PasswordResetKeyStatusRequestSerializer
+    permission_classes = [AllowAny]
+    # Signed-out students open reset links; there's no session to protect.
+    authentication_classes = []
+
+    @extend_schema(responses=PasswordResetKeyStatusSerializer)
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        status = password_reset_key_status(serializer.validated_data["key"])
+        return Response(PasswordResetKeyStatusSerializer({"status": status}).data)

@@ -1,7 +1,10 @@
+from allauth.account.forms import UserTokenForm
 from allauth.account.models import EmailAddress
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import QuerySet
+from django.utils.http import base36_to_int
 
 from .models import Follow, User, normalize_instagram_handle
 
@@ -61,3 +64,31 @@ def set_account_active(user: User, active: bool) -> User:
     User.objects.filter(pk=user.pk).update(is_active=active)
     user.is_active = active
     return user
+
+
+def password_reset_key_status(key: str) -> str:
+    """Why a password reset link from allauth works or not: "valid", "expired", "used" or
+    "invalid". allauth (which checks and uses the key) rejects every bad key with the same
+    error; this only tells the student which one so the page can explain it.
+
+    allauth's key is "<uidb36>-<timestamp>-<hash>" (Django's token generator). A well-formed
+    key that is past PASSWORD_RESET_TIMEOUT is "expired". One that is still fresh but fails
+    the check is "used": its hash covers the password and last login, so it stops working
+    once the password changes or the student logs in. That answer never depends on whether
+    the uid matches a user, so a key can't be used to probe which accounts exist.
+    """
+    uidb36, _, token = key.partition("-")
+    ts_b36, _, token_hash = token.partition("-")
+    try:
+        timestamp = base36_to_int(ts_b36)
+    except ValueError:
+        return "invalid"
+    if not uidb36 or not token_hash:
+        return "invalid"
+    if UserTokenForm(data={"uidb36": uidb36, "key": token}).is_valid():
+        return "valid"
+    generator = UserTokenForm.token_generator
+    now = generator._num_seconds(generator._now())  # the generator's own clock
+    if now - timestamp > settings.PASSWORD_RESET_TIMEOUT:
+        return "expired"
+    return "used"

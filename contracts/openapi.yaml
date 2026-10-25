@@ -1535,6 +1535,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotificationUnreadCount'
           description: ''
+  /api/password-reset/key-status/:
+    post:
+      operationId: password_reset_key_status_create
+      description: |-
+        Explains a password reset link (valid, expired, used or invalid) so the reset page can
+        say why it doesn't work. Checking and using the key stays with allauth's
+        /api/auth/.../auth/password/reset. POST, so keys stay out of URLs and access logs.
+      tags:
+      - password-reset
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetKeyStatusRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetKeyStatusRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetKeyStatusRequestRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetKeyStatus'
+          description: ''
   /api/reports/:
     post:
       operationId: reports_create
@@ -3790,6 +3820,34 @@ components:
       required:
       - count
       - user
+    PasswordResetKeyStatus:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/PasswordResetKeyStatusStatusEnum'
+      required:
+      - status
+    PasswordResetKeyStatusRequestRequest:
+      type: object
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+      - key
+    PasswordResetKeyStatusStatusEnum:
+      enum:
+      - valid
+      - expired
+      - used
+      - invalid
+      type: string
+      description: |-
+        * `valid` - valid
+        * `expired` - expired
+        * `used` - used
+        * `invalid` - invalid
     PatchedCurrentUserRequest:
       type: object
       properties:

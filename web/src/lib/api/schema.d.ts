@@ -765,6 +765,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/password-reset/key-status/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Explains a password reset link (valid, expired, used or invalid) so the reset page can
+         *     say why it doesn't work. Checking and using the key stays with allauth's
+         *     /api/auth/.../auth/password/reset. POST, so keys stay out of URLs and access logs.
+         */
+        post: operations["password_reset_key_status_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reports/": {
         parameters: {
             query?: never;
@@ -1613,6 +1634,20 @@ export interface components {
             readonly user: components["schemas"]["StaffUser"];
             readonly count: number;
         };
+        PasswordResetKeyStatus: {
+            status: components["schemas"]["PasswordResetKeyStatusStatusEnum"];
+        };
+        PasswordResetKeyStatusRequestRequest: {
+            key: string;
+        };
+        /**
+         * @description * `valid` - valid
+         *     * `expired` - expired
+         *     * `used` - used
+         *     * `invalid` - invalid
+         * @enum {string}
+         */
+        PasswordResetKeyStatusStatusEnum: "valid" | "expired" | "used" | "invalid";
         PatchedCurrentUserRequest: {
             instagram_handle?: string;
             profile_description?: string;
@@ -3236,6 +3271,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NotificationUnreadCount"];
+                };
+            };
+        };
+    };
+    password_reset_key_status_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetKeyStatusRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PasswordResetKeyStatusRequestRequest"];
+                "multipart/form-data": components["schemas"]["PasswordResetKeyStatusRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasswordResetKeyStatus"];
                 };
             };
         };

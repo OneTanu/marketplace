@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { authRequest, errorsFrom, pendingFlow, type AuthError } from "@/lib/auth";
@@ -21,7 +22,10 @@ export function LoginForm() {
   return <form method="post" onSubmit={submit} className="space-y-5" noValidate>
     {errors.map((error) => <FormAlert key={`${error.field}-${error.message}`}>{error.message}</FormAlert>)}
     <Field label="School email" name="email" type="email" autoComplete="email" placeholder="you@umd.edu" required />
-    <Field label="Password" name="password" type="password" autoComplete="current-password" required />
+    <div>
+      <Field label="Password" name="password" type="password" autoComplete="current-password" required />
+      <Link href="/account/forgot-password" className="mt-2 inline-block text-sm font-semibold text-muted hover:text-foreground hover:underline">Forgot password?</Link>
+    </div>
     <SubmitButton pending={pending} pendingText="Logging you in…">Log in</SubmitButton>
   </form>;
 }

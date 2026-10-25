@@ -100,3 +100,11 @@ class PublicUserSerializer(serializers.ModelSerializer):
     def get_is_self(self, user) -> bool:
         request = self.context.get("request")
         return bool(request and request.user.is_authenticated and request.user.pk == user.pk)
+
+
+class PasswordResetKeyStatusRequestSerializer(serializers.Serializer):
+    key = serializers.CharField(max_length=200)
+
+
+class PasswordResetKeyStatusSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=["valid", "expired", "used", "invalid"])

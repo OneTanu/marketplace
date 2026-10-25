@@ -14,3 +14,13 @@ MAILERS = {"default": {"BACKEND": "django.core.mail.backends.console.EmailBacken
 # this; never set it anywhere else.
 if os.environ.get("E2E_DISABLE_RATE_LIMITS") == "1":
     ACCOUNT_RATE_LIMITS = False
+
+# E2E runs read emails (e.g. password reset links) from files instead of the console. Only
+# backend/scripts/e2e_server.sh sets this.
+if os.environ.get("E2E_EMAIL_DIR"):
+    MAILERS = {
+        "default": {
+            "BACKEND": "django.core.mail.backends.filebased.EmailBackend",
+            "OPTIONS": {"file_path": os.environ["E2E_EMAIL_DIR"]},
+        }
+    }
