@@ -161,6 +161,7 @@ def test_card_fields(viewer_client, seller, umd):
         "brand": "IKEA",
         "school": {"id": umd.pk, "short_name": "UMD", "colors": ["#E21833", "#FFD200", "#000000"]},
         "seller": {"id": seller.pk, "username": "seller"},
+        "is_bookmarked": False,
         "created_at": card["created_at"],
     }
 
@@ -359,3 +360,32 @@ def test_query_count_doesnt_grow_with_the_page(viewer_client, seller):
         assert len(feed(viewer_client)["results"]) == 11
 
     assert len(eleven) == len(one)
+
+
+# --- Keywords ---
+
+
+@pytest.mark.django_db
+def test_keywords_match_title_brand_or_description(viewer_client, seller):
+    make(seller, "Blue denim jacket")
+    make(seller, "Work coat", brand="Carhartt")
+    make(seller, "Desk", description="Solid oak, from a vintage shop")
+    make(seller, "Lamp")
+
+    assert titles(viewer_client, q="DENIM") == ["Blue denim jacket"]
+    assert titles(viewer_client, q="carhartt") == ["Work coat"]
+    assert titles(viewer_client, q="vintage") == ["Desk"]
+
+
+@pytest.mark.django_db
+def test_every_keyword_must_match(viewer_client, seller):
+    make(seller, "Blue denim jacket")
+    make(seller, "Denim jeans")
+
+    assert titles(viewer_client, q="denim  jacket") == ["Blue denim jacket"]
+    assert titles(viewer_client, q="denim nothing") == []
+
+
+@pytest.mark.django_db
+def test_keywords_are_limited_in_length(viewer_client):
+    assert viewer_client.get(FEED_URL, {"q": "x" * 101}).status_code == 400

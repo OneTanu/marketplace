@@ -25,7 +25,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
-from django.db.models import Count, OuterRef, Subquery
+from django.db.models import Count, Exists, OuterRef, Q, Subquery
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from PIL import Image, ImageOps
@@ -34,7 +34,7 @@ from apps.schools.models import MarketplaceStatus
 from apps.trust import checks as trust_checks
 
 from . import tasks
-from .models import Category, ItemDetails, Listing, ListingKind, ListingPhoto
+from .models import Bookmark, Category, ItemDetails, Listing, ListingKind, ListingPhoto
 
 MAX_PRICE_CENTS = 1_000_000  # $10,000
 MAX_TITLE_LENGTH = 120
@@ -188,6 +188,11 @@ def create_item_listing(
         details.save()
         for position, photo in enumerate(cleaned):
             _store_photo(listing, photo, position=position)
+        # Saved-search alerts. The job is queued in this transaction, so it only runs if the
+        # listing is committed (Notifications owns the matching).
+        from apps.notifications.services import queue_saved_search_alerts
+
+        queue_saved_search_alerts(listing)
     return listing
 
 
@@ -620,11 +625,24 @@ class FeedFilters(NamedTuple):
     colors: Sequence[str] = ()
     size: str = ""
     brand: str = ""
+    query: str = ""  # keywords; every word must appear in the title, brand or description
+
+
+MAX_QUERY_LENGTH = 100
+MAX_QUERY_WORDS = 8
+
+
+def query_words(query: str) -> list[str]:
+    """The words of a keyword search, as matched: lowercased, deduplicated, at most
+    MAX_QUERY_WORDS."""
+    words = dict.fromkeys(query.lower().split())
+    return list(words)[:MAX_QUERY_WORDS]
 
 
 def browse_listings(viewer, filters: FeedFilters):
     """The listings a student can browse, filtered but not yet sorted or paged. The one
-    function behind the feed and (later) keyword search and watched searches.
+    function behind the feed, keyword search and saved-search alerts, so an alert matches
+    exactly what running the saved search would show.
 
     Scoped to the viewer's school unless the filters name another school or ALL_SCHOOLS (every
     school whose marketplace is open); a viewer without a school (staff) sees every school by
@@ -652,6 +670,12 @@ def browse_listings(viewer, filters: FeedFilters):
         listings = listings.filter(item_details__size__iexact=filters.size)
     if filters.brand:
         listings = listings.filter(item_details__brand__iexact=filters.brand)
+    for word in query_words(filters.query):
+        listings = listings.filter(
+            Q(title__icontains=word)
+            | Q(item_details__brand__icontains=word)
+            | Q(description__icontains=word)
+        )
     # Sellers who are restricted from selling, suspended, or banned drop out of browsing.
     return listings.exclude(seller_id__in=trust_checks.hidden_seller_ids())
 
@@ -667,3 +691,55 @@ def category_and_descendants(category: Category) -> list[int]:
         level = [pk for pk in children if pk not in ids]
         ids += level
     return ids
+
+
+# --- Bookmarks ---
+
+# A listing can be newly bookmarked only while other students can browse it.
+BOOKMARKABLE_STATUSES = BROWSABLE_STATUSES
+
+
+def bookmark_listing(user, listing: Listing) -> Bookmark:
+    """Save a listing for the user. Idempotent: bookmarking it again returns the existing
+    bookmark, whatever has happened to the listing since. A new bookmark needs an Available or
+    Pending item listing that isn't the user's own."""
+    existing = Bookmark.objects.filter(user=user, listing=listing).first()
+    if existing is not None:
+        return existing
+    if listing.seller_id == user.pk:
+        raise ValidationError("You can't save your own listing.")
+    if listing.kind != ListingKind.ITEM or listing.status not in BOOKMARKABLE_STATUSES:
+        raise ListingStatusError(listing, "bookmark")
+    bookmark, _ = Bookmark.objects.get_or_create(user=user, listing=listing)
+    return bookmark
+
+
+def remove_bookmark(user, listing_id: int) -> None:
+    """Unsave a listing. Idempotent, and works whatever the listing's status (even Removed)."""
+    Bookmark.objects.filter(user=user, listing_id=listing_id).delete()
+
+
+def is_bookmarked_annotation(user):
+    """Annotates a listing queryset with whether `user` bookmarked each listing."""
+    return Exists(Bookmark.objects.filter(user=user, listing=OuterRef("pk")))
+
+
+def bookmarks_of(user):
+    """The user's bookmarks, newest first, each with `seller_hidden` (the seller can't be
+    browsed right now: restricted, suspended or banned)."""
+    return Bookmark.objects.filter(user=user).annotate(
+        seller_hidden=Exists(
+            trust_checks.hidden_seller_ids().filter(user_id=OuterRef("listing__seller_id"))
+        )
+    )
+
+
+def bookmark_availability(bookmark: Bookmark, viewer) -> str:
+    """How a bookmarked listing can be shown: "available", "pending" or "sold" (show it), or
+    "removed" / "unavailable" (don't show its content; it looks gone, as in the feed)."""
+    listing = bookmark.listing
+    if listing.status == Status.REMOVED and listing.seller_id != viewer.pk:
+        return "removed"
+    if getattr(bookmark, "seller_hidden", False) or listing.kind != ListingKind.ITEM:
+        return "unavailable"
+    return listing.status

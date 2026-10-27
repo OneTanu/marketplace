@@ -14,8 +14,11 @@ from rest_framework.views import APIView
 from apps.accounts.services import verified_users
 
 from . import pagination, services
-from .models import Category, Listing, ListingKind, ListingPhoto
+from .models import Bookmark, Category, Listing, ListingKind, ListingPhoto
 from .serializers import (
+    BookmarkPageSerializer,
+    BookmarkSerializer,
+    BookmarkStateSerializer,
     CategorySerializer,
     FeedQuerySerializer,
     ListingCardSerializer,
@@ -31,17 +34,24 @@ from .serializers import (
 # user (REST_FRAMEWORK defaults); allauth's mandatory verification means they're verified.
 
 
-def listing_queryset():
-    return Listing.objects.select_related(
-        "category", "school", "seller", "item_details"
-    ).prefetch_related("photos")
+def listing_queryset(viewer):
+    return (
+        Listing.objects.select_related("category", "school", "seller", "item_details")
+        .prefetch_related("photos")
+        .annotate(is_bookmarked=services.is_bookmarked_annotation(viewer))
+    )
 
 
-def card_queryset(listings):
+COVER_PHOTOS = Prefetch("photos", ListingPhoto.objects.filter(position=0), to_attr="cover_photos")
+
+
+def card_queryset(listings, viewer):
     """Listings with what ListingCardSerializer needs, in a fixed number of queries: one for
-    the listings and one for their cover photos."""
-    return listings.select_related("school", "seller", "item_details").prefetch_related(
-        Prefetch("photos", ListingPhoto.objects.filter(position=0), to_attr="cover_photos")
+    the listings (with the viewer's bookmark state) and one for their cover photos."""
+    return (
+        listings.select_related("school", "seller", "item_details")
+        .prefetch_related(COVER_PHOTOS)
+        .annotate(is_bookmarked=services.is_bookmarked_annotation(viewer))
     )
 
 
@@ -85,7 +95,9 @@ class ListingListCreateView(APIView):
         included."""
         query = FeedQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
-        listings = card_queryset(services.browse_listings(request.user, query.filters()))
+        listings = card_queryset(
+            services.browse_listings(request.user, query.filters()), request.user
+        )
         sort = query.validated_data["sort"]
         rows, next_cursor = pagination.page(
             listings, sort, services.FEED_SORTS[sort], query.validated_data.get("cursor")
@@ -126,7 +138,7 @@ class MyListingsView(generics.ListAPIView):
         # Listings the seller removed are gone from their point of view. Ones moderation
         # removed stay, so the seller can see what happened to them.
         listings = (
-            listing_queryset()
+            listing_queryset(self.request.user)
             .filter(seller=self.request.user)
             .exclude(status=Listing.Status.REMOVED, removed_by=Listing.RemovedBy.SELLER)
             .order_by("-created_at", "-id")
@@ -180,7 +192,7 @@ class PublicSellerListingsView(generics.ListAPIView):
         )
         if listing_status is not None:
             listings = listings.filter(status=listing_status)
-        return card_queryset(listings).order_by("-created_at", "-id")
+        return card_queryset(listings, self.request.user).order_by("-created_at", "-id")
 
 
 class Conflict(APIException):
@@ -233,7 +245,7 @@ def listing_to_edit(request, pk) -> Listing:
 
 def listing_response(request, listing: Listing, status_code=status.HTTP_200_OK) -> Response:
     serializer = ListingSerializer(
-        listing_queryset().get(pk=listing.pk), context={"request": request}
+        listing_queryset(request.user).get(pk=listing.pk), context={"request": request}
     )
     return Response(serializer.data, status_code)
 
@@ -246,7 +258,7 @@ class ListingDetailView(generics.RetrieveAPIView):
     parser_classes = [JSONParser]
 
     def get_queryset(self):
-        return visible_to(self.request.user, listing_queryset())
+        return visible_to(self.request.user, listing_queryset(self.request.user))
 
     @extend_schema(
         request=ListingUpdateSerializer,
@@ -326,3 +338,70 @@ class ListingPhotoOrderView(APIView):
         with service_errors():
             services.reorder_photos(listing, request.user, serializer.validated_data["photo_ids"])
         return listing_response(request, listing)
+
+
+BOOKMARK_ORDERING = ("-created_at", "-id")
+
+
+@extend_schema(
+    parameters=[
+        OpenApiParameter("cursor", description="`next_cursor` from the last page."),
+    ],
+    responses={200: BookmarkPageSerializer},
+)
+class BookmarkListView(APIView):
+    """My saved listings, most recently saved first, a page at a time. Saved listings that
+    have since gone Pending or Sold are included with their status; ones that were removed or
+    whose seller can't be browsed come back with `listing: null`."""
+
+    def get(self, request):
+        bookmarks = (
+            services.bookmarks_of(request.user)
+            .select_related("listing__school", "listing__seller", "listing__item_details")
+            .prefetch_related(
+                Prefetch(
+                    "listing__photos",
+                    ListingPhoto.objects.filter(position=0),
+                    to_attr="cover_photos",
+                )
+            )
+        )
+        rows, next_cursor = pagination.page(
+            bookmarks, "bookmarks", BOOKMARK_ORDERING, request.query_params.get("cursor")
+        )
+        results = BookmarkSerializer(rows, many=True, context={"request": request})
+        return Response({"results": results.data, "next_cursor": next_cursor})
+
+
+class ListingBookmarkView(APIView):
+    """Save (PUT) or unsave (DELETE) a listing. Both are idempotent."""
+
+    @extend_schema(
+        request=None,
+        responses={
+            200: BookmarkStateSerializer,
+            400: OpenApiResponse(description="It's your own listing."),
+            409: OpenApiResponse(
+                description="The listing isn't Available or Pending, so it can't be saved."
+            ),
+        },
+    )
+    def put(self, request, pk):
+        if Bookmark.objects.filter(user=request.user, listing_id=pk).exists():
+            return Response({"is_bookmarked": True})
+        listing = get_object_or_404(visible_to(request.user, Listing.objects), pk=pk)
+        try:
+            services.bookmark_listing(request.user, listing)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"detail": exc.messages}) from exc
+        except services.ListingStatusError as exc:
+            label = Listing.Status(exc.status).label
+            raise Conflict(
+                f"This listing is {label}. Only Available or Pending listings can be saved."
+            ) from exc
+        return Response({"is_bookmarked": True})
+
+    @extend_schema(responses={204: None})
+    def delete(self, request, pk):
+        services.remove_bookmark(request.user, pk)
+        return Response(status=status.HTTP_204_NO_CONTENT)

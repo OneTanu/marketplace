@@ -43,4 +43,7 @@ python manage.py create_verified_user "$E2E_SECOND_BUYER_EMAIL" --password "$E2E
 python manage.py create_verified_user "$E2E_MODERATOR_EMAIL" --password "$E2E_USER_PASSWORD" --role senior-moderator
 # A student whose password the password reset test changes.
 python manage.py create_verified_user "$E2E_RESET_EMAIL" --password "$E2E_USER_PASSWORD"
+# Background jobs (saved-search alerts, thumbnails). Stops with the API: the container is
+# removed after a local run, and the CI runner ends with the job.
+python manage.py procrastinate worker >/dev/null 2>&1 &
 exec python manage.py runserver "0.0.0.0:${PORT}" --noreload

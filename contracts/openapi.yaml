@@ -63,6 +63,30 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/bookmarks/:
+    get:
+      operationId: bookmarks_retrieve
+      description: |-
+        My saved listings, most recently saved first, a page at a time. Saved listings that
+        have since gone Pending or Sold are included with their status; ones that were removed or
+        whose seller can't be browsed come back with `listing: null`.
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: '`next_cursor` from the last page.'
+      tags:
+      - bookmarks
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookmarkPage'
+          description: ''
   /api/categories/:
     get:
       operationId: categories_list
@@ -728,6 +752,13 @@ paths:
           minimum: 0
         description: In cents.
       - in: query
+        name: q
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description: Keywords. Every word must appear in the title, brand or description.
+      - in: query
         name: school
         schema:
           type: string
@@ -910,6 +941,47 @@ paths:
           description: No response body
         '409':
           description: The listing isn't Available, so it can't be removed.
+  /api/listings/{id}/bookmark/:
+    put:
+      operationId: listings_bookmark_update
+      description: Save (PUT) or unsave (DELETE) a listing. Both are idempotent.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - listings
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookmarkState'
+          description: ''
+        '400':
+          description: It's your own listing.
+        '409':
+          description: The listing isn't Available or Pending, so it can't be saved.
+    delete:
+      operationId: listings_bookmark_destroy
+      description: Save (PUT) or unsave (DELETE) a listing. Both are idempotent.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - listings
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/listings/{id}/photos/:
     post:
       operationId: listings_photos_create
@@ -1594,6 +1666,117 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReportReceipt'
           description: ''
+  /api/saved-searches/:
+    get:
+      operationId: saved_searches_list
+      description: My saved searches, newest first (at most 25, so not paged).
+      tags:
+      - saved-searches
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SavedSearch'
+          description: ''
+    post:
+      operationId: saved_searches_create
+      description: |-
+        Save the current feed filters. 400 if nothing is filtered, the same filters are
+        already saved, or you already have 25 saved searches.
+      tags:
+      - saved-searches
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavedSearchCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SavedSearchCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SavedSearchCreateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedSearch'
+          description: ''
+  /api/saved-searches/{id}/:
+    get:
+      operationId: saved_searches_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - saved-searches
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedSearch'
+          description: ''
+    patch:
+      operationId: saved_searches_partial_update
+      description: Rename a saved search or turn its alerts on or off.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - saved-searches
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSavedSearchUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSavedSearchUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSavedSearchUpdateRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedSearch'
+          description: ''
+    delete:
+      operationId: saved_searches_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - saved-searches
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/schools/:
     get:
       operationId: schools_list
@@ -1904,6 +2087,20 @@ components:
         * `pending` - Pending
         * `upheld` - Upheld
         * `overturned` - Overturned
+    AvailabilityEnum:
+      enum:
+      - available
+      - pending
+      - sold
+      - removed
+      - unavailable
+      type: string
+      description: |-
+        * `available` - available
+        * `pending` - pending
+        * `sold` - sold
+        * `removed` - removed
+        * `unavailable` - unavailable
     AvailabilityOverride:
       type: object
       properties:
@@ -2011,6 +2208,55 @@ components:
       - created_at
       - first_name
       - username
+    Bookmark:
+      type: object
+      description: |-
+        A saved listing. `listing` is null when it can't be shown any more (`availability` is
+        "removed" or "unavailable"); keep `listing_id` to let the student unsave it.
+      properties:
+        listing_id:
+          type: integer
+          readOnly: true
+        availability:
+          allOf:
+          - $ref: '#/components/schemas/AvailabilityEnum'
+          readOnly: true
+        listing:
+          allOf:
+          - $ref: '#/components/schemas/ListingCard'
+          nullable: true
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - availability
+      - created_at
+      - listing
+      - listing_id
+    BookmarkPage:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Bookmark'
+        next_cursor:
+          type: string
+          nullable: true
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      required:
+      - next_cursor
+      - results
+    BookmarkState:
+      type: object
+      properties:
+        is_bookmarked:
+          type: boolean
+          readOnly: true
+      required:
+      - is_bookmarked
     CaseActionRequest:
       type: object
       properties:
@@ -2978,6 +3224,9 @@ components:
           items:
             $ref: '#/components/schemas/ListingPhoto'
           readOnly: true
+        is_bookmarked:
+          type: boolean
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -2992,6 +3241,7 @@ components:
       - currency
       - description
       - id
+      - is_bookmarked
       - item_details
       - kind
       - photos
@@ -3048,6 +3298,9 @@ components:
           allOf:
           - $ref: '#/components/schemas/SellerSummary'
           readOnly: true
+        is_bookmarked:
+          type: boolean
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -3059,6 +3312,7 @@ components:
       - created_at
       - currency
       - id
+      - is_bookmarked
       - price_cents
       - school
       - seller
@@ -3780,6 +4034,7 @@ components:
       - info_request
       - appeal_update
       - staff_alert
+      - saved_search
       type: string
       description: |-
         * `deal` - Deal
@@ -3788,6 +4043,7 @@ components:
         * `info_request` - Moderator question
         * `appeal_update` - Appeal update
         * `staff_alert` - Staff alert
+        * `saved_search` - Saved search match
     NotificationMarkReadRequest:
       type: object
       properties:
@@ -3879,6 +4135,15 @@ components:
           minimum: 0
         item_details:
           $ref: '#/components/schemas/ItemDetailsUpdateRequest'
+    PatchedSavedSearchUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        alerts_enabled:
+          type: boolean
     PriorityEnum:
       enum:
       - 1
@@ -4187,6 +4452,153 @@ components:
       - first_name
       - id
       - username
+    SavedSearch:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        filters:
+          allOf:
+          - $ref: '#/components/schemas/SavedSearchFilters'
+          readOnly: true
+        alerts_enabled:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - alerts_enabled
+      - created_at
+      - filters
+      - id
+      - name
+      - updated_at
+    SavedSearchCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          default: ''
+          description: Leave blank for a name made from the filters.
+          maxLength: 80
+        filters:
+          $ref: '#/components/schemas/SavedSearchFiltersRequest'
+        alerts_enabled:
+          type: boolean
+          default: true
+      required:
+      - filters
+    SavedSearchFilters:
+      type: object
+      description: |-
+        A saved search's filters, named like the feed's query parameters (GET /api/listings/).
+        Blank or null means "any".
+      properties:
+        q:
+          type: string
+          default: ''
+          maxLength: 100
+        school:
+          type: string
+          default: ''
+          description: A school slug, "all", or blank for your own school.
+        category:
+          type: string
+          nullable: true
+        brand:
+          type: string
+          default: ''
+          maxLength: 100
+        min_price:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: In cents.
+        max_price:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: In cents.
+        size:
+          type: string
+          default: ''
+          description: Exact size. Jeans and pants are "<waist>x<inseam>", e.g. 32x30.
+          maxLength: 30
+        condition:
+          default: ''
+          oneOf:
+          - $ref: '#/components/schemas/ConditionEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        color:
+          default: ''
+          oneOf:
+          - $ref: '#/components/schemas/ColorEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        sort:
+          allOf:
+          - $ref: '#/components/schemas/SortEnum'
+          default: newest
+    SavedSearchFiltersRequest:
+      type: object
+      description: |-
+        A saved search's filters, named like the feed's query parameters (GET /api/listings/).
+        Blank or null means "any".
+      properties:
+        q:
+          type: string
+          default: ''
+          maxLength: 100
+        school:
+          type: string
+          default: ''
+          description: A school slug, "all", or blank for your own school.
+        category:
+          type: string
+          minLength: 1
+          nullable: true
+        brand:
+          type: string
+          default: ''
+          maxLength: 100
+        min_price:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: In cents.
+        max_price:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: In cents.
+        size:
+          type: string
+          default: ''
+          description: Exact size. Jeans and pants are "<waist>x<inseam>", e.g. 32x30.
+          maxLength: 30
+        condition:
+          default: ''
+          oneOf:
+          - $ref: '#/components/schemas/ConditionEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        color:
+          default: ''
+          oneOf:
+          - $ref: '#/components/schemas/ColorEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        sort:
+          allOf:
+          - $ref: '#/components/schemas/SortEnum'
+          default: newest
     School:
       type: object
       properties:
@@ -4316,6 +4728,16 @@ components:
           minimum: 1
       required:
       - body
+    SortEnum:
+      enum:
+      - newest
+      - price_asc
+      - price_desc
+      type: string
+      description: |-
+        * `newest` - Newly listed
+        * `price_asc` - Price: low to high
+        * `price_desc` - Price: high to low
     StaffAppeal:
       type: object
       properties:

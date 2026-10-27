@@ -38,6 +38,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/bookmarks/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description My saved listings, most recently saved first, a page at a time. Saved listings that
+         *     have since gone Pending or Sold are included with their status; ones that were removed or
+         *     whose seller can't be browsed come back with `listing: null`.
+         */
+        get: operations["bookmarks_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/categories/": {
         parameters: {
             query?: never;
@@ -436,6 +457,24 @@ export interface paths {
         patch: operations["listings_partial_update"];
         trace?: never;
     };
+    "/api/listings/{id}/bookmark/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Save (PUT) or unsave (DELETE) a listing. Both are idempotent. */
+        put: operations["listings_bookmark_update"];
+        post?: never;
+        /** @description Save (PUT) or unsave (DELETE) a listing. Both are idempotent. */
+        delete: operations["listings_bookmark_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/listings/{id}/photos/": {
         parameters: {
             query?: never;
@@ -806,6 +845,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/saved-searches/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description My saved searches, newest first (at most 25, so not paged). */
+        get: operations["saved_searches_list"];
+        put?: never;
+        /**
+         * @description Save the current feed filters. 400 if nothing is filtered, the same filters are
+         *     already saved, or you already have 25 saved searches.
+         */
+        post: operations["saved_searches_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/saved-searches/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["saved_searches_retrieve"];
+        put?: never;
+        post?: never;
+        delete: operations["saved_searches_destroy"];
+        options?: never;
+        head?: never;
+        /** @description Rename a saved search or turn its alerts on or off. */
+        patch: operations["saved_searches_partial_update"];
+        trace?: never;
+    };
     "/api/schools/": {
         parameters: {
             query?: never;
@@ -979,6 +1056,15 @@ export interface components {
          * @enum {string}
          */
         AppealStatus: "pending" | "upheld" | "overturned";
+        /**
+         * @description * `available` - available
+         *     * `pending` - pending
+         *     * `sold` - sold
+         *     * `removed` - removed
+         *     * `unavailable` - unavailable
+         * @enum {string}
+         */
+        AvailabilityEnum: "available" | "pending" | "sold" | "removed" | "unavailable";
         AvailabilityOverride: {
             readonly id: number;
             /** Format: date */
@@ -1023,6 +1109,25 @@ export interface components {
             readonly first_name: string;
             /** Format: date-time */
             readonly created_at: string;
+        };
+        /**
+         * @description A saved listing. `listing` is null when it can't be shown any more (`availability` is
+         *     "removed" or "unavailable"); keep `listing_id` to let the student unsave it.
+         */
+        Bookmark: {
+            readonly listing_id: number;
+            readonly availability: components["schemas"]["AvailabilityEnum"];
+            readonly listing: components["schemas"]["ListingCard"] | null;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        BookmarkPage: {
+            results: components["schemas"]["Bookmark"][];
+            /** @description Pass as `cursor` to get the next page. Null on the last page. */
+            next_cursor: string | null;
+        };
+        BookmarkState: {
+            readonly is_bookmarked: boolean;
         };
         CaseActionRequest: {
             action: components["schemas"]["ActionEnum"];
@@ -1341,6 +1446,7 @@ export interface components {
             readonly seller: components["schemas"]["SellerSummary"];
             readonly item_details: components["schemas"]["ItemDetails"] | null;
             readonly photos: components["schemas"]["ListingPhoto"][];
+            readonly is_bookmarked: boolean;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -1363,6 +1469,7 @@ export interface components {
             readonly brand: string;
             readonly school: components["schemas"]["SchoolSummary"];
             readonly seller: components["schemas"]["SellerSummary"];
+            readonly is_bookmarked: boolean;
             /** Format: date-time */
             readonly created_at: string;
         };
@@ -1619,9 +1726,10 @@ export interface components {
          *     * `info_request` - Moderator question
          *     * `appeal_update` - Appeal update
          *     * `staff_alert` - Staff alert
+         *     * `saved_search` - Saved search match
          * @enum {string}
          */
-        NotificationKind: "deal" | "moderation_notice" | "report_update" | "info_request" | "appeal_update" | "staff_alert";
+        NotificationKind: "deal" | "moderation_notice" | "report_update" | "info_request" | "appeal_update" | "staff_alert" | "saved_search";
         NotificationMarkReadRequest: {
             ids?: number[];
         };
@@ -1664,6 +1772,10 @@ export interface components {
             description?: string;
             price_cents?: number;
             item_details?: components["schemas"]["ItemDetailsUpdateRequest"];
+        };
+        PatchedSavedSearchUpdateRequest: {
+            name?: string;
+            alerts_enabled?: boolean;
         };
         /**
          * @description * `1` - Urgent
@@ -1792,6 +1904,88 @@ export interface components {
             readonly username: string;
             readonly first_name: string;
         };
+        SavedSearch: {
+            readonly id: number;
+            readonly name: string;
+            readonly filters: components["schemas"]["SavedSearchFilters"];
+            readonly alerts_enabled: boolean;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        SavedSearchCreateRequest: {
+            /**
+             * @description Leave blank for a name made from the filters.
+             * @default
+             */
+            name: string;
+            filters: components["schemas"]["SavedSearchFiltersRequest"];
+            /** @default true */
+            alerts_enabled: boolean;
+        };
+        /**
+         * @description A saved search's filters, named like the feed's query parameters (GET /api/listings/).
+         *     Blank or null means "any".
+         */
+        SavedSearchFilters: {
+            /** @default  */
+            q: string;
+            /**
+             * @description A school slug, "all", or blank for your own school.
+             * @default
+             */
+            school: string;
+            category?: string | null;
+            /** @default  */
+            brand: string;
+            /** @description In cents. */
+            min_price?: number | null;
+            /** @description In cents. */
+            max_price?: number | null;
+            /**
+             * @description Exact size. Jeans and pants are "<waist>x<inseam>", e.g. 32x30.
+             * @default
+             */
+            size: string;
+            /** @default  */
+            condition: components["schemas"]["ConditionEnum"] | components["schemas"]["BlankEnum"];
+            /** @default  */
+            color: components["schemas"]["ColorEnum"] | components["schemas"]["BlankEnum"];
+            /** @default newest */
+            sort: components["schemas"]["SortEnum"];
+        };
+        /**
+         * @description A saved search's filters, named like the feed's query parameters (GET /api/listings/).
+         *     Blank or null means "any".
+         */
+        SavedSearchFiltersRequest: {
+            /** @default  */
+            q: string;
+            /**
+             * @description A school slug, "all", or blank for your own school.
+             * @default
+             */
+            school: string;
+            category?: string | null;
+            /** @default  */
+            brand: string;
+            /** @description In cents. */
+            min_price?: number | null;
+            /** @description In cents. */
+            max_price?: number | null;
+            /**
+             * @description Exact size. Jeans and pants are "<waist>x<inseam>", e.g. 32x30.
+             * @default
+             */
+            size: string;
+            /** @default  */
+            condition: components["schemas"]["ConditionEnum"] | components["schemas"]["BlankEnum"];
+            /** @default  */
+            color: components["schemas"]["ColorEnum"] | components["schemas"]["BlankEnum"];
+            /** @default newest */
+            sort: components["schemas"]["SortEnum"];
+        };
         School: {
             name: string;
             short_name: string;
@@ -1828,6 +2022,13 @@ export interface components {
             body: string;
             listing_id?: number;
         };
+        /**
+         * @description * `newest` - Newly listed
+         *     * `price_asc` - Price: low to high
+         *     * `price_desc` - Price: high to low
+         * @enum {string}
+         */
+        SortEnum: "newest" | "price_asc" | "price_desc";
         StaffAppeal: {
             readonly id: number;
             readonly action: components["schemas"]["Action"];
@@ -1987,6 +2188,28 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    bookmarks_retrieve: {
+        parameters: {
+            query?: {
+                /** @description `next_cursor` from the last page. */
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookmarkPage"];
+                };
             };
         };
     };
@@ -2532,6 +2755,8 @@ export interface operations {
                 max_price?: number;
                 /** @description In cents. */
                 min_price?: number;
+                /** @description Keywords. Every word must appear in the title, brand or description. */
+                q?: string;
                 /** @description A school slug, or "all". Defaults to your school. */
                 school?: string;
                 /** @description Exact size, any case, e.g. 32x30. */
@@ -2703,6 +2928,61 @@ export interface operations {
             };
             /** @description The listing isn't Available, so it can't be edited. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listings_bookmark_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookmarkState"];
+                };
+            };
+            /** @description It's your own listing. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The listing isn't Available or Pending, so it can't be saved. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listings_bookmark_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3321,6 +3601,118 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReportReceipt"];
+                };
+            };
+        };
+    };
+    saved_searches_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedSearch"][];
+                };
+            };
+        };
+    };
+    saved_searches_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavedSearchCreateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SavedSearchCreateRequest"];
+                "multipart/form-data": components["schemas"]["SavedSearchCreateRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedSearch"];
+                };
+            };
+        };
+    };
+    saved_searches_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedSearch"];
+                };
+            };
+        };
+    };
+    saved_searches_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    saved_searches_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedSavedSearchUpdateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedSavedSearchUpdateRequest"];
+                "multipart/form-data": components["schemas"]["PatchedSavedSearchUpdateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedSearch"];
                 };
             };
         };
