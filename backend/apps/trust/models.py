@@ -212,6 +212,7 @@ class ModerationAction(models.Model):
         INFO_RECEIVED = "info_received", "Answer received"
         APPEAL_FILED = "appeal_filed", "Appeal filed"
         APPEAL_DECIDED = "appeal_decided", "Appeal decided"
+        RESOLVE_DEAL_DISPUTE = "resolve_deal_dispute", "Deal dispute decided"
 
     case = models.ForeignKey(
         ModerationCase, on_delete=models.PROTECT, null=True, blank=True, related_name="actions"

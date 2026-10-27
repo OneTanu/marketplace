@@ -10,6 +10,7 @@ from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 
 from apps.accounts.models import User
+from apps.deals.models import Deal
 from apps.errors import service_validation_errors
 from apps.listings.models import Listing
 
@@ -153,6 +154,15 @@ class CaseActionView(StaffView):
                     reason=data["reason"],
                     until=data.get("until"),
                     user_message=data["user_message"],
+                    **common,
+                )
+            elif action == "resolve_deal_dispute":
+                if not data.get("dispute_outcome"):
+                    raise_field("dispute_outcome", "Choose whether the handoff happened.")
+                services.resolve_deal_dispute(
+                    deal=get_object_or_404(Deal, pk=data.get("deal_id")),
+                    outcome=data["dispute_outcome"],
+                    reason=data["reason"],
                     **common,
                 )
             elif action == "ban":

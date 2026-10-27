@@ -115,18 +115,59 @@ def test_stale_times_must_be_replaced_before_accepting():
 
 
 @pytest.mark.django_db
-def test_reschedule_after_handoff_deadline_is_rejected():
+def test_a_reschedule_can_extend_the_handoff_once_and_only_so_far():
     seller, spot = seller_with_meetups("deadline-seller")
     buyer = verified_user("deadline-buyer")
     deal = offer_with_times(seller, spot, buyer, count=1)
     services.accept_deal(deal=deal, actor=seller)
+    # A short deadline, so slots both inside and beyond the extension window exist.
+    deadline = timezone.now() + timedelta(hours=2)
+    Deal.objects.filter(pk=deal.pk).update(handoff_deadline=deadline)
+    slots = services.meetup_slots(seller=seller)
+    beyond = next(slot for slot in slots if slot > deadline + services.MAX_HANDOFF_EXTENSION)
+    within = next(slot for slot in slots if deadline < slot <= deadline + timedelta(hours=24))
+    later = next(slot for slot in slots if slot > within)
+
+    # More than 48 hours past the deadline: refused outright.
+    with pytest.raises(ValidationError, match="48 hours"):
+        services.propose_meetup(deal=deal, actor=buyer, meeting_spot=spot, starts_at=beyond)
+
+    # Within the window: allowed, and the old meetup stands until the seller accepts.
+    accepted_before = deal.meetup_proposals.get(status=MeetupProposal.Status.ACCEPTED)
+    proposal = services.propose_meetup(deal=deal, actor=buyer, meeting_spot=spot, starts_at=within)
+    accepted_before.refresh_from_db()
+    assert accepted_before.status == MeetupProposal.Status.ACCEPTED
+    services.accept_meetup(deal=deal, actor=seller, proposal=proposal)
     deal.refresh_from_db()
-    too_late = next(
-        slot for slot in services.meetup_slots(seller=seller) if slot > deal.handoff_deadline
+    accepted_before.refresh_from_db()
+    assert accepted_before.status == MeetupProposal.Status.SUPERSEDED
+    assert deal.handoff_extensions == 1
+    assert deal.handoff_deadline == within + services.HANDOFF_CONFIRM_GRACE
+    assert deal.events.filter(event_type="handoff_extended").count() == 1
+
+    # A second extension is refused, so rescheduling can't hold the listing indefinitely.
+    if later > deal.handoff_deadline:
+        with pytest.raises(ValidationError, match="already extended"):
+            services.propose_meetup(deal=deal, actor=seller, meeting_spot=spot, starts_at=later)
+
+
+@pytest.mark.django_db
+def test_an_unanswered_reschedule_expires_and_the_confirmed_meetup_stands():
+    seller, spot = seller_with_meetups("lapse-seller")
+    buyer = verified_user("lapse-buyer")
+    deal = offer_with_times(seller, spot, buyer, count=1)
+    services.accept_deal(deal=deal, actor=seller)
+    confirmed = deal.meetup_proposals.get(status=MeetupProposal.Status.ACCEPTED)
+    slot = next(s for s in services.meetup_slots(seller=seller) if s != confirmed.starts_at)
+    proposal = services.propose_meetup(deal=deal, actor=buyer, meeting_spot=spot, starts_at=slot)
+    MeetupProposal.objects.filter(pk=proposal.pk).update(
+        expires_at=timezone.now() - timedelta(seconds=1)
     )
 
-    with pytest.raises(ValidationError):
-        services.propose_meetup(deal=deal, actor=buyer, meeting_spot=spot, starts_at=too_late)
+    with pytest.raises(ValidationError, match="expired"):
+        services.accept_meetup(deal=deal, actor=seller, proposal=proposal)
+    confirmed.refresh_from_db()
+    assert confirmed.status == MeetupProposal.Status.ACCEPTED
 
 
 @pytest.mark.django_db

@@ -2,8 +2,17 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Q
 
+# Statuses in which a deal is still in progress (see services.TRANSITIONS).
+OPEN_STATUSES = ["awaiting_seller", "awaiting_buyer", "backup", "pending", "disputed"]
+# A deal that holds its listing: at most one per listing.
+HOLDING_STATUSES = ["pending", "disputed"]
+
 
 class Deal(models.Model):
+    """A buyer's request for a listing, from first offer to handoff. Status only changes in
+    services.py, which records each change as a DealEvent (who, when, from, to). Deals are
+    never deleted: canceled and expired ones stay as history."""
+
     class Kind(models.TextChoices):
         BUY_NOW = "buy_now", "Buy now"
         OFFER = "offer", "Offer"
@@ -14,6 +23,9 @@ class Deal(models.Model):
         AWAITING_BUYER = "awaiting_buyer", "Awaiting buyer"
         BACKUP = "backup", "Backup"
         PENDING = "pending", "Pending handoff"
+        # The handoff is contested (one-sided confirmation, or a problem reported after a
+        # confirmation). The listing stays held until a moderator decides.
+        DISPUTED = "disputed", "Under review"
         COMPLETED = "completed", "Completed"
         CANCELED = "canceled", "Canceled"
         DECLINED = "declined", "Declined"
@@ -38,6 +50,33 @@ class Deal(models.Model):
     asap = models.BooleanField(default=False)
     response_deadline = models.DateTimeField(null=True, blank=True)
     handoff_deadline = models.DateTimeField(null=True, blank=True)
+    # How many times an agreed reschedule pushed the handoff deadline out (capped).
+    handoff_extensions = models.PositiveSmallIntegerField(default=0)
+    # Place in the listing's backup queue (lower goes first); null unless status is BACKUP.
+    backup_position = models.PositiveIntegerField(null=True, blank=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    accepted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    completed_at = models.DateTimeField(null=True, blank=True)
+    # When and by whom the deal reached a final status other than Completed. A null actor
+    # with a closed_at means the system (a deadline, or the listing selling elsewhere).
+    closed_at = models.DateTimeField(null=True, blank=True)
+    closed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    close_reason = models.CharField(max_length=40, blank=True)
+    # Each side can tidy closed deals out of their list; nothing is deleted.
+    buyer_archived_at = models.DateTimeField(null=True, blank=True)
+    seller_archived_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -49,15 +88,14 @@ class Deal(models.Model):
             ),
             models.UniqueConstraint(
                 fields=["listing", "buyer"],
-                condition=Q(
-                    status__in=[
-                        "awaiting_seller",
-                        "awaiting_buyer",
-                        "backup",
-                        "pending",
-                    ]
-                ),
+                condition=Q(status__in=OPEN_STATUSES),
                 name="deals_one_active_per_buyer_listing",
+            ),
+            # One primary buyer per listing, whatever races the application lets through.
+            models.UniqueConstraint(
+                fields=["listing"],
+                condition=Q(status__in=HOLDING_STATUSES),
+                name="deals_one_holder_per_listing",
             ),
         ]
         indexes = [
@@ -112,8 +150,13 @@ class HandoffConfirmation(models.Model):
 
 
 class DealEvent(models.Model):
+    """The deal's audit trail: one row per meaningful change, with who did it (null for the
+    system) and, for status changes, the status before and after."""
+
     deal = models.ForeignKey(Deal, on_delete=models.CASCADE, related_name="events")
     event_type = models.CharField(max_length=50)
+    from_status = models.CharField(max_length=30, blank=True)
+    to_status = models.CharField(max_length=30, blank=True)
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -239,6 +282,8 @@ class MeetupProposal(models.Model):
     )
     starts_at = models.DateTimeField()
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    # A proposal can't be accepted after this (24 hours, or its start time if sooner).
+    expires_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     responded_at = models.DateTimeField(null=True, blank=True)
 
@@ -276,3 +321,84 @@ class MeetupStatusUpdate(models.Model):
 
     def __str__(self):
         return f"{self.kind} on deal {self.deal_id}"
+
+
+class DealProblem(models.Model):
+    """A structured report from the buyer or seller about a handoff (a no-show, an item not as
+    described...). It's sent to moderation as a deal report; it never punishes anyone by
+    itself."""
+
+    class Kind(models.TextChoices):
+        NO_SHOW = "no_show", "The other person didn't show up"
+        NOT_AS_DESCRIBED = "not_as_described", "Item wasn't as described"
+        PAYMENT = "payment", "Payment problem"
+        SAFETY = "safety", "Safety concern"
+        OTHER = "other", "Something else"
+
+    deal = models.ForeignKey(Deal, on_delete=models.PROTECT, related_name="problems")
+    reporter = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="deal_problems"
+    )
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    details = models.CharField(max_length=1000, blank=True)
+    # The deal's status when it was reported.
+    deal_status = models.CharField(max_length=30)
+    report = models.ForeignKey(
+        "trust.Report", on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    case = models.ForeignKey(
+        "trust.ModerationCase", on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["deal", "reporter", "kind"], name="deals_one_problem_per_kind"
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.kind} on deal {self.deal_id} by {self.reporter_id}"
+
+
+class DealDispute(models.Model):
+    """A handoff Tanu won't settle by guessing: a moderator decides whether it completed.
+    Holds a snapshot of the deal and listing as they were when it opened."""
+
+    class Reason(models.TextChoices):
+        ONE_SIDED_CONFIRMATION = "one_sided_confirmation", "Only one side confirmed in time"
+        PROBLEM_AFTER_CONFIRMATION = (
+            "problem_after_confirmation",
+            "A problem was reported after a confirmation",
+        )
+
+    class Outcome(models.TextChoices):
+        COMPLETED = "completed", "Handoff happened"
+        CANCELED = "canceled", "Handoff didn't happen"
+
+    deal = models.OneToOneField(Deal, on_delete=models.PROTECT, related_name="dispute")
+    reason = models.CharField(max_length=40, choices=Reason.choices)
+    # Null when the system opened it (a deadline passed).
+    opened_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    case = models.ForeignKey(
+        "trust.ModerationCase",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="deal_disputes",
+    )
+    snapshot = models.JSONField(default=dict)
+    opened_at = models.DateTimeField(auto_now_add=True)
+    outcome = models.CharField(max_length=20, choices=Outcome.choices, blank=True)
+    resolved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolution_note = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"Dispute on deal {self.deal_id}"

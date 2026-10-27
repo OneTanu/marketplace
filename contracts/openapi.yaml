@@ -291,6 +291,23 @@ paths:
         schema:
           type: integer
           minimum: 1
+      - in: query
+        name: section
+        schema:
+          enum:
+          - current
+          - history
+          - cancelled
+          - archived
+          type: string
+          minLength: 1
+        description: |-
+          current: in progress. history: completed purchases, sales and trades only. cancelled: canceled, declined or expired. archived: closed deals you archived.
+
+          * `current` - current
+          * `history` - history
+          * `cancelled` - cancelled
+          * `archived` - archived
       tags:
       - deals
       security:
@@ -408,6 +425,47 @@ paths:
               schema:
                 $ref: '#/components/schemas/Deal'
           description: ''
+  /api/deals/{id}/archive/:
+    post:
+      operationId: deals_archive_create
+      description: |-
+        Move a canceled, declined or expired deal into (POST) or out of (DELETE) your
+        Archived activity. Nothing is deleted.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - deals
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+          description: ''
+    delete:
+      operationId: deals_archive_destroy
+      description: |-
+        Move a canceled, declined or expired deal into (POST) or out of (DELETE) your
+        Archived activity. Nothing is deleted.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - deals
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/deals/{id}/cancel/:
     post:
       operationId: deals_cancel_create
@@ -595,6 +653,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MeetupStatusUpdate'
+          description: ''
+  /api/deals/{id}/report-problem/:
+    post:
+      operationId: deals_report_problem_create
+      description: |-
+        Report a problem with an accepted deal: a no-show, an item not as described, a payment
+        or safety concern. It goes to Tanu's moderators with a snapshot of the deal; nobody is
+        penalized automatically. If the handoff was already confirmed by someone, the deal is held
+        as a dispute until a moderator decides.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - deals
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportProblemRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReportProblemRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReportProblemRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
           description: ''
   /api/deals/{id}/trade-offer/:
     post:
@@ -2040,6 +2135,7 @@ components:
       - restrict
       - suspend
       - ban
+      - resolve_deal_dispute
       type: string
       description: |-
         * `note` - Add a note
@@ -2055,6 +2151,7 @@ components:
         * `restrict` - Restrict a feature
         * `suspend` - Suspend account
         * `ban` - Ban account
+        * `resolve_deal_dispute` - Decide a disputed handoff
     AnswerRequest:
       type: object
       properties:
@@ -2284,6 +2381,11 @@ components:
         appeal_id:
           type: integer
           minimum: 1
+        deal_id:
+          type: integer
+          minimum: 1
+        dispute_outcome:
+          $ref: '#/components/schemas/DealDisputeOutcome'
         decision:
           $ref: '#/components/schemas/DecisionEnum'
         override_reason:
@@ -2323,6 +2425,11 @@ components:
           items:
             $ref: '#/components/schemas/StaffInfoRequest'
           readOnly: true
+        deal_disputes:
+          type: array
+          items:
+            $ref: '#/components/schemas/DealDispute'
+          readOnly: true
         subject:
           allOf:
           - $ref: '#/components/schemas/SubjectHistory'
@@ -2350,6 +2457,7 @@ components:
       - actions
       - appeals
       - case
+      - deal_disputes
       - eligible_assignees
       - info_requests
       - involved_users
@@ -2837,6 +2945,51 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        handoff_extensions:
+          type: integer
+          readOnly: true
+        backup_position:
+          type: integer
+          readOnly: true
+          nullable: true
+        accepted_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        closed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        close_reason:
+          type: string
+          readOnly: true
+        section:
+          allOf:
+          - $ref: '#/components/schemas/SectionEnum'
+          description: Where it belongs in the viewer's activity.
+          readOnly: true
+        actions:
+          allOf:
+          - $ref: '#/components/schemas/DealActions'
+          readOnly: true
+        dispute:
+          allOf:
+          - $ref: '#/components/schemas/DealDisputeSummary'
+          nullable: true
+          readOnly: true
+        my_problems:
+          type: array
+          items:
+            type: string
+          readOnly: true
+          description: Kinds of problem the viewer has reported on this deal.
         buyer_confirmed:
           type: boolean
           readOnly: true
@@ -2881,29 +3034,175 @@ components:
           format: date-time
           readOnly: true
       required:
+      - accepted_at
+      - actions
       - agreed_amount_cents
       - asap
       - awaiting_me
+      - backup_position
       - buyer
       - buyer_confirmed
+      - close_reason
+      - closed_at
+      - completed_at
       - conversation
       - created_at
       - currency
       - current_amount_cents
+      - dispute
       - events
       - handoff_deadline
+      - handoff_extensions
       - id
       - kind
       - listing
       - meetup_proposals
       - meetup_updates
+      - my_problems
       - my_role
       - offers
       - response_deadline
+      - section
       - seller
       - seller_confirmed
       - status
       - updated_at
+    DealActions:
+      type: object
+      description: What the viewer can do now. The server still checks every action.
+      properties:
+        accept:
+          type: boolean
+        counter:
+          type: boolean
+        decline:
+          type: boolean
+        cancel:
+          type: boolean
+        confirm_handoff:
+          type: boolean
+        report_problem:
+          type: boolean
+        archive:
+          type: boolean
+        unarchive:
+          type: boolean
+      required:
+      - accept
+      - archive
+      - cancel
+      - confirm_handoff
+      - counter
+      - decline
+      - report_problem
+      - unarchive
+    DealDispute:
+      type: object
+      description: A disputed handoff in a case, with the deal as it stood when the
+        dispute opened.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        deal_id:
+          type: integer
+          readOnly: true
+        listing_title:
+          type: string
+          readOnly: true
+        buyer:
+          allOf:
+          - $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+        seller:
+          allOf:
+          - $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+        deal_status:
+          type: string
+          readOnly: true
+        reason:
+          allOf:
+          - $ref: '#/components/schemas/DealDisputeReason'
+          readOnly: true
+        snapshot:
+          readOnly: true
+        opened_at:
+          type: string
+          format: date-time
+          readOnly: true
+        outcome:
+          allOf:
+          - $ref: '#/components/schemas/DealDisputeOutcome'
+          readOnly: true
+        resolved_by:
+          allOf:
+          - $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+          nullable: true
+        resolved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        resolution_note:
+          type: string
+          readOnly: true
+      required:
+      - buyer
+      - deal_id
+      - deal_status
+      - id
+      - listing_title
+      - opened_at
+      - outcome
+      - reason
+      - resolution_note
+      - resolved_at
+      - resolved_by
+      - seller
+      - snapshot
+    DealDisputeOutcome:
+      enum:
+      - completed
+      - canceled
+      type: string
+      description: |-
+        * `completed` - Handoff happened
+        * `canceled` - Handoff didn't happen
+    DealDisputeReason:
+      enum:
+      - one_sided_confirmation
+      - problem_after_confirmation
+      type: string
+      description: |-
+        * `one_sided_confirmation` - Only one side confirmed in time
+        * `problem_after_confirmation` - A problem was reported after a confirmation
+    DealDisputeSummary:
+      type: object
+      properties:
+        reason:
+          allOf:
+          - $ref: '#/components/schemas/DealDisputeReason'
+          readOnly: true
+        opened_at:
+          type: string
+          format: date-time
+          readOnly: true
+        outcome:
+          allOf:
+          - $ref: '#/components/schemas/DealDisputeOutcome'
+          readOnly: true
+        resolved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - opened_at
+      - outcome
+      - reason
+      - resolved_at
     DealEvent:
       type: object
       properties:
@@ -2918,6 +3217,12 @@ components:
           - $ref: '#/components/schemas/DealUser'
           readOnly: true
           nullable: true
+        from_status:
+          type: string
+          readOnly: true
+        to_status:
+          type: string
+          readOnly: true
         data:
           readOnly: true
         created_at:
@@ -2929,7 +3234,9 @@ components:
       - created_at
       - data
       - event_type
+      - from_status
       - id
+      - to_status
     DealKind:
       enum:
       - buy_now
@@ -3010,12 +3317,27 @@ components:
       - id
       - offered_by
       - trade_items
+    DealProblemKind:
+      enum:
+      - no_show
+      - not_as_described
+      - payment
+      - safety
+      - other
+      type: string
+      description: |-
+        * `no_show` - The other person didn't show up
+        * `not_as_described` - Item wasn't as described
+        * `payment` - Payment problem
+        * `safety` - Safety concern
+        * `other` - Something else
     DealStatus:
       enum:
       - awaiting_seller
       - awaiting_buyer
       - backup
       - pending
+      - disputed
       - completed
       - canceled
       - declined
@@ -3026,6 +3348,7 @@ components:
         * `awaiting_buyer` - Awaiting buyer
         * `backup` - Backup
         * `pending` - Pending handoff
+        * `disputed` - Under review
         * `completed` - Completed
         * `canceled` - Canceled
         * `declined` - Declined
@@ -3767,6 +4090,7 @@ components:
       - info_received
       - appeal_filed
       - appeal_decided
+      - resolve_deal_dispute
       type: string
       description: |-
         * `note` - Note
@@ -3787,6 +4111,7 @@ components:
         * `info_received` - Answer received
         * `appeal_filed` - Appeal filed
         * `appeal_decided` - Appeal decided
+        * `resolve_deal_dispute` - Deal dispute decided
     ModerationStats:
       type: object
       properties:
@@ -4288,6 +4613,17 @@ components:
       - reason
       - target_id
       - target_type
+    ReportProblemRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/DealProblemKind'
+        details:
+          type: string
+          default: ''
+          maxLength: 1000
+      required:
+      - kind
     ReportReason:
       enum:
       - prohibited_item
@@ -4704,6 +5040,13 @@ components:
       - colors
       - id
       - short_name
+    SectionEnum:
+      enum:
+      - current
+      - history
+      - cancelled
+      - archived
+      type: string
     SellerSummary:
       type: object
       properties:

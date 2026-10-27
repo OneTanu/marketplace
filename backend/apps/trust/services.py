@@ -21,7 +21,7 @@ from django.utils import timezone
 from apps.accounts import services as account_services
 from apps.accounts.models import User
 from apps.deals import services as deal_services
-from apps.deals.models import Deal
+from apps.deals.models import Deal, DealDispute
 from apps.listings import services as listing_services
 from apps.listings.models import Listing
 from apps.messaging.models import Conversation, ConversationParticipant, Message
@@ -289,6 +289,56 @@ def create_report(
     if block:
         block_user(blocker=reporter, blocked=reported_user)
     return report
+
+
+def open_case_for_deal(*, deal: Deal, subject_user: User) -> ModerationCase:
+    """The open case a deal problem or dispute joins (the subject's), or a new one. Called by
+    Deals; it never acts against anyone: a moderator reviews and decides."""
+    return _case_for(
+        reported_user=subject_user,
+        listing=None,
+        school=deal.listing.school,
+        priority=ModerationCase.Priority.HIGH,
+    )
+
+
+@transaction.atomic
+def resolve_deal_dispute(
+    *,
+    staff: User,
+    case: ModerationCase,
+    deal: Deal,
+    outcome: str,
+    reason: str,
+    override_reason: str = "",
+) -> ModerationAction:
+    """Decide a disputed handoff in this case: it happened, or it didn't. Deals moves the
+    deal and its listing; this records the decision. Deciding the same way again is a no-op."""
+    _require_staff(staff, case, override_reason=override_reason)
+    dispute = DealDispute.objects.filter(deal=deal, case=case).first()
+    if dispute is None:
+        raise ValidationError("That deal isn't disputed in this case.")
+    if dispute.outcome == outcome:
+        existing = case.actions.filter(
+            kind=ModerationAction.Kind.RESOLVE_DEAL_DISPUTE, data__deal_id=deal.pk
+        ).first()
+        if existing is not None:
+            return existing
+    reason = (reason or "").strip()
+    if not reason:
+        raise ValidationError({"reason": "Give a reason for this decision."})
+    try:
+        deal_services.resolve_dispute(deal=deal, staff=staff, outcome=outcome, note=reason)
+    except deal_services.DealStateError as exc:
+        raise ValidationError(str(exc)) from exc
+    return _record(
+        staff,
+        case,
+        ModerationAction.Kind.RESOLVE_DEAL_DISPUTE,
+        reason,
+        deal_id=deal.pk,
+        outcome=outcome,
+    )
 
 
 # --- Evidence ---
@@ -1317,6 +1367,9 @@ def case_detail(staff: User, case: ModerationCase) -> dict:
             "user", "decided_by", "action__actor", "action__target_user"
         ),
         "info_requests": case.info_requests.select_related("recipient", "asked_by"),
+        "deal_disputes": case.deal_disputes.select_related(
+            "deal__listing", "deal__buyer", "deal__seller", "resolved_by"
+        ).order_by("opened_at", "id"),
         "subject": {
             "user": subject,
             "email": subject.email,

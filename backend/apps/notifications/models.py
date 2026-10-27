@@ -26,6 +26,9 @@ class Notification(models.Model):
     body = models.TextField(blank=True)
     # A path in the web app ("/deals"), not a full URL, so it works on any domain.
     link = models.CharField(max_length=300, blank=True)
+    # Set for notifications that must be sent once only (e.g. "deal-event:42"): notify() with a
+    # key that's already been used returns the existing notification.
+    dedupe_key = models.CharField(max_length=100, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     read_at = models.DateTimeField(null=True, blank=True)
 
@@ -38,6 +41,13 @@ class Notification(models.Model):
                 name="notification_unread_idx",
             ),
             models.Index(fields=["user", "-created_at"], name="notification_user_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "dedupe_key"],
+                condition=~Q(dedupe_key=""),
+                name="notification_once_per_key",
+            ),
         ]
 
     def __str__(self):

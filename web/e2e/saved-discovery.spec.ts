@@ -28,7 +28,10 @@ test("bookmarks a listing, saves a search, and is alerted once to a new match", 
   await page.goto(`/listings/${lampId}`);
   const save = page.getByRole("button", { name: "Save listing" });
   await expect(save).toHaveAttribute("aria-pressed", "false");
+  // The heart fills at once (optimistically); wait for the save itself before moving on.
+  const saved = page.waitForResponse((response) => response.url().endsWith(`/api/listings/${lampId}/bookmark/`) && response.ok());
   await save.click();
+  await saved;
   await expect(page.getByRole("button", { name: "Remove saved listing" })).toHaveAttribute("aria-pressed", "true");
 
   // The feed shows it saved too.

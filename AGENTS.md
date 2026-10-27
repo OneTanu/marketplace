@@ -69,7 +69,10 @@ API docs: http://localhost:8000/api/docs/. Health: `/api/health/`. Auth (django-
 ### Listings
 - Shared fields go on `Listing`; kind-specific fields go on `ItemDetails` / `ServiceDetails`. Don't add item-only or service-only columns to `Listing`.
 - Item status: Available → Pending (seller accepted a buyer) → Sold (both confirmed the handoff). Pending can return to Available. Removed is for sellers and moderation. Never mark Sold on a Buy now click.
-- Timers: the seller has 24h to answer a request or offer; a Pending deal returns to Available after 72h without a confirmed handoff. Both run as background jobs.
+- Timers: whoever's turn it is has 24h to answer a request or offer; a Pending deal with no confirmation returns its listing to Available after 72h. Deadlines are enforced at request time and by background jobs (a per-deal job plus a 10-minute sweep). One agreed reschedule may extend the handoff deadline, once, by up to 48h.
+- Deal statuses and every allowed move are in `deals.services.TRANSITIONS`; all status changes go through `_transition()`, which records actor, time and from/to as a `DealEvent`. Deals are never deleted.
+- After one handoff confirmation a deal can't be canceled. A lapsed one-sided confirmation, or a problem reported after a confirmation, makes the deal `disputed`: the listing stays Pending until a moderator decides (completed → Sold, canceled → Available). Never guess the outcome, and never penalize anyone automatically from a report.
+- Backup buyers queue in request order and can't be accepted out of turn; when a listing comes back, only the first eligible backup is promoted (with a fresh 24h).
 
 ### Data and money
 - Money is integer cents with an explicit currency. Never floats.

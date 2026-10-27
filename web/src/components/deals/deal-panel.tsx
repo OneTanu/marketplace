@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { TradeSummary } from "@/components/deals/trade";
-import { actOnDeal, counterDeal, listConversationDeals, meetupState, tradePackage } from "@/lib/deals";
+import { actOnDeal, counterDeal, DEAL_STATUS_LABELS, dealNextStep, listConversationDeals, meetupState, tradePackage } from "@/lib/deals";
 import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
 import { centsToDollars } from "@/lib/money";
@@ -15,16 +15,7 @@ type Deal = components["schemas"]["Deal"];
 type MeetingSpot = components["schemas"]["MeetingSpot"];
 type Review = components["schemas"]["Review"];
 
-const statusText: Record<Deal["status"], string> = {
-  awaiting_seller: "Waiting for seller",
-  awaiting_buyer: "Waiting for buyer",
-  backup: "Backup buyer",
-  pending: "Handoff pending",
-  completed: "Completed",
-  canceled: "Canceled",
-  declined: "Declined",
-  expired: "Expired",
-};
+const statusText = DEAL_STATUS_LABELS;
 
 function deadlineText(value: string | null | undefined) {
   return value ? formatDateTime(value) : "";
@@ -107,8 +98,8 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
     : meetups.fromOther[0]?.id;
 
   const mineConfirmed = deal.my_role === "buyer" ? deal.buyer_confirmed : deal.seller_confirmed;
-  const open = ["awaiting_seller", "awaiting_buyer", "backup", "pending"].includes(deal.status);
-  const canCancel = open && !(deal.status === "pending" && (deal.buyer_confirmed || deal.seller_confirmed));
+  const open = deal.section === "current";
+  const can = deal.actions;
 
   async function run(action: "accept" | "decline" | "cancel" | "confirm-handoff") {
     setWorking(true);
@@ -191,7 +182,7 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
       {isTrade && (
         <div className="mt-2 rounded-lg border border-line bg-background p-3">
           <TradeSummary deal={deal} compact />
-          {deal.awaiting_me && deal.status !== "backup" && (
+          {deal.awaiting_me && (
             <Link href="/deals" className="mt-2 inline-block text-sm font-semibold text-brand underline">
               {tradeOffer ? "Counter with different items in Deals" : "Pick items in Deals"}
             </Link>
@@ -201,14 +192,12 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
       {deal.asap && deal.my_role === "seller" && open && deal.status !== "pending" && (
         <p className="mt-2 text-xs font-semibold text-brand">@{deal.buyer.username} wants to meet as soon as possible.</p>
       )}
-      {deal.status === "backup" && (
-        <p className="mt-2 text-xs leading-5 text-muted">
-          Another buyer is pending. The seller can choose this request if that handoff falls through.
-        </p>
+      {(deal.status === "backup" || deal.status === "disputed") && (
+        <p className="mt-2 text-xs leading-5 text-muted">{dealNextStep(deal)}</p>
       )}
       {deal.status === "pending" && (
         <div className="mt-2 text-xs leading-5 text-muted">
-          <p>Meet in a public campus location. Inspect the item and exchange payment in person.</p>
+          <p>Meet in a public campus location. Inspect the item and exchange payment in person. Tanu doesn’t handle or verify payment.</p>
           {acceptedMeetup && (
             <p className="mt-1 font-semibold text-ink">
               {acceptedMeetup.meeting_spot.name} · {deadlineText(acceptedMeetup.starts_at)}
@@ -294,22 +283,17 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
 
       {!countering && !confirmingHandoff && (
         <div className="mt-3 flex flex-wrap gap-2">
-          {deal.awaiting_me && (
-            <>
-              {(!isTrade || tradeOffer) && (
-                <button type="button" onClick={() => run("accept")} disabled={working} className="btn btn-primary h-9 px-3 text-sm">
-                  {deal.status === "backup" ? "Choose this buyer" : "Accept"}
-                </button>
-              )}
-              {deal.status !== "backup" && !isTrade && <button type="button" onClick={() => setCountering(true)} disabled={working} className="btn btn-secondary h-9 px-3 text-sm">Counter</button>}
-              <button type="button" onClick={() => run("decline")} disabled={working} className="btn btn-secondary h-9 px-3 text-sm">Decline</button>
-            </>
+          {can.accept && (!isTrade || tradeOffer) && (
+            <button type="button" onClick={() => run("accept")} disabled={working} className="btn btn-primary h-9 px-3 text-sm">Accept</button>
           )}
-          {deal.status === "pending" && !mineConfirmed && (
+          {can.counter && !isTrade && <button type="button" onClick={() => setCountering(true)} disabled={working} className="btn btn-secondary h-9 px-3 text-sm">Counter</button>}
+          {can.decline && <button type="button" onClick={() => run("decline")} disabled={working} className="btn btn-secondary h-9 px-3 text-sm">{deal.status === "backup" ? "Remove from line" : "Decline"}</button>}
+          {can.confirm_handoff && (
             <button type="button" onClick={() => setConfirmingHandoff(true)} disabled={working} className="btn btn-primary h-9 px-3 text-sm">Confirm handoff</button>
           )}
           {deal.status === "pending" && mineConfirmed && <p className="self-center text-sm font-semibold text-muted">Waiting for the other person to confirm</p>}
-          {canCancel && <button type="button" onClick={() => run("cancel")} disabled={working} className="btn btn-secondary h-9 px-3 text-sm">Cancel {deal.status === "pending" ? "purchase" : "request"}</button>}
+          {can.cancel && <button type="button" onClick={() => run("cancel")} disabled={working} className="btn btn-secondary h-9 px-3 text-sm">{deal.status === "backup" ? "Leave the line" : `Cancel ${deal.status === "pending" ? "purchase" : "request"}`}</button>}
+          {can.report_problem && <Link href="/deals" className="btn btn-quiet h-9 px-3 text-sm">Report a problem</Link>}
         </div>
       )}
 

@@ -204,7 +204,7 @@ test("a declined request and a canceled purchase both leave the listing availabl
   await requestDeal(buyerContext, baseURL!, listingId, { kind: "offer", amount_cents: 1000 });
   await openDeals(page, "Selling");
   await dealCard(page, title).getByRole("button", { name: "Decline" }).click();
-  await page.getByRole("heading", { name: "Closed offers" }).click();
+  await page.getByRole("heading", { name: "Cancelled" }).click();
   await expect(dealCard(page, title)).toContainText("Declined");
 
   // The buyer tries again, the seller accepts, then the buyer backs out. The declined request
@@ -221,8 +221,8 @@ test("a declined request and a canceled purchase both leave the listing availabl
   await openDeals(buyerPage, "Buying");
   const buyerCard = dealCard(buyerPage, title).filter({ hasNotText: "Declined" });
   await buyerCard.getByRole("button", { name: "Cancel purchase" }).click();
-  // Canceled deals move into the collapsed Closed offers section.
-  await buyerPage.getByRole("heading", { name: "Closed offers" }).click();
+  // Canceled deals move into the collapsed Cancelled section.
+  await buyerPage.getByRole("heading", { name: "Cancelled" }).click();
   await expect(dealCard(buyerPage, title).filter({ hasText: "Canceled" })).toBeVisible();
 
   await buyerPage.goto(`/listings/${listingId}`);
@@ -230,7 +230,7 @@ test("a declined request and a canceled purchase both leave the listing availabl
   await buyerContext.close();
 });
 
-test("a second buyer waits as a backup and the seller can choose them when the first backs out", async ({
+test("a second buyer waits in line and gets the next turn when the first backs out", async ({
   browser,
   context,
   page,
@@ -250,19 +250,24 @@ test("a second buyer waits as a backup and the seller can choose them when the f
   await openDeals(page, "Selling");
   await cardFor(TEST_BUYER.username).getByRole("button", { name: "Accept", exact: true }).click();
   await expect(cardFor(TEST_BUYER.username)).toContainText("Handoff pending");
-  await expect(cardFor(TEST_SECOND_BUYER.username)).toContainText("Available as a backup");
+  await expect(cardFor(TEST_SECOND_BUYER.username)).toContainText("Backup buyer · #1 in line");
+  // Backups wait their turn; the seller can't pick one out of order.
+  await expect(cardFor(TEST_SECOND_BUYER.username).getByRole("button", { name: "Accept", exact: true })).toHaveCount(0);
 
   await openDeals(secondPage, "Buying");
-  await expect(dealCard(secondPage, title)).toContainText("Backup buyer");
+  await expect(dealCard(secondPage, title)).toContainText("Backup buyer · #1 in line");
 
-  // The first buyer backs out; the listing is free again and the seller picks the backup,
-  // which confirms the backup's proposed meetup too.
+  // The first buyer backs out; the listing is free again and goes to the first buyer in
+  // line, whose request returns to the seller. Accepting it confirms their proposed meetup.
   await openDeals(buyerPage, "Buying");
+  const canceled = buyerPage.waitForResponse((response) => response.url().endsWith("/cancel/") && response.ok());
   await dealCard(buyerPage, title).getByRole("button", { name: "Cancel purchase" }).click();
+  await canceled;
   await page.reload();
   await page.getByRole("tab", { name: /^Selling/ }).click();
   const backup = cardFor(TEST_SECOND_BUYER.username);
-  await backup.getByRole("button", { name: "Choose buyer" }).click();
+  await expect(backup).toContainText("Needs your response");
+  await backup.getByRole("button", { name: "Accept", exact: true }).click();
   await expect(backup).toContainText("Handoff pending");
   await expect(backup).not.toContainText("Meetup time still needs to be confirmed");
 

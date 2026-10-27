@@ -220,6 +220,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/deals/{id}/archive/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Move a canceled, declined or expired deal into (POST) or out of (DELETE) your
+         *     Archived activity. Nothing is deleted.
+         */
+        post: operations["deals_archive_create"];
+        /**
+         * @description Move a canceled, declined or expired deal into (POST) or out of (DELETE) your
+         *     Archived activity. Nothing is deleted.
+         */
+        delete: operations["deals_archive_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/deals/{id}/cancel/": {
         parameters: {
             query?: never;
@@ -326,6 +350,28 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["deals_meetup_status_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/deals/{id}/report-problem/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Report a problem with an accepted deal: a no-show, an item not as described, a payment
+         *     or safety concern. It goes to Tanu's moderators with a snapshot of the deal; nobody is
+         *     penalized automatically. If the handoff was already confirmed by someone, the deal is held
+         *     as a dispute until a moderator decides.
+         */
+        post: operations["deals_report_problem_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1039,9 +1085,10 @@ export interface components {
          *     * `restrict` - Restrict a feature
          *     * `suspend` - Suspend account
          *     * `ban` - Ban account
+         *     * `resolve_deal_dispute` - Decide a disputed handoff
          * @enum {string}
          */
-        ActionEnum: "note" | "assign" | "escalate" | "request_info" | "decide_appeal" | "dismiss" | "resolve" | "remove_listing" | "restore_listing" | "warn" | "restrict" | "suspend" | "ban";
+        ActionEnum: "note" | "assign" | "escalate" | "request_info" | "decide_appeal" | "dismiss" | "resolve" | "remove_listing" | "restore_listing" | "warn" | "restrict" | "suspend" | "ban" | "resolve_deal_dispute";
         AnswerRequest: {
             answer: string;
         };
@@ -1140,6 +1187,8 @@ export interface components {
             /** @default  */
             user_message: string;
             appeal_id?: number;
+            deal_id?: number;
+            dispute_outcome?: components["schemas"]["DealDisputeOutcome"];
             decision?: components["schemas"]["DecisionEnum"];
             /** @default  */
             override_reason: string;
@@ -1151,6 +1200,7 @@ export interface components {
             readonly actions: components["schemas"]["Action"][];
             readonly appeals: components["schemas"]["StaffAppeal"][];
             readonly info_requests: components["schemas"]["StaffInfoRequest"][];
+            readonly deal_disputes: components["schemas"]["DealDispute"][];
             readonly subject: components["schemas"]["SubjectHistory"];
             readonly involved_users: components["schemas"]["StaffUser"][];
             readonly reporter_records: components["schemas"]["ReporterRecord"][];
@@ -1317,6 +1367,21 @@ export interface components {
             readonly response_deadline: string | null;
             /** Format: date-time */
             readonly handoff_deadline: string | null;
+            readonly handoff_extensions: number;
+            readonly backup_position: number | null;
+            /** Format: date-time */
+            readonly accepted_at: string | null;
+            /** Format: date-time */
+            readonly completed_at: string | null;
+            /** Format: date-time */
+            readonly closed_at: string | null;
+            readonly close_reason: string;
+            /** @description Where it belongs in the viewer's activity. */
+            readonly section: components["schemas"]["SectionEnum"];
+            readonly actions: components["schemas"]["DealActions"];
+            readonly dispute: components["schemas"]["DealDisputeSummary"] | null;
+            /** @description Kinds of problem the viewer has reported on this deal. */
+            readonly my_problems: string[];
             readonly buyer_confirmed: boolean;
             readonly seller_confirmed: boolean;
             readonly my_role: string;
@@ -1331,10 +1396,61 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
         };
+        /** @description What the viewer can do now. The server still checks every action. */
+        DealActions: {
+            accept: boolean;
+            counter: boolean;
+            decline: boolean;
+            cancel: boolean;
+            confirm_handoff: boolean;
+            report_problem: boolean;
+            archive: boolean;
+            unarchive: boolean;
+        };
+        /** @description A disputed handoff in a case, with the deal as it stood when the dispute opened. */
+        DealDispute: {
+            readonly id: number;
+            readonly deal_id: number;
+            readonly listing_title: string;
+            readonly buyer: components["schemas"]["StaffUser"];
+            readonly seller: components["schemas"]["StaffUser"];
+            readonly deal_status: string;
+            readonly reason: components["schemas"]["DealDisputeReason"];
+            readonly snapshot: unknown;
+            /** Format: date-time */
+            readonly opened_at: string;
+            readonly outcome: components["schemas"]["DealDisputeOutcome"];
+            readonly resolved_by: components["schemas"]["StaffUser"] | null;
+            /** Format: date-time */
+            readonly resolved_at: string | null;
+            readonly resolution_note: string;
+        };
+        /**
+         * @description * `completed` - Handoff happened
+         *     * `canceled` - Handoff didn't happen
+         * @enum {string}
+         */
+        DealDisputeOutcome: "completed" | "canceled";
+        /**
+         * @description * `one_sided_confirmation` - Only one side confirmed in time
+         *     * `problem_after_confirmation` - A problem was reported after a confirmation
+         * @enum {string}
+         */
+        DealDisputeReason: "one_sided_confirmation" | "problem_after_confirmation";
+        DealDisputeSummary: {
+            readonly reason: components["schemas"]["DealDisputeReason"];
+            /** Format: date-time */
+            readonly opened_at: string;
+            readonly outcome: components["schemas"]["DealDisputeOutcome"];
+            /** Format: date-time */
+            readonly resolved_at: string | null;
+        };
         DealEvent: {
             readonly id: number;
             readonly event_type: string;
             readonly actor: components["schemas"]["DealUser"] | null;
+            readonly from_status: string;
+            readonly to_status: string;
             readonly data: unknown;
             /** Format: date-time */
             readonly created_at: string;
@@ -1366,17 +1482,27 @@ export interface components {
             readonly created_at: string;
         };
         /**
+         * @description * `no_show` - The other person didn't show up
+         *     * `not_as_described` - Item wasn't as described
+         *     * `payment` - Payment problem
+         *     * `safety` - Safety concern
+         *     * `other` - Something else
+         * @enum {string}
+         */
+        DealProblemKind: "no_show" | "not_as_described" | "payment" | "safety" | "other";
+        /**
          * @description * `awaiting_seller` - Awaiting seller
          *     * `awaiting_buyer` - Awaiting buyer
          *     * `backup` - Backup
          *     * `pending` - Pending handoff
+         *     * `disputed` - Under review
          *     * `completed` - Completed
          *     * `canceled` - Canceled
          *     * `declined` - Declined
          *     * `expired` - Expired
          * @enum {string}
          */
-        DealStatus: "awaiting_seller" | "awaiting_buyer" | "backup" | "pending" | "completed" | "canceled" | "declined" | "expired";
+        DealStatus: "awaiting_seller" | "awaiting_buyer" | "backup" | "pending" | "disputed" | "completed" | "canceled" | "declined" | "expired";
         DealUser: {
             readonly id: number;
             readonly username: string;
@@ -1641,9 +1767,10 @@ export interface components {
          *     * `info_received` - Answer received
          *     * `appeal_filed` - Appeal filed
          *     * `appeal_decided` - Appeal decided
+         *     * `resolve_deal_dispute` - Deal dispute decided
          * @enum {string}
          */
-        ModerationActionKind: "note" | "assign" | "escalate" | "dismiss" | "resolve" | "remove_listing" | "auto_hide_listing" | "restore_listing" | "warn" | "restrict" | "suspend" | "ban" | "lift_restriction" | "conflict_override" | "request_info" | "info_received" | "appeal_filed" | "appeal_decided";
+        ModerationActionKind: "note" | "assign" | "escalate" | "dismiss" | "resolve" | "remove_listing" | "auto_hide_listing" | "restore_listing" | "warn" | "restrict" | "suspend" | "ban" | "lift_restriction" | "conflict_override" | "request_info" | "info_received" | "appeal_filed" | "appeal_decided" | "resolve_deal_dispute";
         ModerationStats: {
             readonly days: number;
             readonly cases_opened: number;
@@ -1831,6 +1958,11 @@ export interface components {
             /** @default false */
             block: boolean;
         };
+        ReportProblemRequest: {
+            kind: components["schemas"]["DealProblemKind"];
+            /** @default  */
+            details: string;
+        };
         /**
          * @description * `prohibited_item` - Prohibited item
          *     * `counterfeit` - Counterfeit item
@@ -2014,6 +2146,8 @@ export interface components {
             readonly short_name: string;
             readonly colors: string[];
         };
+        /** @enum {string} */
+        SectionEnum: "current" | "history" | "cancelled" | "archived";
         SellerSummary: {
             readonly id: number;
             readonly username: string;
@@ -2408,6 +2542,15 @@ export interface operations {
         parameters: {
             query?: {
                 conversation?: number;
+                /**
+                 * @description current: in progress. history: completed purchases, sales and trades only. cancelled: canceled, declined or expired. archived: closed deals you archived.
+                 *
+                 *     * `current` - current
+                 *     * `history` - history
+                 *     * `cancelled` - cancelled
+                 *     * `archived` - archived
+                 */
+                section?: "current" | "history" | "cancelled" | "archived";
             };
             header?: never;
             path?: never;
@@ -2518,6 +2661,47 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Deal"];
                 };
+            };
+        };
+    };
+    deals_archive_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Deal"];
+                };
+            };
+        };
+    };
+    deals_archive_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -2688,6 +2872,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeetupStatusUpdate"];
+                };
+            };
+        };
+    };
+    deals_report_problem_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportProblemRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReportProblemRequest"];
+                "multipart/form-data": components["schemas"]["ReportProblemRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Deal"];
                 };
             };
         };

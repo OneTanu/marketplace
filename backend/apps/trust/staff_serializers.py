@@ -4,6 +4,7 @@ staff_views.IsModerator)."""
 from rest_framework import serializers
 
 from apps.accounts.models import User
+from apps.deals.models import DealDispute
 
 from .models import (
     Appeal,
@@ -221,6 +222,36 @@ class ViewerSerializer(serializers.Serializer):
     conflict_overridable = serializers.BooleanField(read_only=True)
 
 
+class DealDisputeSerializer(serializers.ModelSerializer):
+    """A disputed handoff in a case, with the deal as it stood when the dispute opened."""
+
+    deal_id = serializers.IntegerField(read_only=True)
+    listing_title = serializers.CharField(source="deal.listing.title", read_only=True)
+    buyer = StaffUserSerializer(source="deal.buyer", read_only=True)
+    seller = StaffUserSerializer(source="deal.seller", read_only=True)
+    deal_status = serializers.CharField(source="deal.status", read_only=True)
+    resolved_by = StaffUserSerializer(read_only=True, allow_null=True)
+
+    class Meta:
+        model = DealDispute
+        fields = [
+            "id",
+            "deal_id",
+            "listing_title",
+            "buyer",
+            "seller",
+            "deal_status",
+            "reason",
+            "snapshot",
+            "opened_at",
+            "outcome",
+            "resolved_by",
+            "resolved_at",
+            "resolution_note",
+        ]
+        read_only_fields = fields
+
+
 class CaseDetailSerializer(serializers.Serializer):
     case = CaseRowSerializer(read_only=True)
     legal_hold = serializers.BooleanField(read_only=True)
@@ -228,6 +259,7 @@ class CaseDetailSerializer(serializers.Serializer):
     actions = ActionSerializer(many=True, read_only=True)
     appeals = StaffAppealSerializer(many=True, read_only=True)
     info_requests = StaffInfoRequestSerializer(many=True, read_only=True)
+    deal_disputes = DealDisputeSerializer(many=True, read_only=True)
     subject = SubjectHistorySerializer(read_only=True)
     # Reporters too, since consequences can go to them (e.g. for false reports).
     involved_users = StaffUserSerializer(many=True, read_only=True)
@@ -273,6 +305,7 @@ ACTIONS = [
     ("restrict", "Restrict a feature"),
     ("suspend", "Suspend account"),
     ("ban", "Ban account"),
+    ("resolve_deal_dispute", "Decide a disputed handoff"),
 ]
 
 
@@ -296,6 +329,9 @@ class CaseActionSerializer(serializers.Serializer):
         max_length=2000, required=False, allow_blank=True, default=""
     )
     appeal_id = serializers.IntegerField(required=False, min_value=1)
+    # Deciding a disputed handoff.
+    deal_id = serializers.IntegerField(required=False, min_value=1)
+    dispute_outcome = serializers.ChoiceField(choices=DealDispute.Outcome.choices, required=False)
     decision = serializers.ChoiceField(
         choices=[("uphold", "Uphold"), ("overturn", "Overturn")], required=False
     )

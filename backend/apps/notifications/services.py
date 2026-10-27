@@ -17,13 +17,31 @@ Kind = Notification.Kind
 
 
 def notify(
-    user, *, kind: str, title: str, body: str = "", link: str = "", email: bool = False
+    user,
+    *,
+    kind: str,
+    title: str,
+    body: str = "",
+    link: str = "",
+    email: bool = False,
+    dedupe_key: str = "",
 ) -> Notification:
     """Record a notification. With `email`, also queue an email, which only goes out if the
-    surrounding transaction commits (the job lives in the same database)."""
-    notification = Notification.objects.create(
-        user=user, kind=kind, title=title, body=body, link=link
-    )
+    surrounding transaction commits (the job lives in the same database). With `dedupe_key`,
+    a second call with the same key returns the first notification and sends nothing."""
+    if dedupe_key:
+        with transaction.atomic():
+            notification, created = Notification.objects.get_or_create(
+                user=user,
+                dedupe_key=dedupe_key,
+                defaults={"kind": kind, "title": title, "body": body, "link": link},
+            )
+        if not created:
+            return notification
+    else:
+        notification = Notification.objects.create(
+            user=user, kind=kind, title=title, body=body, link=link
+        )
     if email and user.email:
         from .tasks import send_notification_email
 
