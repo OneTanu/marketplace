@@ -230,7 +230,11 @@ export function ChatClient({ conversationId, listingId }: { conversationId: numb
       }) : <div className="m-auto max-w-xs text-center"><Avatar user={user} /><p className="mt-3 font-bold">Say hi to {user.first_name || `@${user.username}`}</p><p className="mt-1 text-sm text-muted">Ask about an item, make an offer, or pick a place to meet on campus.</p></div>}
     </div>
 
-    <form onSubmit={submit} className="border-t border-line px-3 py-3 sm:px-4">
+    {!user.is_available ? (
+      <p role="status" className="border-t border-line px-4 py-4 text-center text-sm text-muted">
+        This account isn&apos;t available right now. You can still read your messages.
+      </p>
+    ) : <form onSubmit={submit} className="border-t border-line px-3 py-3 sm:px-4">
       {error && <p role="alert" className="mb-2 text-sm text-[var(--danger)]">{error}</p>}
       {attachedListing && <div className="mb-2 flex items-center gap-3 rounded-lg border border-line bg-surface px-3 py-2">
         <div className="min-w-0 flex-1"><p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Messaging about</p><p className="truncate text-sm font-bold">{attachedListing.title}</p></div>
@@ -243,6 +247,6 @@ export function ChatClient({ conversationId, listingId }: { conversationId: numb
         </button>
       </div>
       {nearLimit && <p className="mt-1.5 text-right text-xs text-muted">{MAX_LENGTH - body.length} characters left</p>}
-    </form>
+    </form>}
   </main>;
 }

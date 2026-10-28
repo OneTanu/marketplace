@@ -3,7 +3,7 @@ import { api, csrfToken } from "@/lib/api/client";
 export type AuthError = { message: string; field?: string };
 
 type AllauthError = { message?: string; code?: string; param?: string };
-type AllauthResponse = {
+export type AllauthResponse = {
   status?: number;
   data?: { user?: { email?: string }; flows?: { id: string; is_pending?: boolean }[] };
   errors?: AllauthError[];

@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/api/account/reactivate/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Turn a deactivated account back on, before logging in. Same answer for wrong details
+         *     whether or not the account exists; rate limited because it checks passwords signed out.
+         */
+        post: operations["account_reactivate_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/blocks/": {
         parameters: {
             query?: never;
@@ -630,6 +650,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/deactivate/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Close my account after checking my password. Signs me out everywhere. */
+        post: operations["me_deactivate_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/deactivation/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description What deactivating would do now: deals that must be settled first, open deals that
+         *     would be withdrawn, and listings that would be hidden.
+         */
+        get: operations["me_deactivation_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/info-requests/{id}/answer/": {
         parameters: {
             query?: never;
@@ -1157,6 +1214,13 @@ export interface components {
             /** Format: date-time */
             readonly created_at: string;
         };
+        /** @description A deal that has to be settled before the account can be deactivated. */
+        BlockingDeal: {
+            readonly id: number;
+            readonly status: string;
+            readonly listing_title: string;
+            readonly conversation: number;
+        };
         /**
          * @description A saved listing. `listing` is null when it can't be shown any more (`availability` is
          *     "removed" or "unavailable"); keep `listing_id` to let the student unsave it.
@@ -1351,6 +1415,16 @@ export interface components {
         CurrentUserRequest: {
             instagram_handle?: string;
             profile_description?: string;
+        };
+        DeactivateRequest: {
+            password: string;
+            /** @default  */
+            reason: string;
+        };
+        DeactivationPreview: {
+            readonly blockers: components["schemas"]["BlockingDeal"][];
+            readonly open_deals: number;
+            readonly listings_to_hide: number;
         };
         Deal: {
             readonly id: number;
@@ -1747,6 +1821,7 @@ export interface components {
             readonly username: string;
             readonly first_name: string;
             readonly school: components["schemas"]["School"] | null;
+            readonly is_available: boolean;
         };
         /**
          * @description * `note` - Note
@@ -1854,9 +1929,10 @@ export interface components {
          *     * `appeal_update` - Appeal update
          *     * `staff_alert` - Staff alert
          *     * `saved_search` - Saved search match
+         *     * `account` - Account
          * @enum {string}
          */
-        NotificationKind: "deal" | "moderation_notice" | "report_update" | "info_request" | "appeal_update" | "staff_alert" | "saved_search";
+        NotificationKind: "deal" | "moderation_notice" | "report_update" | "info_request" | "appeal_update" | "staff_alert" | "saved_search" | "account";
         NotificationMarkReadRequest: {
             ids?: number[];
         };
@@ -1944,8 +2020,13 @@ export interface components {
             readonly assigned_to_me: number;
             readonly escalated: number;
         };
+        ReactivateRequest: {
+            /** Format: email */
+            email: string;
+            password: string;
+        };
         /** @enum {string} */
-        RemovedByEnum: "seller" | "moderation";
+        RemovedByEnum: "seller" | "moderation" | "account";
         ReportCreateRequest: {
             target_type: components["schemas"]["ReportTargetType"];
             target_id: number;
@@ -2261,6 +2342,30 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    account_reactivate_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReactivateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReactivateRequest"];
+                "multipart/form-data": components["schemas"]["ReactivateRequest"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     blocks_list: {
         parameters: {
             query?: never;
@@ -3406,6 +3511,49 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MyAppeal"];
+                };
+            };
+        };
+    };
+    me_deactivate_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeactivateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DeactivateRequest"];
+                "multipart/form-data": components["schemas"]["DeactivateRequest"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    me_deactivation_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeactivationPreview"];
                 };
             };
         };

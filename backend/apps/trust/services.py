@@ -1058,6 +1058,10 @@ def ban_user(
 
 
 def _reactivate_if_clear(user: User) -> None:
+    user.refresh_from_db(fields=["deactivated_at"])
+    if user.deactivated_at is not None:
+        # They closed their own account; only signing in again turns it back on.
+        return
     still_off = checks.active_restrictions(user).filter(kind__in=[Kind.SUSPENSION, Kind.BAN])
     if not still_off.exists():
         account_services.set_account_active(user, True)

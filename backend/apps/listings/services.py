@@ -396,6 +396,36 @@ def restore_by_moderation(listing: Listing) -> Listing:
     return listing
 
 
+def hide_for_deactivation(listing: Listing) -> Listing:
+    """Available -> Removed while its seller's account is deactivated. Comes back with
+    restore_after_reactivation()."""
+    return _move(
+        listing,
+        "hide (account deactivated)",
+        allowed_from={Status.AVAILABLE},
+        to=Status.REMOVED,
+        removed_by=Listing.RemovedBy.ACCOUNT,
+    )
+
+
+def restore_after_reactivation(seller) -> int:
+    """Bring back the listings hidden when `seller` deactivated. Returns how many."""
+    restored = 0
+    hidden = Listing.objects.filter(
+        seller=seller, status=Status.REMOVED, removed_by=Listing.RemovedBy.ACCOUNT
+    )
+    for listing in hidden:
+        _move(
+            listing,
+            "restore (account reactivated)",
+            allowed_from={Status.REMOVED},
+            to=Status.AVAILABLE,
+        )
+        Listing.objects.filter(pk=listing.pk).update(removed_by="", removed_at=None)
+        restored += 1
+    return restored
+
+
 def _move(
     listing: Listing,
     action: str,

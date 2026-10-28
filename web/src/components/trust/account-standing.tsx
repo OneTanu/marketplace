@@ -69,6 +69,11 @@ export function AccountStanding() {
           </ul>
         </section>
       )}
+      <section aria-labelledby="close-heading" className="mt-10 border-t border-line pt-6">
+        <h2 id="close-heading" className="text-lg font-black">Deactivate account</h2>
+        <p className="mt-1 text-sm text-muted">Hide your profile and listings and sign out everywhere. You can come back by logging in again.</p>
+        <Link href="/profile/deactivate" className="btn btn-secondary mt-3">Deactivate account</Link>
+      </section>
     </main>
   );
 }

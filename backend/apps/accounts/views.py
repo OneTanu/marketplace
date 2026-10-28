@@ -1,3 +1,4 @@
+from django.contrib.auth import logout
 from django.db.models import Case, Count, Exists, IntegerField, OuterRef, Q, Subquery, Value, When
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
@@ -10,6 +11,7 @@ from rest_framework.generics import (
 )
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 
 from apps.errors import service_validation_errors
 from apps.listings.services import sold_count_annotation
@@ -17,11 +19,22 @@ from apps.listings.services import sold_count_annotation
 from .models import Follow, User
 from .serializers import (
     CurrentUserSerializer,
+    DeactivateSerializer,
+    DeactivationPreviewSerializer,
     PasswordResetKeyStatusRequestSerializer,
     PasswordResetKeyStatusSerializer,
     PublicUserSerializer,
+    ReactivateSerializer,
 )
-from .services import follow_user, password_reset_key_status, unfollow_user, verified_users
+from .services import (
+    deactivate_account,
+    deactivation_preview,
+    follow_user,
+    password_reset_key_status,
+    reactivate_account,
+    unfollow_user,
+    verified_users,
+)
 
 
 def follow_count(**filters):
@@ -38,8 +51,9 @@ def public_users(viewer):
         .select_related("school")
         .prefetch_related("school__domains")
         .annotate(
-            follower_count=follow_count(following=OuterRef("pk")),
-            following_count=follow_count(follower=OuterRef("pk")),
+            # Deactivated or suspended students don't count toward anyone's follows.
+            follower_count=follow_count(following=OuterRef("pk"), follower__is_active=True),
+            following_count=follow_count(follower=OuterRef("pk"), following__is_active=True),
             sold_count=sold_count_annotation(),
             is_following=Exists(Follow.objects.filter(follower=viewer, following=OuterRef("pk"))),
         )
@@ -145,3 +159,47 @@ class PasswordResetKeyStatusView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
         status = password_reset_key_status(serializer.validated_data["key"])
         return Response(PasswordResetKeyStatusSerializer({"status": status}).data)
+
+
+class DeactivationPreviewView(GenericAPIView):
+    """What deactivating would do now: deals that must be settled first, open deals that
+    would be withdrawn, and listings that would be hidden."""
+
+    serializer_class = DeactivationPreviewSerializer
+
+    def get(self, request):
+        return Response(DeactivationPreviewSerializer(deactivation_preview(request.user)).data)
+
+
+class DeactivateView(GenericAPIView):
+    """Close my account after checking my password. Signs me out everywhere."""
+
+    serializer_class = DeactivateSerializer
+
+    @extend_schema(responses={204: None})
+    def post(self, request):
+        payload = self.get_serializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        with service_validation_errors():
+            deactivate_account(user=request.user, **payload.validated_data)
+        logout(request)
+        return Response(status=204)
+
+
+class ReactivateView(GenericAPIView):
+    """Turn a deactivated account back on, before logging in. Same answer for wrong details
+    whether or not the account exists; rate limited because it checks passwords signed out."""
+
+    serializer_class = ReactivateSerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "reactivate"
+
+    @extend_schema(responses={204: None})
+    def post(self, request):
+        payload = self.get_serializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        with service_validation_errors():
+            reactivate_account(**payload.validated_data)
+        return Response(status=204)

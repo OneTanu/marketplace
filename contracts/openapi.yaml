@@ -4,6 +4,31 @@ info:
   version: 0.1.0
   description: Marketplace API shared by the Tanu web and mobile apps.
 paths:
+  /api/account/reactivate/:
+    post:
+      operationId: account_reactivate_create
+      description: |-
+        Turn a deactivated account back on, before logging in. Same answer for wrong details
+        whether or not the account exists; rate limited because it checks passwords signed out.
+      tags:
+      - account
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReactivateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReactivateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReactivateRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '204':
+          description: No response body
   /api/blocks/:
     get:
       operationId: blocks_list
@@ -1286,6 +1311,46 @@ paths:
               schema:
                 $ref: '#/components/schemas/MyAppeal'
           description: ''
+  /api/me/deactivate/:
+    post:
+      operationId: me_deactivate_create
+      description: Close my account after checking my password. Signs me out everywhere.
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeactivateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeactivateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeactivateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/me/deactivation/:
+    get:
+      operationId: me_deactivation_retrieve
+      description: |-
+        What deactivating would do now: deals that must be settled first, open deals that
+        would be withdrawn, and listings that would be hidden.
+      tags:
+      - me
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeactivationPreview'
+          description: ''
   /api/me/info-requests/{id}/answer/:
     post:
       operationId: me_info_requests_answer_create
@@ -2305,6 +2370,27 @@ components:
       - created_at
       - first_name
       - username
+    BlockingDeal:
+      type: object
+      description: A deal that has to be settled before the account can be deactivated.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        status:
+          type: string
+          readOnly: true
+        listing_title:
+          type: string
+          readOnly: true
+        conversation:
+          type: integer
+          readOnly: true
+      required:
+      - conversation
+      - id
+      - listing_title
+      - status
     Bookmark:
       type: object
       description: |-
@@ -2896,6 +2982,37 @@ components:
         profile_description:
           type: string
           maxLength: 300
+    DeactivateRequest:
+      type: object
+      properties:
+        password:
+          type: string
+          minLength: 1
+          maxLength: 4096
+        reason:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - password
+    DeactivationPreview:
+      type: object
+      properties:
+        blockers:
+          type: array
+          items:
+            $ref: '#/components/schemas/BlockingDeal'
+          readOnly: true
+        open_deals:
+          type: integer
+          readOnly: true
+        listings_to_hide:
+          type: integer
+          readOnly: true
+      required:
+      - blockers
+      - listings_to_hide
+      - open_deals
     Deal:
       type: object
       properties:
@@ -4065,9 +4182,13 @@ components:
           - $ref: '#/components/schemas/School'
           readOnly: true
           nullable: true
+        is_available:
+          type: boolean
+          readOnly: true
       required:
       - first_name
       - id
+      - is_available
       - school
       - username
     ModerationActionKind:
@@ -4360,6 +4481,7 @@ components:
       - appeal_update
       - staff_alert
       - saved_search
+      - account
       type: string
       description: |-
         * `deal` - Deal
@@ -4369,6 +4491,7 @@ components:
         * `appeal_update` - Appeal update
         * `staff_alert` - Staff alert
         * `saved_search` - Saved search match
+        * `account` - Account
     NotificationMarkReadRequest:
       type: object
       properties:
@@ -4576,10 +4699,25 @@ components:
       - escalated
       - open
       - urgent
+    ReactivateRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+          maxLength: 4096
+      required:
+      - email
+      - password
     RemovedByEnum:
       enum:
       - seller
       - moderation
+      - account
       type: string
     ReportCreateRequest:
       type: object

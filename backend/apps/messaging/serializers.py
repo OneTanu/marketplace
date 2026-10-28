@@ -10,10 +10,12 @@ from .models import MESSAGE_MAX_LENGTH, Conversation, Message
 
 class MessagingUserSerializer(serializers.ModelSerializer):
     school = SchoolSerializer(read_only=True, allow_null=True)
+    # False for deactivated (or suspended) accounts: their messages stay, but no replies.
+    is_available = serializers.BooleanField(source="is_active", read_only=True)
 
     class Meta:
         model = User
-        fields = ["id", "username", "first_name", "school"]
+        fields = ["id", "username", "first_name", "school", "is_available"]
         read_only_fields = fields
 
 

@@ -48,6 +48,8 @@ class Listing(models.Model):
     class RemovedBy(models.TextChoices):
         SELLER = "seller", "Seller"
         MODERATION = "moderation", "Moderation"
+        # Hidden while the seller's account is deactivated; back to Available if they return.
+        ACCOUNT = "account", "Account deactivated"
 
     school = models.ForeignKey("schools.School", on_delete=models.PROTECT, related_name="listings")
     seller = models.ForeignKey(

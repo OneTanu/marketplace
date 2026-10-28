@@ -34,4 +34,11 @@ export const TEST_RESET_USER = {
   password: TEST_USER.password,
 };
 
+/** Only the deactivation test signs in as this student, since it closes the account. */
+export const TEST_CLOSER = {
+  email: "e2e-closer@umd.edu",
+  username: "e2e_closer",
+  password: TEST_USER.password,
+};
+
 export type TestUser = typeof TEST_USER;

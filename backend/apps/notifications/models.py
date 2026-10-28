@@ -17,6 +17,7 @@ class Notification(models.Model):
         APPEAL_UPDATE = "appeal_update", "Appeal update"
         STAFF_ALERT = "staff_alert", "Staff alert"
         SAVED_SEARCH = "saved_search", "Saved search match"
+        ACCOUNT = "account", "Account"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications"
