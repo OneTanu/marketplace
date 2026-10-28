@@ -777,16 +777,22 @@ def test_quiet_block_cancellations_dont_notify(listing, buyer, seller):
 @pytest.mark.django_db
 def test_activity_sections(listing, buyer, seller):
     current = request(listing_for(seller), buyer)
-    completed = pending(listing, buyer, seller)
-    services.confirm_handoff(deal=completed, actor=buyer)
-    services.confirm_handoff(deal=completed, actor=seller)
+    backup = request(listing, buyer)  # another buyer is accepted below, so this waits in line
+    pending(listing, verified_user("holder"), seller)
+    bought = pending(listing_for(seller), buyer, seller)
+    services.confirm_handoff(deal=bought, actor=buyer)
+    services.confirm_handoff(deal=bought, actor=seller)
     canceled = request(listing_for(seller), buyer)
     services.cancel_deal(deal=canceled, actor=buyer)
-    archived = request(listing_for(seller), buyer)
-    services.decline_deal(deal=archived, actor=seller)
-    services.set_archived(deal=archived, actor=buyer, archived=True)
-    disputed_listing = listing_for(seller)
-    disputed = pending(disputed_listing, buyer, seller)
+    archived_by_me = request(listing_for(seller), buyer)
+    services.cancel_deal(deal=archived_by_me, actor=seller)
+    services.set_archived(deal=archived_by_me, actor=buyer, archived=True)
+    declined = request(listing_for(seller), buyer)
+    services.decline_deal(deal=declined, actor=seller)
+    expired = request(listing_for(seller), buyer)
+    Deal.objects.filter(pk=expired.pk).update(response_deadline=past())
+    services.settle_due_deals()
+    disputed = pending(listing_for(seller), buyer, seller)
     services.confirm_handoff(deal=disputed, actor=buyer)
     services.report_problem(deal=disputed, actor=buyer, kind="other")
 
@@ -796,20 +802,28 @@ def test_activity_sections(listing, buyer, seller):
     def ids(section):
         response = client.get("/api/deals/", {"section": section})
         assert response.status_code == 200
-        return {deal["id"]: deal["section"] for deal in response.json()}
+        found = {deal["id"]: deal["section"] for deal in response.json()}
+        assert set(found.values()) <= {section}
+        return set(found)
 
-    assert ids("current") == {current.pk: "current", disputed.pk: "current"}
-    assert ids("history") == {completed.pk: "history"}
-    assert ids("cancelled") == {canceled.pk: "cancelled"}
-    assert ids("archived") == {archived.pk: "archived"}
-    # Archiving is per person: the seller still sees it as cancelled.
-    assert services.section_for(Deal.objects.get(pk=archived.pk), seller) == "cancelled"
+    # Backups and disputes under review stay current.
+    assert ids("current") == {current.pk, backup.pk, disputed.pk}
+    assert status(backup) == S.BACKUP
+    # History is completed deals only: the backup that never happened isn't there.
+    assert ids("history") == {bought.pk}
+    assert ids("cancelled") == {canceled.pk}
+    assert ids("archived") == {archived_by_me.pk, declined.pk, expired.pk}
+    # Archiving is per person: the seller still sees it under Cancelled.
+    assert services.section_for(Deal.objects.get(pk=archived_by_me.pk), seller) == "cancelled"
 
 
 @pytest.mark.django_db
-def test_only_closed_deals_can_be_archived(listing, buyer, seller):
+def test_only_canceled_deals_can_be_archived_by_hand(listing, buyer, seller):
     open_deal = request(listing, buyer)
     with pytest.raises(services.DealStateError):
+        services.set_archived(deal=open_deal, actor=buyer, archived=True)
+    services.decline_deal(deal=open_deal, actor=seller)
+    with pytest.raises(services.DealStateError):  # already in Archived
         services.set_archived(deal=open_deal, actor=buyer, archived=True)
     completed = pending(listing_for(seller), verified_user("b2"), seller)
     services.confirm_handoff(deal=completed, actor=completed.buyer)
@@ -860,3 +874,144 @@ def test_report_problem_endpoint(listing, buyer, seller):
         f"/api/deals/{deal.pk}/report-problem/", {"kind": "rude"}, content_type="application/json"
     )
     assert bad.status_code == 400
+
+
+# --- Trades through the same rules ---
+
+
+@pytest.fixture
+def trade(seller, buyer, listing):
+    """A pending trade: the seller's listing for two of the buyer's items, plus a backup for
+    one of the buyer's items."""
+    jacket, boots = listing_for(buyer), listing_for(buyer)
+    jacket_fan = request(jacket, verified_user("jacketfan"))
+    deal = services.create_deal(listing=listing, buyer=buyer, kind=Deal.Kind.TRADE)
+    services.counter_trade(deal=deal, actor=seller, item_ids=[jacket.pk, boots.pk])
+    services.accept_deal(deal=deal, actor=buyer)
+    deal.refresh_from_db()
+    return deal, jacket, boots, jacket_fan
+
+
+@pytest.mark.django_db
+def test_a_trade_holds_every_item_and_queues_their_other_buyers(trade, listing):
+    deal, jacket, boots, jacket_fan = trade
+    assert deal.status == S.PENDING
+    assert [status(x) for x in (listing, jacket, boots)] == [Listing.Status.PENDING] * 3
+    jacket_fan.refresh_from_db()
+    assert (jacket_fan.status, jacket_fan.backup_position) == (S.BACKUP, 1)
+
+
+@pytest.mark.django_db
+def test_a_canceled_trade_releases_every_item_and_promotes_their_backups(trade, buyer, listing):
+    deal, jacket, boots, jacket_fan = trade
+    services.cancel_deal(deal=deal, actor=buyer)
+    assert [status(x) for x in (listing, jacket, boots)] == [Listing.Status.AVAILABLE] * 3
+    assert status(jacket_fan) == S.AWAITING_SELLER
+
+
+@pytest.mark.django_db
+def test_a_disputed_trade_waits_and_a_completed_decision_sells_every_item(
+    trade, buyer, seller, listing
+):
+    deal, jacket, boots, jacket_fan = trade
+    services.confirm_handoff(deal=deal, actor=seller)
+    services.report_problem(deal=deal, actor=buyer, kind="not_as_described")
+    assert status(deal) == S.DISPUTED
+    assert [status(x) for x in (listing, jacket, boots)] == [Listing.Status.PENDING] * 3
+
+    trust_services.resolve_deal_dispute(
+        staff=staff("moderator"),
+        case=deal.dispute.case,
+        deal=deal,
+        outcome="completed",
+        reason="Photos match the listing.",
+    )
+
+    assert [status(x) for x in (listing, jacket, boots)] == [Listing.Status.SOLD] * 3
+    assert status(jacket_fan) == S.EXPIRED
+
+
+@pytest.mark.django_db
+def test_a_canceled_trade_decision_releases_every_item(trade, buyer, seller, listing):
+    deal, jacket, boots, jacket_fan = trade
+    services.confirm_handoff(deal=deal, actor=buyer)
+    Deal.objects.filter(pk=deal.pk).update(handoff_deadline=past())
+    services.settle_due_deals()
+    assert status(deal) == S.DISPUTED
+
+    trust_services.resolve_deal_dispute(
+        staff=staff("moderator"),
+        case=deal.dispute.case,
+        deal=deal,
+        outcome="canceled",
+        reason="No sign the swap happened.",
+    )
+
+    assert [status(x) for x in (listing, jacket, boots)] == [Listing.Status.AVAILABLE] * 3
+    assert status(jacket_fan) == S.AWAITING_SELLER
+
+
+@pytest.mark.django_db
+def test_an_inactive_backup_buyer_is_skipped(queue, buyer):
+    primary, backups = queue
+    first = backups[0].buyer
+    first.is_active = False
+    first.save(update_fields=["is_active"])
+
+    services.cancel_deal(deal=primary, actor=buyer)
+
+    assert status(backups[0]) == S.CANCELED
+    assert status(backups[1]) == S.AWAITING_SELLER
+
+
+@pytest.mark.django_db
+def test_a_canceled_decision_promotes_at_most_one_backup(queue, buyer, seller):
+    primary, backups = queue
+    services.confirm_handoff(deal=primary, actor=buyer)
+    services.report_problem(deal=primary, actor=seller, kind="no_show")
+    assert status(primary) == S.DISPUTED
+
+    trust_services.resolve_deal_dispute(
+        staff=staff("moderator"),
+        case=primary.dispute.case,
+        deal=primary,
+        outcome="canceled",
+        reason="Buyer never came.",
+    )
+
+    assert [status(b) for b in backups] == [S.AWAITING_SELLER, S.BACKUP, S.BACKUP]
+
+
+@pytest.mark.django_db
+def test_the_admin_can_view_deals_but_not_change_or_delete_them(listing, buyer):
+    deal = request(listing, buyer)
+    superuser = verified_user("superuser")
+    superuser.is_staff = superuser.is_superuser = True
+    superuser.save(update_fields=["is_staff", "is_superuser"])
+    admin_client = Client()
+    admin_client.force_login(superuser)
+    assert admin_client.get(f"/admin/deals/deal/{deal.pk}/change/").status_code == 200
+    admin_client.post(f"/admin/deals/deal/{deal.pk}/change/", {"status": "completed"})
+    admin_client.post(f"/admin/deals/deal/{deal.pk}/delete/", {"post": "yes"})
+    assert status(deal) == S.AWAITING_SELLER
+    assert admin_client.get("/admin/deals/deal/add/").status_code == 403
+
+
+@pytest.mark.django_db
+def test_backup_actions_differ_for_the_buyer_and_the_seller(queue, seller):
+    _, backups = queue
+    client = Client()
+    client.force_login(seller)
+    seller_view = client.get(f"/api/deals/{backups[0].pk}/").json()["actions"]
+    client.force_login(backups[0].buyer)
+    buyer_view = client.get(f"/api/deals/{backups[0].pk}/").json()["actions"]
+    assert (seller_view["decline"], seller_view["cancel"], seller_view["accept"]) == (
+        True,
+        False,
+        False,
+    )
+    assert (buyer_view["decline"], buyer_view["cancel"], buyer_view["accept"]) == (
+        False,
+        True,
+        False,
+    )

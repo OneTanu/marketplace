@@ -179,3 +179,17 @@ def test_declining_withdraws_pending_times():
     services.decline_deal(deal=deal, actor=seller)
 
     assert statuses(deal) == [MeetupProposal.Status.WITHDRAWN] * 2
+
+
+@pytest.mark.django_db
+def test_rescheduling_to_the_confirmed_meetup_is_refused():
+    seller, spot = seller_with_meetups("same-seller")
+    buyer = verified_user("same-buyer")
+    deal = offer_with_times(seller, spot, buyer, count=1)
+    services.accept_deal(deal=deal, actor=seller)
+    confirmed = deal.meetup_proposals.get(status=MeetupProposal.Status.ACCEPTED)
+
+    with pytest.raises(ValidationError, match="already the confirmed meetup"):
+        services.propose_meetup(
+            deal=deal, actor=buyer, meeting_spot=spot, starts_at=confirmed.starts_at
+        )

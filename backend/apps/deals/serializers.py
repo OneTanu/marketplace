@@ -204,15 +204,18 @@ class DealSerializer(serializers.ModelSerializer):
             "accept": turn,
             "counter": turn,
             "decline": turn or (mine and deal.status == S.BACKUP and viewer.pk == deal.seller_id),
+            # A backup buyer leaves the line; the seller removes them with decline instead.
             "cancel": mine
             and (
-                deal.status in services.NEGOTIATING | {S.BACKUP}
+                deal.status in services.NEGOTIATING
+                or (deal.status == S.BACKUP and viewer.pk == deal.buyer_id)
                 or (deal.status == S.PENDING and not confirmed)
             ),
             "confirm_handoff": mine and deal.status == S.PENDING and viewer.pk not in confirmed,
             "report_problem": mine and deal.status in {S.PENDING, S.DISPUTED, S.COMPLETED},
             "archive": mine and section == "cancelled",
-            "unarchive": mine and section == "archived",
+            # Declined and expired deals live in Archived; only a hand-archived cancel moves back.
+            "unarchive": mine and section == "archived" and deal.status == S.CANCELED,
         }
 
     @extend_schema_field(DealDisputeSummarySerializer(allow_null=True))
@@ -299,8 +302,9 @@ class DealQuerySerializer(serializers.Serializer):
     section = serializers.ChoiceField(
         choices=list(services.SECTION_FILTERS),
         required=False,
-        help_text="current: in progress. history: completed purchases, sales and trades only. "
-        "cancelled: canceled, declined or expired. archived: closed deals you archived.",
+        help_text="current: in progress or under review. history: completed purchases, sales "
+        "and trades only. cancelled: canceled deals. archived: declined and expired deals, plus "
+        "canceled ones you archived.",
     )
 
 

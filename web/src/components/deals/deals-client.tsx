@@ -297,7 +297,7 @@ function DealCard({ deal, onChange }: { deal: Deal; onChange: (deal: Deal) => vo
       {deal.dispute?.outcome && (
         <p className="mt-3 rounded-lg bg-surface p-3 text-sm text-muted">A moderator reviewed this handoff and decided {deal.dispute.outcome === "completed" ? "it happened" : "it didn’t happen"}.</p>
       )}
-      {open && <p className="mt-3 text-sm text-ink">{dealNextStep(deal)}</p>}
+      {open && deal.status !== "disputed" && <p className="mt-3 text-sm text-ink">{dealNextStep(deal)}</p>}
       {deal.status === "pending" && pendingFromOther && (
         <div className="mt-3 rounded-lg border border-signal bg-[var(--brand-soft)]/35 p-3 text-sm">
           <p className="font-bold">New meetup proposed</p>
@@ -496,8 +496,8 @@ export function DealsClient() {
 
       <DealSection title="Current deals" description={role === "seller" ? "Offers that need your answer, backup buyers, handoffs, and anything under review." : "Requests, offers, handoffs, and anything under review."} deals={current} onChange={update} empty={role === "seller" ? "No active offers on your listings." : "You have no active purchases or offers."} />
       <DealSection title="Transaction history" description={role === "seller" ? "Completed sales and trades only." : "Completed purchases and trades only."} deals={history} onChange={update} empty="No completed transactions yet." />
-      <CollapsedSection title="Cancelled" description="Declined, canceled, and expired deals, kept for reference." deals={cancelled} onChange={update} empty="Nothing cancelled." />
-      <CollapsedSection title="Archived" description="Closed deals you’ve archived. Nothing is deleted." deals={archived} onChange={update} empty="Nothing archived." />
+      <CollapsedSection title="Cancelled" description="Deals that you or the other person canceled. Archive any you don’t need to see." deals={cancelled} onChange={update} empty="Nothing cancelled." />
+      <CollapsedSection title="Archived" description="Declined and expired requests, and cancelled deals you archived. Nothing is deleted." deals={archived} onChange={update} empty="Nothing archived." />
     </main>
   );
 }

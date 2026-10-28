@@ -5,6 +5,47 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+def close_duplicate_holders(apps, schema_editor):
+    """deals_one_holder_per_listing allows one pending deal per listing. Older code relied on
+    the listing lock alone, so a database could hold two. Keep the one furthest along (most
+    handoff confirmations, then the oldest) and cancel the rest, with an audit event. A no-op on
+    a consistent database, and safe to run again."""
+    from django.db.models import Count
+    from django.utils import timezone
+
+    Deal = apps.get_model("deals", "Deal")
+    DealEvent = apps.get_model("deals", "DealEvent")
+    crowded = (
+        Deal.objects.filter(status="pending")
+        .values("listing_id")
+        .annotate(holders=Count("id"))
+        .filter(holders__gt=1)
+        .values_list("listing_id", flat=True)
+    )
+    now = timezone.now()
+    for listing_id in list(crowded):
+        holders = (
+            Deal.objects.filter(listing_id=listing_id, status="pending")
+            .annotate(confirmed=Count("confirmations"))
+            .order_by("-confirmed", "created_at", "id")
+        )
+        for extra in list(holders)[1:]:
+            Deal.objects.filter(pk=extra.pk).update(
+                status="canceled",
+                handoff_deadline=None,
+                closed_at=now,
+                close_reason="duplicate_holder",
+                updated_at=now,
+            )
+            DealEvent.objects.create(
+                deal_id=extra.pk,
+                event_type="canceled",
+                from_status="pending",
+                to_status="canceled",
+                data={"reason": "Another deal already held this listing (data repair)."},
+            )
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -115,6 +156,8 @@ class Migration(migrations.Migration):
             name='status',
             field=models.CharField(choices=[('awaiting_seller', 'Awaiting seller'), ('awaiting_buyer', 'Awaiting buyer'), ('backup', 'Backup'), ('pending', 'Pending handoff'), ('disputed', 'Under review'), ('completed', 'Completed'), ('canceled', 'Canceled'), ('declined', 'Declined'), ('expired', 'Expired')], max_length=30),
         ),
+        # Make existing rows satisfy the new constraints before adding them (see below).
+        migrations.RunPython(close_duplicate_holders, migrations.RunPython.noop),
         migrations.AddConstraint(
             model_name='deal',
             constraint=models.UniqueConstraint(condition=models.Q(('status__in', ['awaiting_seller', 'awaiting_buyer', 'backup', 'pending', 'disputed'])), fields=('listing', 'buyer'), name='deals_one_active_per_buyer_listing'),

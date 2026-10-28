@@ -425,6 +425,10 @@ def propose_meetup(
         return repeat
     if locked.status != S.PENDING:
         _require_can_negotiate(locked, actor)
+    if locked.meetup_proposals.filter(
+        status=MeetupProposal.Status.ACCEPTED, meeting_spot=meeting_spot, starts_at=starts_at
+    ).exists():
+        raise ValidationError({"starts_at": "That's already the confirmed meetup."})
     _validate_meetup(deal=locked, actor=actor, meeting_spot=meeting_spot, starts_at=starts_at)
     _close_pending_meetups(locked, MeetupProposal.Status.SUPERSEDED)
     proposal = MeetupProposal.objects.create(
@@ -1323,17 +1327,19 @@ def resolve_dispute(*, deal: Deal, staff, outcome: str, note: str) -> Deal:
 # --- Archiving ---
 
 
+# Closed deals that go straight to Archived: nobody walked away, it just didn't happen.
+AUTO_ARCHIVED = {S.DECLINED, S.EXPIRED}
+
+
 @transaction.atomic
 def set_archived(*, deal: Deal, actor, archived: bool) -> Deal:
-    """Move a closed deal (canceled, declined or expired) into or out of the actor's Archived
-    activity. Only hides it from their own lists; nothing is deleted. Completed deals stay in
-    Transaction History."""
+    """Move a canceled deal into or out of the actor's Archived activity. Only hides it from
+    their own Cancelled list; nothing is deleted. Declined and expired deals are always in
+    Archived, and completed ones always in Transaction History."""
     locked = Deal.objects.select_for_update().get(pk=deal.pk)
     _require_party(locked, actor)
-    if locked.status not in CLOSED_STATUSES:
-        raise DealStateError(
-            locked, "archive", "only canceled, declined or expired deals can be archived"
-        )
+    if locked.status != S.CANCELED:
+        raise DealStateError(locked, "archive", "only canceled deals can be archived")
     field = "buyer_archived_at" if actor.pk == locked.buyer_id else "seller_archived_at"
     current = getattr(locked, field)
     if archived and current is None:
@@ -1347,31 +1353,35 @@ def set_archived(*, deal: Deal, actor, archived: bool) -> Deal:
 
 
 def section_for(deal: Deal, user) -> str:
-    """Where a deal goes in the user's activity: current, history, cancelled or archived."""
-    archived = deal.buyer_archived_at if user.pk == deal.buyer_id else deal.seller_archived_at
+    """Where a deal goes in the user's activity:
+
+    - current: still open, including backups and disputes under review
+    - history: completed purchases, sales and trades, and nothing else
+    - cancelled: canceled deals (until the user archives them)
+    - archived: declined and expired deals, plus canceled ones the user archived
+    """
     if deal.status in OPEN_STATUSES:
         return "current"
     if deal.status == S.COMPLETED:
         return "history"
+    if deal.status in AUTO_ARCHIVED:
+        return "archived"
+    archived = deal.buyer_archived_at if user.pk == deal.buyer_id else deal.seller_archived_at
     return "archived" if archived else "cancelled"
+
+
+def _archived_by(user) -> Q:
+    return Q(buyer=user, buyer_archived_at__isnull=False) | Q(
+        seller=user, seller_archived_at__isnull=False
+    )
 
 
 SECTION_FILTERS = {
     "current": lambda user: Q(status__in=OPEN_STATUSES),
     "history": lambda user: Q(status=S.COMPLETED),
-    "cancelled": lambda user: (
-        Q(status__in=CLOSED_STATUSES)
-        & (
-            Q(buyer=user, buyer_archived_at__isnull=True)
-            | Q(seller=user, seller_archived_at__isnull=True)
-        )
-    ),
+    "cancelled": lambda user: Q(status=S.CANCELED) & ~_archived_by(user),
     "archived": lambda user: (
-        Q(status__in=CLOSED_STATUSES)
-        & (
-            Q(buyer=user, buyer_archived_at__isnull=False)
-            | Q(seller=user, seller_archived_at__isnull=False)
-        )
+        Q(status__in=AUTO_ARCHIVED) | (Q(status=S.CANCELED) & _archived_by(user))
     ),
 }
 

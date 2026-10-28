@@ -2543,7 +2543,7 @@ export interface operations {
             query?: {
                 conversation?: number;
                 /**
-                 * @description current: in progress. history: completed purchases, sales and trades only. cancelled: canceled, declined or expired. archived: closed deals you archived.
+                 * @description current: in progress or under review. history: completed purchases, sales and trades only. cancelled: canceled deals. archived: declined and expired deals, plus canceled ones you archived.
                  *
                  *     * `current` - current
                  *     * `history` - history

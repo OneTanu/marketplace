@@ -204,7 +204,8 @@ test("a declined request and a canceled purchase both leave the listing availabl
   await requestDeal(buyerContext, baseURL!, listingId, { kind: "offer", amount_cents: 1000 });
   await openDeals(page, "Selling");
   await dealCard(page, title).getByRole("button", { name: "Decline" }).click();
-  await page.getByRole("heading", { name: "Cancelled" }).click();
+  // Declined requests go to the collapsed Archived section.
+  await page.getByRole("heading", { name: "Archived" }).click();
   await expect(dealCard(page, title)).toContainText("Declined");
 
   // The buyer tries again, the seller accepts, then the buyer backs out. The declined request
