@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { refusalMessage, toFieldErrors } from "@/components/listings/listing-form";
 import { PhotoGallery } from "@/components/listings/photo-gallery";
 import { MeetupPicker, type MeetupSelection } from "@/components/deals/meetup-picker";
+import { BookmarkButton } from "@/components/discovery/bookmark-button";
 import { ReportButton } from "@/components/trust/report";
 import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
@@ -182,6 +183,8 @@ function ListingView({
               {listing.school.short_name} · Listed {formatShortDate(listing.created_at)}
             </p>
           </div>
+          {/* A Sold listing can't be newly saved, but one saved earlier can be unsaved. */}
+          {!isSeller && (listing.is_bookmarked || listing.status === "available" || listing.status === "pending") && <BookmarkButton listingId={listing.id} isBookmarked={listing.is_bookmarked} variant="page" />}
           <ShareButton title={listing.title} />
         </div>
 

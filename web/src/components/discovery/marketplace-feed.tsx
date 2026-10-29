@@ -15,8 +15,10 @@ import {
   type ListingCard as Card,
 } from "@/lib/discovery";
 import { getCurrentUser, getSchools, searchUsers } from "@/lib/platform";
+import { hasSearchFilters } from "@/lib/saved-searches";
 import { ListingCard } from "./listing-card";
 import { MarketplaceFilterBar } from "./marketplace-filter-bar";
+import { SaveSearch } from "./save-search";
 
 type PublicUser = components["schemas"]["PublicUser"];
 type School = components["schemas"]["School"];
@@ -54,6 +56,7 @@ export function MarketplaceFeed({ school }: { school?: School }) {
   const [tree, setTree] = useState<CategoryTree | null>(null);
   const [schools, setSchools] = useState<School[]>(school ? [school] : []);
   const [homeSchool, setHomeSchool] = useState<School | null>(null);
+  const [viewerId, setViewerId] = useState<number>();
   const [result, setResult] = useState<Feed>({ key, state: "loading" });
   // Bumped by "Try again", to refetch the same query.
   const [attempt, setAttempt] = useState(0);
@@ -67,7 +70,7 @@ export function MarketplaceFeed({ school }: { school?: School }) {
 
   useEffect(() => {
     loadItemCategories().then((categories) => setTree(categories ? categoryTree(categories) : null));
-    getCurrentUser().then((user) => setHomeSchool(user?.school ?? null)).catch(() => setHomeSchool(null));
+    getCurrentUser().then((user) => { setHomeSchool(user?.school ?? null); setViewerId(user?.id); }).catch(() => setHomeSchool(null));
     if (!school) getSchools().then((items) => setSchools(items.filter((item) => item.marketplace_status === "open"))).catch(() => setSchools([]));
   }, [school]);
 
@@ -154,7 +157,6 @@ export function MarketplaceFeed({ school }: { school?: School }) {
         {peopleState === "signed-out" && <p className="mt-3 rounded-xl bg-surface p-4 text-sm"><Link href="/account/login" className="font-bold text-brand underline underline-offset-2">Log in</Link> to search for students by name or username.</p>}
         {peopleState === "error" && <p className="mt-3 text-sm text-[var(--danger)]">Account search isn’t available right now. Try again in a moment.</p>}
         {peopleState === "ready" && (people.users.length ? <div className="mt-4 grid gap-3 sm:grid-cols-2">{people.users.map((user) => <UserResult key={user.id} user={user} />)}</div> : <p className="mt-3 text-sm text-muted">No students match “{search}”.</p>)}
-        <p className="mt-6 text-sm text-muted">Searching listings by keyword is coming soon. Browse by category and filters below.</p>
       </section>}
 
       <div className="mb-5">
@@ -171,6 +173,8 @@ export function MarketplaceFeed({ school }: { school?: School }) {
       {/* Keyed on the URL, so the bar's half-typed inputs (prices, waist and length) start
           over whenever the filters change from outside it: links, back/forward, Clear. */}
       <MarketplaceFilterBar key={searchParams.toString()} feed={feed} update={update} tree={tree} schools={schools} showSchool={!school} homeSchool={homeSchool?.slug ?? ""} />
+      {/* Keyed on the URL too, so a half-written name starts over when the filters change. */}
+      {viewerId !== undefined && hasSearchFilters(feed) && current.state !== "invalid" && <div className="-mt-3 mb-6"><SaveSearch key={searchParams.toString()} feed={feed} fixedSchool={school?.slug} categoryLabel={category ? heading : undefined} schoolLabel={school ? school.short_name : feed.school === "all" ? "All schools" : feed.school ? scopeShort : undefined} /></div>}
 
       {current.state === "loading" && <div aria-busy="true" aria-label="Loading listings" className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4">{Array.from({ length: 8 }).map((_, index) => <div key={index} className="aspect-[4/5] animate-pulse rounded-md bg-surface" />)}</div>}
 
@@ -182,7 +186,7 @@ export function MarketplaceFeed({ school }: { school?: School }) {
 
       {current.state === "ready" && (current.listings.length ? <>
         <ul aria-label="Listings" className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-8 lg:grid-cols-4">
-          {current.listings.map((listing) => <li key={listing.id}><ListingCard listing={listing} showSchool={!school && feed.school === "all"} /></li>)}
+          {current.listings.map((listing) => <li key={listing.id}><ListingCard listing={listing} showSchool={!school && feed.school === "all"} showBookmark={viewerId !== undefined && listing.seller.id !== viewerId} /></li>)}
         </ul>
         <div ref={sentinel} className="mt-8 flex min-h-10 justify-center">
           {current.loadingMore && <p role="status" className="text-sm text-muted">Loading more…</p>}

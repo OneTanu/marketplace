@@ -100,3 +100,36 @@ class PublicUserSerializer(serializers.ModelSerializer):
     def get_is_self(self, user) -> bool:
         request = self.context.get("request")
         return bool(request and request.user.is_authenticated and request.user.pk == user.pk)
+
+
+class PasswordResetKeyStatusRequestSerializer(serializers.Serializer):
+    key = serializers.CharField(max_length=200)
+
+
+class PasswordResetKeyStatusSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=["valid", "expired", "used", "invalid"])
+
+
+class BlockingDealSerializer(serializers.Serializer):
+    """A deal that has to be settled before the account can be deactivated."""
+
+    id = serializers.IntegerField(read_only=True)
+    status = serializers.CharField(read_only=True)
+    listing_title = serializers.CharField(source="listing.title", read_only=True)
+    conversation = serializers.IntegerField(source="conversation_id", read_only=True)
+
+
+class DeactivationPreviewSerializer(serializers.Serializer):
+    blockers = BlockingDealSerializer(many=True, read_only=True)
+    open_deals = serializers.IntegerField(read_only=True)
+    listings_to_hide = serializers.IntegerField(read_only=True)
+
+
+class DeactivateSerializer(serializers.Serializer):
+    password = serializers.CharField(trim_whitespace=False, max_length=4096)
+    reason = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
+
+
+class ReactivateSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(trim_whitespace=False, max_length=4096)

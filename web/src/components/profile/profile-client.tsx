@@ -14,6 +14,7 @@ import {
 } from "@/lib/platform";
 import type { components } from "@/lib/api/schema";
 
+import { BookmarksTab } from "./bookmarks-tab";
 import { InstagramLink } from "./instagram-link";
 import { StudentIdCard } from "./student-id-card";
 
@@ -21,9 +22,10 @@ type CurrentUser = components["schemas"]["CurrentUser"];
 type Listing = components["schemas"]["Listing"];
 
 type ProfileTab = "selling" | "sold" | "bookmarks";
+type ListingTab = Exclude<ProfileTab, "bookmarks">;
 
 // Which of the seller's own listings each tab shows. Removed ones stay on My listings only.
-const TAB_STATUSES: Partial<Record<ProfileTab, Listing["status"][]>> = {
+const TAB_STATUSES: Record<ListingTab, Listing["status"][]> = {
   selling: ["available", "pending"],
   sold: ["sold"],
 };
@@ -46,11 +48,12 @@ function toCard(listing: Listing, details: NonNullable<Listing["item_details"]>)
     brand: details.brand,
     school: listing.school,
     seller: listing.seller,
+    is_bookmarked: listing.is_bookmarked,
     created_at: listing.created_at,
   };
 }
 
-function EmptyCollection({ tab }: { tab: ProfileTab }) {
+function EmptyCollection({ tab }: { tab: ListingTab }) {
   const content = {
     selling: {
       title: "Nothing for sale yet",
@@ -61,11 +64,6 @@ function EmptyCollection({ tab }: { tab: ProfileTab }) {
       title: "No sold items yet",
       note: "Items you've sold will appear here.",
       action: null,
-    },
-    bookmarks: {
-      title: "No bookmarks yet",
-      note: "Save interesting listings while browsing and they will be collected here.",
-      action: <Link href="/search" className="btn btn-secondary">Browse listings</Link>,
     },
   }[tab];
 
@@ -81,9 +79,8 @@ function EmptyCollection({ tab }: { tab: ProfileTab }) {
   );
 }
 
-function TabContent({ tab, listings }: { tab: ProfileTab; listings: Card[] | null | undefined }) {
+function TabContent({ tab, listings }: { tab: ListingTab; listings: Card[] | null | undefined }) {
   const statuses = TAB_STATUSES[tab];
-  if (!statuses) return <EmptyCollection tab={tab} />;
   if (listings === undefined) {
     return <div aria-busy="true" aria-label="Loading listings" className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="aspect-[4/5] animate-pulse rounded-md bg-surface" />)}</div>;
   }
@@ -220,6 +217,7 @@ export function ProfileClient() {
           )}
           <div className="mt-5 flex flex-wrap gap-2">
             <Link href="/listings/mine" className="btn btn-secondary">My listings</Link>
+            <Link href="/profile/searches" className="btn btn-secondary">Saved searches</Link>
             <Link href="/profile/meetup" className="btn btn-secondary">Meetup preferences</Link>
             <Link href="/profile/standing" className="btn btn-secondary">Account status</Link>
             {user.is_moderator && <Link href="/moderation" className="btn btn-secondary">Moderation</Link>}
@@ -234,7 +232,7 @@ export function ProfileClient() {
             <button key={value} role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className="relative min-w-max px-5 py-3 text-sm font-bold text-muted transition hover:text-foreground aria-[selected=true]:text-foreground after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-brand after:opacity-0 aria-[selected=true]:after:opacity-100">{label}</button>
           ))}
         </div>
-        <TabContent tab={tab} listings={listings} />
+        {tab === "bookmarks" ? <BookmarksTab /> : <TabContent tab={tab} listings={listings} />}
       </section>
     </main>
   );

@@ -4,6 +4,31 @@ info:
   version: 0.1.0
   description: Marketplace API shared by the Tanu web and mobile apps.
 paths:
+  /api/account/reactivate/:
+    post:
+      operationId: account_reactivate_create
+      description: |-
+        Turn a deactivated account back on, before logging in. Same answer for wrong details
+        whether or not the account exists; rate limited because it checks passwords signed out.
+      tags:
+      - account
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReactivateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReactivateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReactivateRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '204':
+          description: No response body
   /api/blocks/:
     get:
       operationId: blocks_list
@@ -63,6 +88,30 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/bookmarks/:
+    get:
+      operationId: bookmarks_retrieve
+      description: |-
+        My saved listings, most recently saved first, a page at a time. Saved listings that
+        have since gone Pending or Sold are included with their status; ones that were removed or
+        whose seller can't be browsed come back with `listing: null`.
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: '`next_cursor` from the last page.'
+      tags:
+      - bookmarks
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookmarkPage'
+          description: ''
   /api/categories/:
     get:
       operationId: categories_list
@@ -267,6 +316,23 @@ paths:
         schema:
           type: integer
           minimum: 1
+      - in: query
+        name: section
+        schema:
+          enum:
+          - current
+          - history
+          - cancelled
+          - archived
+          type: string
+          minLength: 1
+        description: |-
+          current: in progress or under review. history: completed purchases, sales and trades only. cancelled: canceled deals. archived: declined and expired deals, plus canceled ones you archived.
+
+          * `current` - current
+          * `history` - history
+          * `cancelled` - cancelled
+          * `archived` - archived
       tags:
       - deals
       security:
@@ -384,6 +450,47 @@ paths:
               schema:
                 $ref: '#/components/schemas/Deal'
           description: ''
+  /api/deals/{id}/archive/:
+    post:
+      operationId: deals_archive_create
+      description: |-
+        Move a canceled, declined or expired deal into (POST) or out of (DELETE) your
+        Archived activity. Nothing is deleted.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - deals
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+          description: ''
+    delete:
+      operationId: deals_archive_destroy
+      description: |-
+        Move a canceled, declined or expired deal into (POST) or out of (DELETE) your
+        Archived activity. Nothing is deleted.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - deals
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/deals/{id}/cancel/:
     post:
       operationId: deals_cancel_create
@@ -572,6 +679,43 @@ paths:
               schema:
                 $ref: '#/components/schemas/MeetupStatusUpdate'
           description: ''
+  /api/deals/{id}/report-problem/:
+    post:
+      operationId: deals_report_problem_create
+      description: |-
+        Report a problem with an accepted deal: a no-show, an item not as described, a payment
+        or safety concern. It goes to Tanu's moderators with a snapshot of the deal; nobody is
+        penalized automatically. If the handoff was already confirmed by someone, the deal is held
+        as a dispute until a moderator decides.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - deals
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportProblemRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReportProblemRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReportProblemRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+          description: ''
   /api/deals/{id}/trade-offer/:
     post:
       operationId: deals_trade_offer_create
@@ -727,6 +871,13 @@ paths:
           type: integer
           minimum: 0
         description: In cents.
+      - in: query
+        name: q
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description: Keywords. Every word must appear in the title, brand or description.
       - in: query
         name: school
         schema:
@@ -910,6 +1061,47 @@ paths:
           description: No response body
         '409':
           description: The listing isn't Available, so it can't be removed.
+  /api/listings/{id}/bookmark/:
+    put:
+      operationId: listings_bookmark_update
+      description: Save (PUT) or unsave (DELETE) a listing. Both are idempotent.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - listings
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookmarkState'
+          description: ''
+        '400':
+          description: It's your own listing.
+        '409':
+          description: The listing isn't Available or Pending, so it can't be saved.
+    delete:
+      operationId: listings_bookmark_destroy
+      description: Save (PUT) or unsave (DELETE) a listing. Both are idempotent.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - listings
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/listings/{id}/photos/:
     post:
       operationId: listings_photos_create
@@ -1118,6 +1310,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MyAppeal'
+          description: ''
+  /api/me/deactivate/:
+    post:
+      operationId: me_deactivate_create
+      description: Close my account after checking my password. Signs me out everywhere.
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeactivateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeactivateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeactivateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/me/deactivation/:
+    get:
+      operationId: me_deactivation_retrieve
+      description: |-
+        What deactivating would do now: deals that must be settled first, open deals that
+        would be withdrawn, and listings that would be hidden.
+      tags:
+      - me
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeactivationPreview'
           description: ''
   /api/me/info-requests/{id}/answer/:
     post:
@@ -1535,6 +1767,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotificationUnreadCount'
           description: ''
+  /api/password-reset/key-status/:
+    post:
+      operationId: password_reset_key_status_create
+      description: |-
+        Explains a password reset link (valid, expired, used or invalid) so the reset page can
+        say why it doesn't work. Checking and using the key stays with allauth's
+        /api/auth/.../auth/password/reset. POST, so keys stay out of URLs and access logs.
+      tags:
+      - password-reset
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetKeyStatusRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetKeyStatusRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetKeyStatusRequestRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetKeyStatus'
+          description: ''
   /api/reports/:
     post:
       operationId: reports_create
@@ -1564,6 +1826,117 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReportReceipt'
           description: ''
+  /api/saved-searches/:
+    get:
+      operationId: saved_searches_list
+      description: My saved searches, newest first (at most 25, so not paged).
+      tags:
+      - saved-searches
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SavedSearch'
+          description: ''
+    post:
+      operationId: saved_searches_create
+      description: |-
+        Save the current feed filters. 400 if nothing is filtered, the same filters are
+        already saved, or you already have 25 saved searches.
+      tags:
+      - saved-searches
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavedSearchCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SavedSearchCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SavedSearchCreateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedSearch'
+          description: ''
+  /api/saved-searches/{id}/:
+    get:
+      operationId: saved_searches_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - saved-searches
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedSearch'
+          description: ''
+    patch:
+      operationId: saved_searches_partial_update
+      description: Rename a saved search or turn its alerts on or off.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - saved-searches
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSavedSearchUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSavedSearchUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSavedSearchUpdateRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedSearch'
+          description: ''
+    delete:
+      operationId: saved_searches_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - saved-searches
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/schools/:
     get:
       operationId: schools_list
@@ -1827,6 +2200,7 @@ components:
       - restrict
       - suspend
       - ban
+      - resolve_deal_dispute
       type: string
       description: |-
         * `note` - Add a note
@@ -1842,6 +2216,7 @@ components:
         * `restrict` - Restrict a feature
         * `suspend` - Suspend account
         * `ban` - Ban account
+        * `resolve_deal_dispute` - Decide a disputed handoff
     AnswerRequest:
       type: object
       properties:
@@ -1874,6 +2249,20 @@ components:
         * `pending` - Pending
         * `upheld` - Upheld
         * `overturned` - Overturned
+    AvailabilityEnum:
+      enum:
+      - available
+      - pending
+      - sold
+      - removed
+      - unavailable
+      type: string
+      description: |-
+        * `available` - available
+        * `pending` - pending
+        * `sold` - sold
+        * `removed` - removed
+        * `unavailable` - unavailable
     AvailabilityOverride:
       type: object
       properties:
@@ -1981,6 +2370,76 @@ components:
       - created_at
       - first_name
       - username
+    BlockingDeal:
+      type: object
+      description: A deal that has to be settled before the account can be deactivated.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        status:
+          type: string
+          readOnly: true
+        listing_title:
+          type: string
+          readOnly: true
+        conversation:
+          type: integer
+          readOnly: true
+      required:
+      - conversation
+      - id
+      - listing_title
+      - status
+    Bookmark:
+      type: object
+      description: |-
+        A saved listing. `listing` is null when it can't be shown any more (`availability` is
+        "removed" or "unavailable"); keep `listing_id` to let the student unsave it.
+      properties:
+        listing_id:
+          type: integer
+          readOnly: true
+        availability:
+          allOf:
+          - $ref: '#/components/schemas/AvailabilityEnum'
+          readOnly: true
+        listing:
+          allOf:
+          - $ref: '#/components/schemas/ListingCard'
+          nullable: true
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - availability
+      - created_at
+      - listing
+      - listing_id
+    BookmarkPage:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Bookmark'
+        next_cursor:
+          type: string
+          nullable: true
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      required:
+      - next_cursor
+      - results
+    BookmarkState:
+      type: object
+      properties:
+        is_bookmarked:
+          type: boolean
+          readOnly: true
+      required:
+      - is_bookmarked
     CaseActionRequest:
       type: object
       properties:
@@ -2008,6 +2467,11 @@ components:
         appeal_id:
           type: integer
           minimum: 1
+        deal_id:
+          type: integer
+          minimum: 1
+        dispute_outcome:
+          $ref: '#/components/schemas/DealDisputeOutcome'
         decision:
           $ref: '#/components/schemas/DecisionEnum'
         override_reason:
@@ -2047,6 +2511,11 @@ components:
           items:
             $ref: '#/components/schemas/StaffInfoRequest'
           readOnly: true
+        deal_disputes:
+          type: array
+          items:
+            $ref: '#/components/schemas/DealDispute'
+          readOnly: true
         subject:
           allOf:
           - $ref: '#/components/schemas/SubjectHistory'
@@ -2074,6 +2543,7 @@ components:
       - actions
       - appeals
       - case
+      - deal_disputes
       - eligible_assignees
       - info_requests
       - involved_users
@@ -2512,6 +2982,37 @@ components:
         profile_description:
           type: string
           maxLength: 300
+    DeactivateRequest:
+      type: object
+      properties:
+        password:
+          type: string
+          minLength: 1
+          maxLength: 4096
+        reason:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - password
+    DeactivationPreview:
+      type: object
+      properties:
+        blockers:
+          type: array
+          items:
+            $ref: '#/components/schemas/BlockingDeal'
+          readOnly: true
+        open_deals:
+          type: integer
+          readOnly: true
+        listings_to_hide:
+          type: integer
+          readOnly: true
+      required:
+      - blockers
+      - listings_to_hide
+      - open_deals
     Deal:
       type: object
       properties:
@@ -2561,6 +3062,51 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        handoff_extensions:
+          type: integer
+          readOnly: true
+        backup_position:
+          type: integer
+          readOnly: true
+          nullable: true
+        accepted_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        closed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        close_reason:
+          type: string
+          readOnly: true
+        section:
+          allOf:
+          - $ref: '#/components/schemas/SectionEnum'
+          description: Where it belongs in the viewer's activity.
+          readOnly: true
+        actions:
+          allOf:
+          - $ref: '#/components/schemas/DealActions'
+          readOnly: true
+        dispute:
+          allOf:
+          - $ref: '#/components/schemas/DealDisputeSummary'
+          nullable: true
+          readOnly: true
+        my_problems:
+          type: array
+          items:
+            type: string
+          readOnly: true
+          description: Kinds of problem the viewer has reported on this deal.
         buyer_confirmed:
           type: boolean
           readOnly: true
@@ -2605,29 +3151,175 @@ components:
           format: date-time
           readOnly: true
       required:
+      - accepted_at
+      - actions
       - agreed_amount_cents
       - asap
       - awaiting_me
+      - backup_position
       - buyer
       - buyer_confirmed
+      - close_reason
+      - closed_at
+      - completed_at
       - conversation
       - created_at
       - currency
       - current_amount_cents
+      - dispute
       - events
       - handoff_deadline
+      - handoff_extensions
       - id
       - kind
       - listing
       - meetup_proposals
       - meetup_updates
+      - my_problems
       - my_role
       - offers
       - response_deadline
+      - section
       - seller
       - seller_confirmed
       - status
       - updated_at
+    DealActions:
+      type: object
+      description: What the viewer can do now. The server still checks every action.
+      properties:
+        accept:
+          type: boolean
+        counter:
+          type: boolean
+        decline:
+          type: boolean
+        cancel:
+          type: boolean
+        confirm_handoff:
+          type: boolean
+        report_problem:
+          type: boolean
+        archive:
+          type: boolean
+        unarchive:
+          type: boolean
+      required:
+      - accept
+      - archive
+      - cancel
+      - confirm_handoff
+      - counter
+      - decline
+      - report_problem
+      - unarchive
+    DealDispute:
+      type: object
+      description: A disputed handoff in a case, with the deal as it stood when the
+        dispute opened.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        deal_id:
+          type: integer
+          readOnly: true
+        listing_title:
+          type: string
+          readOnly: true
+        buyer:
+          allOf:
+          - $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+        seller:
+          allOf:
+          - $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+        deal_status:
+          type: string
+          readOnly: true
+        reason:
+          allOf:
+          - $ref: '#/components/schemas/DealDisputeReason'
+          readOnly: true
+        snapshot:
+          readOnly: true
+        opened_at:
+          type: string
+          format: date-time
+          readOnly: true
+        outcome:
+          allOf:
+          - $ref: '#/components/schemas/DealDisputeOutcome'
+          readOnly: true
+        resolved_by:
+          allOf:
+          - $ref: '#/components/schemas/StaffUser'
+          readOnly: true
+          nullable: true
+        resolved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        resolution_note:
+          type: string
+          readOnly: true
+      required:
+      - buyer
+      - deal_id
+      - deal_status
+      - id
+      - listing_title
+      - opened_at
+      - outcome
+      - reason
+      - resolution_note
+      - resolved_at
+      - resolved_by
+      - seller
+      - snapshot
+    DealDisputeOutcome:
+      enum:
+      - completed
+      - canceled
+      type: string
+      description: |-
+        * `completed` - Handoff happened
+        * `canceled` - Handoff didn't happen
+    DealDisputeReason:
+      enum:
+      - one_sided_confirmation
+      - problem_after_confirmation
+      type: string
+      description: |-
+        * `one_sided_confirmation` - Only one side confirmed in time
+        * `problem_after_confirmation` - A problem was reported after a confirmation
+    DealDisputeSummary:
+      type: object
+      properties:
+        reason:
+          allOf:
+          - $ref: '#/components/schemas/DealDisputeReason'
+          readOnly: true
+        opened_at:
+          type: string
+          format: date-time
+          readOnly: true
+        outcome:
+          allOf:
+          - $ref: '#/components/schemas/DealDisputeOutcome'
+          readOnly: true
+        resolved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - opened_at
+      - outcome
+      - reason
+      - resolved_at
     DealEvent:
       type: object
       properties:
@@ -2642,6 +3334,12 @@ components:
           - $ref: '#/components/schemas/DealUser'
           readOnly: true
           nullable: true
+        from_status:
+          type: string
+          readOnly: true
+        to_status:
+          type: string
+          readOnly: true
         data:
           readOnly: true
         created_at:
@@ -2653,7 +3351,9 @@ components:
       - created_at
       - data
       - event_type
+      - from_status
       - id
+      - to_status
     DealKind:
       enum:
       - buy_now
@@ -2734,12 +3434,27 @@ components:
       - id
       - offered_by
       - trade_items
+    DealProblemKind:
+      enum:
+      - no_show
+      - not_as_described
+      - payment
+      - safety
+      - other
+      type: string
+      description: |-
+        * `no_show` - The other person didn't show up
+        * `not_as_described` - Item wasn't as described
+        * `payment` - Payment problem
+        * `safety` - Safety concern
+        * `other` - Something else
     DealStatus:
       enum:
       - awaiting_seller
       - awaiting_buyer
       - backup
       - pending
+      - disputed
       - completed
       - canceled
       - declined
@@ -2750,6 +3465,7 @@ components:
         * `awaiting_buyer` - Awaiting buyer
         * `backup` - Backup
         * `pending` - Pending handoff
+        * `disputed` - Under review
         * `completed` - Completed
         * `canceled` - Canceled
         * `declined` - Declined
@@ -2948,6 +3664,9 @@ components:
           items:
             $ref: '#/components/schemas/ListingPhoto'
           readOnly: true
+        is_bookmarked:
+          type: boolean
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -2962,6 +3681,7 @@ components:
       - currency
       - description
       - id
+      - is_bookmarked
       - item_details
       - kind
       - photos
@@ -3018,6 +3738,9 @@ components:
           allOf:
           - $ref: '#/components/schemas/SellerSummary'
           readOnly: true
+        is_bookmarked:
+          type: boolean
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -3029,6 +3752,7 @@ components:
       - created_at
       - currency
       - id
+      - is_bookmarked
       - price_cents
       - school
       - seller
@@ -3458,9 +4182,13 @@ components:
           - $ref: '#/components/schemas/School'
           readOnly: true
           nullable: true
+        is_available:
+          type: boolean
+          readOnly: true
       required:
       - first_name
       - id
+      - is_available
       - school
       - username
     ModerationActionKind:
@@ -3483,6 +4211,7 @@ components:
       - info_received
       - appeal_filed
       - appeal_decided
+      - resolve_deal_dispute
       type: string
       description: |-
         * `note` - Note
@@ -3503,6 +4232,7 @@ components:
         * `info_received` - Answer received
         * `appeal_filed` - Appeal filed
         * `appeal_decided` - Appeal decided
+        * `resolve_deal_dispute` - Deal dispute decided
     ModerationStats:
       type: object
       properties:
@@ -3750,6 +4480,8 @@ components:
       - info_request
       - appeal_update
       - staff_alert
+      - saved_search
+      - account
       type: string
       description: |-
         * `deal` - Deal
@@ -3758,6 +4490,8 @@ components:
         * `info_request` - Moderator question
         * `appeal_update` - Appeal update
         * `staff_alert` - Staff alert
+        * `saved_search` - Saved search match
+        * `account` - Account
     NotificationMarkReadRequest:
       type: object
       properties:
@@ -3790,6 +4524,34 @@ components:
       required:
       - count
       - user
+    PasswordResetKeyStatus:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/PasswordResetKeyStatusStatusEnum'
+      required:
+      - status
+    PasswordResetKeyStatusRequestRequest:
+      type: object
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+      - key
+    PasswordResetKeyStatusStatusEnum:
+      enum:
+      - valid
+      - expired
+      - used
+      - invalid
+      type: string
+      description: |-
+        * `valid` - valid
+        * `expired` - expired
+        * `used` - used
+        * `invalid` - invalid
     PatchedCurrentUserRequest:
       type: object
       properties:
@@ -3821,6 +4583,15 @@ components:
           minimum: 0
         item_details:
           $ref: '#/components/schemas/ItemDetailsUpdateRequest'
+    PatchedSavedSearchUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        alerts_enabled:
+          type: boolean
     PriorityEnum:
       enum:
       - 1
@@ -3928,10 +4699,25 @@ components:
       - escalated
       - open
       - urgent
+    ReactivateRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+          maxLength: 4096
+      required:
+      - email
+      - password
     RemovedByEnum:
       enum:
       - seller
       - moderation
+      - account
       type: string
     ReportCreateRequest:
       type: object
@@ -3965,6 +4751,17 @@ components:
       - reason
       - target_id
       - target_type
+    ReportProblemRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/DealProblemKind'
+        details:
+          type: string
+          default: ''
+          maxLength: 1000
+      required:
+      - kind
     ReportReason:
       enum:
       - prohibited_item
@@ -4129,6 +4926,153 @@ components:
       - first_name
       - id
       - username
+    SavedSearch:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        filters:
+          allOf:
+          - $ref: '#/components/schemas/SavedSearchFilters'
+          readOnly: true
+        alerts_enabled:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - alerts_enabled
+      - created_at
+      - filters
+      - id
+      - name
+      - updated_at
+    SavedSearchCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          default: ''
+          description: Leave blank for a name made from the filters.
+          maxLength: 80
+        filters:
+          $ref: '#/components/schemas/SavedSearchFiltersRequest'
+        alerts_enabled:
+          type: boolean
+          default: true
+      required:
+      - filters
+    SavedSearchFilters:
+      type: object
+      description: |-
+        A saved search's filters, named like the feed's query parameters (GET /api/listings/).
+        Blank or null means "any".
+      properties:
+        q:
+          type: string
+          default: ''
+          maxLength: 100
+        school:
+          type: string
+          default: ''
+          description: A school slug, "all", or blank for your own school.
+        category:
+          type: string
+          nullable: true
+        brand:
+          type: string
+          default: ''
+          maxLength: 100
+        min_price:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: In cents.
+        max_price:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: In cents.
+        size:
+          type: string
+          default: ''
+          description: Exact size. Jeans and pants are "<waist>x<inseam>", e.g. 32x30.
+          maxLength: 30
+        condition:
+          default: ''
+          oneOf:
+          - $ref: '#/components/schemas/ConditionEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        color:
+          default: ''
+          oneOf:
+          - $ref: '#/components/schemas/ColorEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        sort:
+          allOf:
+          - $ref: '#/components/schemas/SortEnum'
+          default: newest
+    SavedSearchFiltersRequest:
+      type: object
+      description: |-
+        A saved search's filters, named like the feed's query parameters (GET /api/listings/).
+        Blank or null means "any".
+      properties:
+        q:
+          type: string
+          default: ''
+          maxLength: 100
+        school:
+          type: string
+          default: ''
+          description: A school slug, "all", or blank for your own school.
+        category:
+          type: string
+          minLength: 1
+          nullable: true
+        brand:
+          type: string
+          default: ''
+          maxLength: 100
+        min_price:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: In cents.
+        max_price:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: In cents.
+        size:
+          type: string
+          default: ''
+          description: Exact size. Jeans and pants are "<waist>x<inseam>", e.g. 32x30.
+          maxLength: 30
+        condition:
+          default: ''
+          oneOf:
+          - $ref: '#/components/schemas/ConditionEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        color:
+          default: ''
+          oneOf:
+          - $ref: '#/components/schemas/ColorEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        sort:
+          allOf:
+          - $ref: '#/components/schemas/SortEnum'
+          default: newest
     School:
       type: object
       properties:
@@ -4234,6 +5178,13 @@ components:
       - colors
       - id
       - short_name
+    SectionEnum:
+      enum:
+      - current
+      - history
+      - cancelled
+      - archived
+      type: string
     SellerSummary:
       type: object
       properties:
@@ -4258,6 +5209,16 @@ components:
           minimum: 1
       required:
       - body
+    SortEnum:
+      enum:
+      - newest
+      - price_asc
+      - price_desc
+      type: string
+      description: |-
+        * `newest` - Newly listed
+        * `price_asc` - Price: low to high
+        * `price_desc` - Price: high to low
     StaffAppeal:
       type: object
       properties:

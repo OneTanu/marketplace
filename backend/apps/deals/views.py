@@ -30,6 +30,7 @@ from .serializers import (
     MeetupProposalSerializer,
     MeetupStatusCreateSerializer,
     MeetupStatusUpdateSerializer,
+    ReportProblemSerializer,
     TradeOfferSerializer,
 )
 
@@ -67,7 +68,9 @@ def deal_queryset(user):
             "meetup_proposals__proposed_by",
             "meetup_proposals__meeting_spot",
             "meetup_updates__actor",
+            "problems",
         )
+        .select_related("dispute")
     )
 
 
@@ -82,6 +85,9 @@ class DealListView(ListAPIView):
         conversation = query.validated_data.get("conversation")
         if conversation:
             deals = deals.filter(conversation_id=conversation)
+        section = query.validated_data.get("section")
+        if section:
+            deals = deals.filter(services.SECTION_FILTERS[section](self.request.user))
         return deals
 
 
@@ -165,6 +171,46 @@ class CancelDealView(DealActionView):
 
 class ConfirmHandoffView(DealActionView):
     action = "confirm_handoff"
+
+
+class ReportProblemView(GenericAPIView):
+    """Report a problem with an accepted deal: a no-show, an item not as described, a payment
+    or safety concern. It goes to Tanu's moderators with a snapshot of the deal; nobody is
+    penalized automatically. If the handoff was already confirmed by someone, the deal is held
+    as a dispute until a moderator decides."""
+
+    serializer_class = ReportProblemSerializer
+
+    @extend_schema(responses={200: DealSerializer})
+    def post(self, request, pk):
+        deal = get_object_or_404(deal_queryset(request.user), pk=pk)
+        payload = self.get_serializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        with service_errors():
+            services.report_problem(deal=deal, actor=request.user, **payload.validated_data)
+        refreshed = deal_queryset(request.user).get(pk=deal.pk)
+        return Response(DealSerializer(refreshed, context={"request": request}).data)
+
+
+class ArchiveDealView(GenericAPIView):
+    """Move a canceled, declined or expired deal into (POST) or out of (DELETE) your
+    Archived activity. Nothing is deleted."""
+
+    serializer_class = DealSerializer
+
+    def _set(self, request, pk, archived):
+        deal = get_object_or_404(deal_queryset(request.user), pk=pk)
+        with service_errors():
+            services.set_archived(deal=deal, actor=request.user, archived=archived)
+        refreshed = deal_queryset(request.user).get(pk=deal.pk)
+        return Response(self.get_serializer(refreshed).data)
+
+    @extend_schema(request=None)
+    def post(self, request, pk):
+        return self._set(request, pk, True)
+
+    def delete(self, request, pk):
+        return self._set(request, pk, False)
 
 
 class CounterOfferView(GenericAPIView):

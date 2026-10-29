@@ -1,9 +1,9 @@
-import { csrfToken } from "@/lib/api/client";
+import { api, csrfToken } from "@/lib/api/client";
 
 export type AuthError = { message: string; field?: string };
 
 type AllauthError = { message?: string; code?: string; param?: string };
-type AllauthResponse = {
+export type AllauthResponse = {
   status?: number;
   data?: { user?: { email?: string }; flows?: { id: string; is_pending?: boolean }[] };
   errors?: AllauthError[];
@@ -31,4 +31,17 @@ export function errorsFrom(body: AllauthResponse, fallback: string): AuthError[]
 
 export function pendingFlow(body: AllauthResponse, id: string) {
   return body.data?.flows?.some((flow) => flow.id === id && flow.is_pending);
+}
+
+export type ResetKeyStatus = "valid" | "expired" | "used" | "invalid";
+
+/** Why allauth rejected a password reset key, from our own endpoint (allauth gives every
+ * bad key the same error). Falls back to "invalid" if the reason can't be fetched. */
+export async function resetKeyStatus(key: string): Promise<ResetKeyStatus> {
+  try {
+    const { data } = await api.POST("/api/password-reset/key-status/", { body: { key } });
+    return data?.status ?? "invalid";
+  } catch {
+    return "invalid";
+  }
 }

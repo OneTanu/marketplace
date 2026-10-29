@@ -15,3 +15,5 @@ export const API_PORT = 8100 + SLOT;
 export const POSTGRES_DB = SLOT ? `tanu_${SLOT}_e2e` : "tanu_e2e";
 /** Name of the local E2E API container (started by playwright.config.ts). */
 export const API_CONTAINER = SLOT ? `tanu-e2e-backend-${SLOT}` : "tanu-e2e-backend";
+/** Where the E2E API writes emails, relative to backend/ (its working directory). */
+export const EMAIL_DIR = `e2e-mail/${POSTGRES_DB}`;

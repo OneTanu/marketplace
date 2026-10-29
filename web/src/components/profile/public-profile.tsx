@@ -95,12 +95,12 @@ export function PublicProfile({ username }: { username: string }) {
         <button type="button" role="tab" aria-selected={listingTab === "selling"} onClick={() => setListingTab("selling")} className="relative min-w-max px-5 py-3 text-sm font-bold text-muted transition hover:text-foreground aria-[selected=true]:text-foreground after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-brand after:opacity-0 aria-[selected=true]:after:opacity-100">Selling</button>
         <button type="button" role="tab" aria-selected={listingTab === "sold"} onClick={() => setListingTab("sold")} className="relative min-w-max px-5 py-3 text-sm font-bold text-muted transition hover:text-foreground aria-[selected=true]:text-foreground after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-brand after:opacity-0 aria-[selected=true]:after:opacity-100">Sold</button>
       </div>
-      <PublicListings tab={listingTab} listings={listings} />
+      <PublicListings tab={listingTab} listings={listings} isSelf={user.is_self} />
     </section>
   </main>;
 }
 
-function PublicListings({ tab, listings }: { tab: "selling" | "sold"; listings: Card[] | null | undefined }) {
+function PublicListings({ tab, listings, isSelf }: { tab: "selling" | "sold"; listings: Card[] | null | undefined; isSelf: boolean }) {
   if (listings === undefined) {
     return <div aria-busy="true" aria-label="Loading listings" className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="aspect-[4/5] animate-pulse rounded-md bg-surface" />)}</div>;
   }
@@ -111,5 +111,5 @@ function PublicListings({ tab, listings }: { tab: "selling" | "sold"; listings: 
   if (!shown.length) {
     return <div className="grid min-h-56 place-items-center rounded-3xl border border-dashed border-line bg-white/45 p-8 text-center"><div><p className="font-bold">{tab === "sold" ? "No sold items yet" : "No active listings"}</p><p className="mt-2 text-sm text-muted">{tab === "sold" ? "Completed sales will appear here." : "This student is not currently selling anything."}</p></div></div>;
   }
-  return <ul aria-label={tab === "sold" ? "Sold listings" : "Listings for sale"} className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-8 lg:grid-cols-4">{shown.map((listing) => <li key={listing.id}><ListingCard listing={listing} /></li>)}</ul>;
+  return <ul aria-label={tab === "sold" ? "Sold listings" : "Listings for sale"} className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-8 lg:grid-cols-4">{shown.map((listing) => <li key={listing.id}><ListingCard listing={listing} showBookmark={!isSelf} /></li>)}</ul>;
 }

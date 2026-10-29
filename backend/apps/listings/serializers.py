@@ -4,7 +4,19 @@ from rest_framework import serializers
 from apps.schools.models import MarketplaceStatus, School
 
 from . import services
-from .models import Category, Color, ItemDetails, Listing, ListingKind, ListingPhoto
+from .models import Bookmark, Category, Color, ItemDetails, Listing, ListingKind, ListingPhoto
+
+
+class IsBookmarkedField(serializers.BooleanField):
+    """Whether the viewer bookmarked the listing. Read from the `is_bookmarked` annotation
+    (services.is_bookmarked_annotation) that the views add, so it costs no query per listing;
+    false where a queryset doesn't have it."""
+
+    def __init__(self, **kwargs):
+        super().__init__(read_only=True, **kwargs)
+
+    def get_attribute(self, instance):
+        return getattr(instance, "is_bookmarked", False)
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -67,6 +79,7 @@ class ListingSerializer(serializers.ModelSerializer):
         help_text="Who removed a Removed listing, shown only to its seller: blank unless the "
         "listing is Removed, and null for everyone else."
     )
+    is_bookmarked = IsBookmarkedField()
 
     class Meta:
         model = Listing
@@ -84,6 +97,7 @@ class ListingSerializer(serializers.ModelSerializer):
             "seller",
             "item_details",
             "photos",
+            "is_bookmarked",
             "created_at",
             "updated_at",
         ]
@@ -219,6 +233,7 @@ class ListingCardSerializer(serializers.ModelSerializer):
     brand = serializers.CharField(source="item_details.brand", read_only=True)
     school = SchoolSummarySerializer(read_only=True)
     seller = SellerSummarySerializer(read_only=True)
+    is_bookmarked = IsBookmarkedField()
 
     class Meta:
         model = Listing
@@ -234,6 +249,7 @@ class ListingCardSerializer(serializers.ModelSerializer):
             "brand",
             "school",
             "seller",
+            "is_bookmarked",
             "created_at",
         ]
         read_only_fields = fields
@@ -276,6 +292,11 @@ class FeedQuerySerializer(serializers.Serializer):
     )
     size = serializers.CharField(required=False, help_text="Exact size, any case, e.g. 32x30.")
     brand = serializers.CharField(required=False, help_text="Exact brand, any case.")
+    q = serializers.CharField(
+        required=False,
+        max_length=services.MAX_QUERY_LENGTH,
+        help_text="Keywords. Every word must appear in the title, brand or description.",
+    )
     sort = serializers.ChoiceField(choices=list(services.FEED_SORTS), default="newest")
     cursor = serializers.CharField(
         required=False,
@@ -308,4 +329,43 @@ class FeedQuerySerializer(serializers.Serializer):
             colors=data.get("color", ()),
             size=data.get("size", ""),
             brand=data.get("brand", ""),
+            query=data.get("q", ""),
         )
+
+
+class BookmarkSerializer(serializers.ModelSerializer):
+    """A saved listing. `listing` is null when it can't be shown any more (`availability` is
+    "removed" or "unavailable"); keep `listing_id` to let the student unsave it."""
+
+    availability = serializers.SerializerMethodField()
+    listing = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Bookmark
+        fields = ["listing_id", "availability", "listing", "created_at"]
+        read_only_fields = fields
+
+    @extend_schema_field(
+        serializers.ChoiceField(choices=["available", "pending", "sold", "removed", "unavailable"])
+    )
+    def get_availability(self, bookmark) -> str:
+        return services.bookmark_availability(bookmark, self.context["request"].user)
+
+    @extend_schema_field(ListingCardSerializer(allow_null=True))
+    def get_listing(self, bookmark):
+        if self.get_availability(bookmark) in {"removed", "unavailable"}:
+            return None
+        bookmark.listing.is_bookmarked = True
+        return ListingCardSerializer(bookmark.listing, context=self.context).data
+
+
+class BookmarkPageSerializer(serializers.Serializer):
+    results = BookmarkSerializer(many=True)
+    next_cursor = serializers.CharField(
+        allow_null=True,
+        help_text="Pass as `cursor` to get the next page. Null on the last page.",
+    )
+
+
+class BookmarkStateSerializer(serializers.Serializer):
+    is_bookmarked = serializers.BooleanField(read_only=True)

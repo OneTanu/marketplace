@@ -63,8 +63,12 @@ def test_buy_now_uses_listing_price_and_duplicate_active_request_is_rejected():
     deal = services.create_deal(listing=listing, buyer=buyer, kind=Deal.Kind.BUY_NOW)
 
     assert deal.current_amount_cents == 7300
+    # Sending the same request again returns the open one; a different one is refused.
+    again = services.create_deal(listing=listing, buyer=buyer, kind=Deal.Kind.BUY_NOW)
+    assert again.pk == deal.pk
+    assert Deal.objects.filter(listing=listing, buyer=buyer).count() == 1
     with pytest.raises(ValidationError):
-        services.create_deal(listing=listing, buyer=buyer, kind=Deal.Kind.BUY_NOW)
+        services.create_deal(listing=listing, buyer=buyer, kind=Deal.Kind.OFFER, amount_cents=5000)
 
 
 @pytest.mark.django_db
@@ -160,7 +164,7 @@ def test_expired_pending_deal_returns_listing_to_available():
 
 
 @pytest.mark.django_db
-def test_one_confirmation_prevents_cancel_and_automatic_release():
+def test_one_confirmation_prevents_cancel_and_a_lapsed_deadline_opens_a_dispute():
     seller = verified_user("seller")
     buyer = verified_user("buyer")
     listing = listing_for(seller)
@@ -176,10 +180,12 @@ def test_one_confirmation_prevents_cancel_and_automatic_release():
 
     deal.refresh_from_db()
     listing.refresh_from_db()
-    assert deal.status == Deal.Status.PENDING
+    # Tanu doesn't guess whether it happened: a moderator decides, and the listing waits.
+    assert deal.status == Deal.Status.DISPUTED
     assert deal.handoff_deadline is None
     assert listing.status == Listing.Status.PENDING
-    assert deal.events.filter(event_type="confirmation_stalled").exists()
+    assert deal.dispute.reason == "one_sided_confirmation"
+    assert deal.dispute.case.subject_user == seller
 
 
 @pytest.mark.django_db

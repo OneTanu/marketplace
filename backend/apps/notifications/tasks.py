@@ -8,3 +8,8 @@ from . import services
 @app.task(name="notifications.send_email")
 def send_notification_email(notification_id: int) -> None:
     services.send_email(notification_id=notification_id)
+
+
+@app.task(name="notifications.alert_saved_searches")
+def alert_saved_searches(listing_id: int) -> None:
+    services.alert_saved_searches(listing_id=listing_id)

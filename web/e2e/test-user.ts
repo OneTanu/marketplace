@@ -27,4 +27,18 @@ export const TEST_MODERATOR = {
   password: TEST_USER.password,
 };
 
+/** A student whose password the password reset test changes, so no other test signs in as it. */
+export const TEST_RESET_USER = {
+  email: "e2e-reset@umd.edu",
+  username: "e2e_reset",
+  password: TEST_USER.password,
+};
+
+/** Only the deactivation test signs in as this student, since it closes the account. */
+export const TEST_CLOSER = {
+  email: "e2e-closer@umd.edu",
+  username: "e2e_closer",
+  password: TEST_USER.password,
+};
+
 export type TestUser = typeof TEST_USER;

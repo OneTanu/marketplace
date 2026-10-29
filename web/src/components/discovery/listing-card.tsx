@@ -4,6 +4,7 @@ import Link from "next/link";
 import { priceLabel, type ListingCard as Card } from "@/lib/discovery";
 import { schoolPalette } from "@/lib/school-colors";
 
+import { BookmarkButton } from "./bookmark-button";
 import styles from "./listing-card.module.css";
 
 // Slight, stable variation so a grid of tags doesn't look stamped out by a machine.
@@ -13,11 +14,13 @@ function tilt(id: number) {
 }
 
 /** A listing in a grid: the price hangs on the photo as a kraft tag, and Pending and Sold are
- * stamps. `previousPriceCents` marks a price drop (no API data for it yet; the design lab uses it). */
-export function ListingCard({ listing, showSchool = false, previousPriceCents }: {
+ * stamps. `previousPriceCents` marks a price drop (no API data for it yet; the design lab uses it).
+ * `showBookmark` adds a heart to save it (callers leave it off on the viewer's own listings). */
+export function ListingCard({ listing, showSchool = false, previousPriceCents, showBookmark = false }: {
   listing: Card;
   showSchool?: boolean;
   previousPriceCents?: number;
+  showBookmark?: boolean;
 }) {
   const sold = listing.status === "sold";
   const dropped = !sold && previousPriceCents !== undefined && previousPriceCents > listing.price_cents;
@@ -29,7 +32,7 @@ export function ListingCard({ listing, showSchool = false, previousPriceCents }:
   const school = schoolPalette(listing.school.colors);
 
   return (
-    <article className="group min-w-0">
+    <article className="group relative min-w-0">
       <Link href={`/listings/${listing.id}`} className="block">
         <div className="relative aspect-[4/5] overflow-hidden rounded-md bg-surface">
           {listing.cover_url && (
@@ -50,6 +53,9 @@ export function ListingCard({ listing, showSchool = false, previousPriceCents }:
           {(sold || detail) && <p className="mt-0.5 truncate text-[13px] text-muted">{sold ? `Sold for ${price}` : detail}</p>}
         </div>
       </Link>
+      {/* Outside the link: a button can't sit inside one. */}
+      {/* A Sold listing can't be newly saved, but one saved earlier can be unsaved. */}
+      {showBookmark && (listing.is_bookmarked || !sold) && <BookmarkButton listingId={listing.id} isBookmarked={listing.is_bookmarked} />}
     </article>
   );
 }

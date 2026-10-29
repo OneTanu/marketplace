@@ -10,4 +10,10 @@ urlpatterns = [
         name="notification-unread-count",
     ),
     path("notifications/read/", views.MarkReadView.as_view(), name="notification-read"),
+    path("saved-searches/", views.SavedSearchListView.as_view(), name="saved-search-list"),
+    path(
+        "saved-searches/<int:pk>/",
+        views.SavedSearchDetailView.as_view(),
+        name="saved-search-detail",
+    ),
 ]

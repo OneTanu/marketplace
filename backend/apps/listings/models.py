@@ -48,6 +48,8 @@ class Listing(models.Model):
     class RemovedBy(models.TextChoices):
         SELLER = "seller", "Seller"
         MODERATION = "moderation", "Moderation"
+        # Hidden while the seller's account is deactivated; back to Available if they return.
+        ACCOUNT = "account", "Account deactivated"
 
     school = models.ForeignKey("schools.School", on_delete=models.PROTECT, related_name="listings")
     seller = models.ForeignKey(
@@ -96,6 +98,31 @@ class ListingPhoto(models.Model):
 
     def __str__(self):
         return f"Photo {self.position} of {self.listing_id}"
+
+
+class Bookmark(models.Model):
+    """A student saving a listing to come back to. Deleting the listing or the student deletes
+    their bookmarks; a listing that is soft-removed keeps them (the API hides its content)."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="bookmarks"
+    )
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name="bookmarks")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        constraints = [
+            # Also the index behind "is this listing bookmarked by me?".
+            models.UniqueConstraint(fields=["user", "listing"], name="bookmark_one_per_listing"),
+        ]
+        indexes = [
+            # A student's bookmarks, newest first (keyset paged on created_at, id).
+            models.Index(fields=["user", "-created_at", "-id"], name="bookmark_user_recent_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} bookmarked {self.listing_id}"
 
 
 class Color(models.TextChoices):

@@ -30,6 +30,7 @@ function card(
     brand: details.brand ?? "",
     school: { id: 1, short_name: "UMD", slug: "umd", colors: labSchool("umd").colors },
     seller: SELLER,
+    is_bookmarked: false,
     created_at: POSTED,
   };
 }

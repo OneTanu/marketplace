@@ -24,6 +24,7 @@ type Action = components["schemas"]["Action"];
 type Restriction = components["schemas"]["StaffRestriction"];
 type Appeal = components["schemas"]["StaffAppeal"];
 type InfoRequest = components["schemas"]["StaffInfoRequest"];
+type DealDispute = components["schemas"]["DealDispute"];
 type ActionName = CaseAction["action"];
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -123,6 +124,7 @@ export function CaseDetailView({ caseId }: { caseId: number }) {
               </div>
             )}
           </section>
+          {detail.deal_disputes.length > 0 && <DealDisputes disputes={detail.deal_disputes} caseId={row.id} onChange={setDetail} />}
           {detail.appeals.length > 0 && <Appeals appeals={detail.appeals} caseId={row.id} onChange={setDetail} />}
           {detail.info_requests.length > 0 && <InfoRequests requests={detail.info_requests} />}
           <SubjectHistory detail={detail} onChanged={reload} />
@@ -515,6 +517,71 @@ function ActionPanel({ detail, onChange }: { detail: CaseDetail; onChange: (deta
         {saved && <p role="status" className="mt-3 text-sm font-semibold text-brand">{saved}</p>}
       </div>
     </aside>
+  );
+}
+
+const DISPUTE_REASONS: Record<DealDispute["reason"], string> = {
+  one_sided_confirmation: "Only one side confirmed the handoff before the deadline",
+  problem_after_confirmation: "A problem was reported after a confirmation",
+};
+
+/** Handoffs held for a decision: did it happen? Deciding moves the deal and its listing. */
+function DealDisputes({ disputes, caseId, onChange }: { disputes: DealDispute[]; caseId: number; onChange: (detail: CaseDetail) => void }) {
+  return (
+    <section aria-labelledby="disputes-heading" className="rounded-xl border border-signal p-4">
+      <h2 id="disputes-heading" className="text-lg font-black">Disputed handoffs</h2>
+      <p className="mt-1 text-sm text-muted">Payment happens off-platform; Tanu can’t verify it. Decide from the evidence, and don’t penalize anyone on one person’s word alone.</p>
+      <ul className="mt-3 space-y-3">
+        {disputes.map((dispute) => <DisputeItem key={dispute.id} dispute={dispute} caseId={caseId} onChange={onChange} />)}
+      </ul>
+    </section>
+  );
+}
+
+function DisputeItem({ dispute, caseId, onChange }: { dispute: DealDispute; caseId: number; onChange: (detail: CaseDetail) => void }) {
+  const [reason, setReason] = useState("");
+  const [working, setWorking] = useState(false);
+  const [error, setError] = useState("");
+  const snapshot = dispute.snapshot as { deal?: { agreed_amount_cents?: number | null; confirmed_by?: { user_id: number }[] }; problems?: { reporter_id: number; kind: string; details: string }[] };
+  const confirmedIds = new Set((snapshot.deal?.confirmed_by ?? []).map((item) => item.user_id));
+  const who = (id: number) => (id === dispute.buyer.id ? `@${dispute.buyer.username} (buyer)` : `@${dispute.seller.username} (seller)`);
+
+  async function decide(outcome: "completed" | "canceled") {
+    setWorking(true);
+    setError("");
+    try {
+      onChange(await actOnCase(caseId, { action: "resolve_deal_dispute", deal_id: dispute.deal_id, dispute_outcome: outcome, reason, user_message: "", override_reason: "" }));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "That didn't go through.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  return (
+    <li className="rounded-lg bg-surface p-3 text-sm">
+      <p className="font-bold">“{dispute.listing_title}” <span className="font-normal text-muted">· deal #{dispute.deal_id} · opened {formatDateTime(dispute.opened_at)}</span></p>
+      <p className="mt-1">{DISPUTE_REASONS[dispute.reason]}.</p>
+      <p className="mt-1 text-muted">
+        Buyer @{dispute.buyer.username} {confirmedIds.has(dispute.buyer.id) ? "confirmed" : "did not confirm"} · Seller @{dispute.seller.username} {confirmedIds.has(dispute.seller.id) ? "confirmed" : "did not confirm"}
+        {snapshot.deal?.agreed_amount_cents != null ? ` · Agreed ${centsToDollars(snapshot.deal.agreed_amount_cents)}` : ""}
+      </p>
+      {(snapshot.problems ?? []).map((problem, index) => (
+        <p key={index} className="mt-1">{who(problem.reporter_id)} reported <strong>{problem.kind.replaceAll("_", " ")}</strong>{problem.details ? `: “${problem.details}”` : ""}</p>
+      ))}
+      {dispute.outcome ? (
+        <p className="mt-2 font-semibold">Decided by @{dispute.resolved_by?.username}: {dispute.outcome === "completed" ? "the handoff happened" : "the handoff didn’t happen"}. <span className="font-normal text-muted">{dispute.resolution_note}</span></p>
+      ) : (
+        <div className="mt-3 space-y-2">
+          <textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={2} placeholder="Why? (staff only)" aria-label="Dispute decision reason" className="field w-full resize-none p-2" />
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={working || !reason.trim()} onClick={() => decide("completed")} className="btn btn-primary btn-sm">It happened: mark Sold</button>
+            <button type="button" disabled={working || !reason.trim()} onClick={() => decide("canceled")} className="btn btn-secondary btn-sm">It didn’t: release the listing</button>
+          </div>
+          {error && <p role="alert" className="text-[var(--danger)]">{error}</p>}
+        </div>
+      )}
+    </li>
   );
 }
 

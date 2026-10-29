@@ -63,12 +63,16 @@ API docs: http://localhost:8000/api/docs/. Health: `/api/health/`. Auth (django-
 - Signup requires a verified email on a domain registered to a `School` with `signup_is_open` (UMD: `umd.edu`, `terpmail.umd.edu`). Email verification is mandatory before login. Don't weaken this.
 - Adding a school is data (an admin or migration row), never code or settings.
 - A user's school is set once at signup from their verified email; changing it is an admin action.
+- Password reset is allauth's: `/account/forgot-password` calls `auth/password/request`, and the emailed link (`/account/password/reset/{key}`) calls `auth/password/reset`. No custom tokens, no mail from Next.js. A reset request answers the same way for every address (the adapter skips its school and ban checks there), so it never reveals whether an account exists. `/api/password-reset/key-status/` only explains a rejected key (expired, used or invalid). A reset signs the student out of every existing session (Django drops sessions whose password hash changed) and doesn't sign them in; they log in again.
 - A listing's `school` is always its seller's school. Feeds and searches filter by the viewer's school unless they explicitly widen the scope.
 
 ### Listings
 - Shared fields go on `Listing`; kind-specific fields go on `ItemDetails` / `ServiceDetails`. Don't add item-only or service-only columns to `Listing`.
 - Item status: Available → Pending (seller accepted a buyer) → Sold (both confirmed the handoff). Pending can return to Available. Removed is for sellers and moderation. Never mark Sold on a Buy now click.
-- Timers: the seller has 24h to answer a request or offer; a Pending deal returns to Available after 72h without a confirmed handoff. Both run as background jobs.
+- Timers: whoever's turn it is has 24h to answer a request or offer; a Pending deal with no confirmation returns its listing to Available after 72h. Deadlines are enforced at request time and by background jobs (a per-deal job plus a 10-minute sweep). One agreed reschedule may extend the handoff deadline, once, by up to 48h.
+- Deal statuses and every allowed move are in `deals.services.TRANSITIONS`; all status changes go through `_transition()`, which records actor, time and from/to as a `DealEvent`. Deals are never deleted.
+- After one handoff confirmation a deal can't be canceled. A lapsed one-sided confirmation, or a problem reported after a confirmation, makes the deal `disputed`: the listing stays Pending until a moderator decides (completed → Sold, canceled → Available). Never guess the outcome, and never penalize anyone automatically from a report.
+- Backup buyers queue in request order and can't be accepted out of turn; when a listing comes back, only the first eligible backup is promoted (with a fresh 24h).
 
 ### Data and money
 - Money is integer cents with an explicit currency. Never floats.

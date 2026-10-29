@@ -5,7 +5,7 @@ without a circular import.
 """
 
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db.models import Q, QuerySet
+from django.db.models import Case, F, Q, QuerySet, When
 from django.utils import timezone
 
 from .models import BannedEmail, Block, UserRestriction
@@ -75,6 +75,17 @@ def is_blocked(first, second) -> bool:
     return Block.objects.filter(
         Q(blocker=first, blocked=second) | Q(blocker=second, blocked=first)
     ).exists()
+
+
+def blocked_either_way_ids(user_id: int):
+    """Ids of users who blocked `user_id` or whom they blocked. A subquery."""
+    return (
+        Block.objects.filter(Q(blocker_id=user_id) | Q(blocked_id=user_id))
+        .annotate(
+            other=Case(When(blocker_id=user_id, then=F("blocked_id")), default=F("blocker_id"))
+        )
+        .values("other")
+    )
 
 
 def require_not_blocked(first, second) -> None:

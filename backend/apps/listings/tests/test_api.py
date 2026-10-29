@@ -736,6 +736,7 @@ def test_public_profile_listings_show_selling_and_sold_but_never_removed(client,
             "brand",
             "school",
             "seller",
+            "is_bookmarked",
             "created_at",
         }
         for listing in response.json()

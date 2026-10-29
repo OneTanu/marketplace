@@ -1,12 +1,16 @@
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.accounts.models import User
 from apps.schools.serializers import MeetingSpotSerializer
 
+from . import services
 from .models import (
     Deal,
+    DealDispute,
     DealEvent,
     DealOffer,
+    DealProblem,
     HandoffConfirmation,
     MeetupAvailabilityOverride,
     MeetupAvailabilityWindow,
@@ -55,7 +59,7 @@ class DealEventSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DealEvent
-        fields = ["id", "event_type", "actor", "data", "created_at"]
+        fields = ["id", "event_type", "actor", "from_status", "to_status", "data", "created_at"]
         read_only_fields = fields
 
 
@@ -86,6 +90,26 @@ class MeetupStatusUpdateSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class DealDisputeSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DealDispute
+        fields = ["reason", "opened_at", "outcome", "resolved_at"]
+        read_only_fields = fields
+
+
+class DealActionsSerializer(serializers.Serializer):
+    """What the viewer can do now. The server still checks every action."""
+
+    accept = serializers.BooleanField()
+    counter = serializers.BooleanField()
+    decline = serializers.BooleanField()
+    cancel = serializers.BooleanField()
+    confirm_handoff = serializers.BooleanField()
+    report_problem = serializers.BooleanField()
+    archive = serializers.BooleanField()
+    unarchive = serializers.BooleanField()
+
+
 class DealSerializer(serializers.ModelSerializer):
     listing = DealListingSerializer(read_only=True)
     buyer = DealUserSerializer(read_only=True)
@@ -98,6 +122,14 @@ class DealSerializer(serializers.ModelSerializer):
     awaiting_me = serializers.SerializerMethodField()
     meetup_proposals = MeetupProposalSerializer(many=True, read_only=True)
     meetup_updates = MeetupStatusUpdateSerializer(many=True, read_only=True)
+    section = serializers.SerializerMethodField(
+        help_text="Where it belongs in the viewer's activity."
+    )
+    actions = serializers.SerializerMethodField()
+    dispute = serializers.SerializerMethodField()
+    my_problems = serializers.SerializerMethodField(
+        help_text="Kinds of problem the viewer has reported on this deal."
+    )
 
     class Meta:
         model = Deal
@@ -114,6 +146,16 @@ class DealSerializer(serializers.ModelSerializer):
             "currency",
             "response_deadline",
             "handoff_deadline",
+            "handoff_extensions",
+            "backup_position",
+            "accepted_at",
+            "completed_at",
+            "closed_at",
+            "close_reason",
+            "section",
+            "actions",
+            "dispute",
+            "my_problems",
             "buyer_confirmed",
             "seller_confirmed",
             "my_role",
@@ -139,6 +181,57 @@ class DealSerializer(serializers.ModelSerializer):
     def get_seller_confirmed(self, deal) -> bool:
         return deal.seller_id in self._confirmed_user_ids(deal)
 
+    def _viewer(self):
+        request = self.context.get("request")
+        return request.user if request else None
+
+    @extend_schema_field(
+        serializers.ChoiceField(choices=["current", "history", "cancelled", "archived"])
+    )
+    def get_section(self, deal) -> str:
+        viewer = self._viewer()
+        return services.section_for(deal, viewer) if viewer else "current"
+
+    @extend_schema_field(DealActionsSerializer)
+    def get_actions(self, deal) -> dict:
+        viewer = self._viewer()
+        S = Deal.Status
+        mine = viewer is not None and viewer.pk in {deal.buyer_id, deal.seller_id}
+        turn = mine and self.get_awaiting_me(deal) and deal.status != S.BACKUP
+        confirmed = self._confirmed_user_ids(deal)
+        section = self.get_section(deal)
+        return {
+            "accept": turn,
+            "counter": turn,
+            "decline": turn or (mine and deal.status == S.BACKUP and viewer.pk == deal.seller_id),
+            # A backup buyer leaves the line; the seller removes them with decline instead.
+            "cancel": mine
+            and (
+                deal.status in services.NEGOTIATING
+                or (deal.status == S.BACKUP and viewer.pk == deal.buyer_id)
+                or (deal.status == S.PENDING and not confirmed)
+            ),
+            "confirm_handoff": mine and deal.status == S.PENDING and viewer.pk not in confirmed,
+            "report_problem": mine and deal.status in {S.PENDING, S.DISPUTED, S.COMPLETED},
+            "archive": mine and section == "cancelled",
+            # Declined and expired deals live in Archived; only a hand-archived cancel moves back.
+            "unarchive": mine and section == "archived" and deal.status == S.CANCELED,
+        }
+
+    @extend_schema_field(DealDisputeSummarySerializer(allow_null=True))
+    def get_dispute(self, deal):
+        try:
+            dispute = deal.dispute
+        except DealDispute.DoesNotExist:
+            return None
+        return DealDisputeSummarySerializer(dispute).data
+
+    def get_my_problems(self, deal) -> list[str]:
+        viewer = self._viewer()
+        if viewer is None:
+            return []
+        return [p.kind for p in deal.problems.all() if p.reporter_id == viewer.pk]
+
     def get_my_role(self, deal) -> str:
         request = self.context.get("request")
         return "seller" if request and request.user.pk == deal.seller_id else "buyer"
@@ -148,10 +241,7 @@ class DealSerializer(serializers.ModelSerializer):
         if request is None:
             return False
         return bool(
-            (
-                deal.status in {Deal.Status.AWAITING_SELLER, Deal.Status.BACKUP}
-                and request.user.pk == deal.seller_id
-            )
+            (deal.status == Deal.Status.AWAITING_SELLER and request.user.pk == deal.seller_id)
             or (deal.status == Deal.Status.AWAITING_BUYER and request.user.pk == deal.buyer_id)
         )
 
@@ -209,6 +299,18 @@ class TradeOfferSerializer(serializers.Serializer):
 
 class DealQuerySerializer(serializers.Serializer):
     conversation = serializers.IntegerField(required=False, min_value=1)
+    section = serializers.ChoiceField(
+        choices=list(services.SECTION_FILTERS),
+        required=False,
+        help_text="current: in progress or under review. history: completed purchases, sales "
+        "and trades only. cancelled: canceled deals. archived: declined and expired deals, plus "
+        "canceled ones you archived.",
+    )
+
+
+class ReportProblemSerializer(serializers.Serializer):
+    kind = serializers.ChoiceField(choices=DealProblem.Kind.choices)
+    details = serializers.CharField(max_length=1000, required=False, allow_blank=True, default="")
 
 
 class HandoffConfirmationSerializer(serializers.ModelSerializer):

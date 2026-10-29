@@ -61,6 +61,9 @@ def send_message(
         raise ValidationError("You are not a participant in this conversation.")
     if not automated:
         trust_checks.require_can(sender, trust_checks.Kind.MESSAGING)
+    if conversation.participants.exclude(pk=sender.pk).filter(is_active=False).exists():
+        # Deactivated, suspended, or banned: the conversation stays as history, read-only.
+        raise ValidationError("This account isn't available right now.")
     for other in conversation.participants.exclude(pk=sender.pk):
         trust_checks.require_not_blocked(sender, other)
     if listing is not None:

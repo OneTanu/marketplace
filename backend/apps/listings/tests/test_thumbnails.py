@@ -80,9 +80,10 @@ def test_upload_ends_with_a_thumbnail(client, seller, media_root, in_memory_jobs
     assert response.status_code == 201
     listing_id = response.json()["id"]
     assert [p["thumbnail_url"] for p in response.json()["photos"]] == [None, None, None]
-    assert [job["task_name"] for job in in_memory_jobs.connector.jobs.values()] == [
+    # One thumbnail job per photo, plus saved-search alerts for the new listing.
+    assert sorted(job["task_name"] for job in in_memory_jobs.connector.jobs.values()) == [
         "listings.make_photo_thumbnail"
-    ] * 3
+    ] * 3 + ["notifications.alert_saved_searches"]
 
     in_memory_jobs.run_worker(wait=False, install_signal_handlers=False, listen_notify=False)
 

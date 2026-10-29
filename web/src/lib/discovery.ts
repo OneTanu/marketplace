@@ -1,6 +1,6 @@
 // The feed's filters, as URL query parameters and as the API query. The URL is the source of
-// truth: a filtered feed can be reloaded or shared, and the same parameters can later be saved
-// as a watched search.
+// truth: a filtered feed can be reloaded or shared, and saved as a saved search
+// (lib/saved-searches.ts), which rebuilds the same URL to run it.
 
 import type { components, operations } from "@/lib/api/schema";
 import { COLORS, CONDITIONS } from "@/lib/listing-options";
@@ -127,8 +127,7 @@ export function feedQueryString(feed: FeedParams): string {
   return query ? `?${query}` : "";
 }
 
-/** The API query for these filters. A school page passes its school, which wins over the URL.
- * Keyword search isn't part of the feed API yet, so `search` isn't sent. */
+/** The API query for these filters. A school page passes its school, which wins over the URL. */
 export function feedApiQuery(feed: FeedParams, fixedSchool?: string): FeedApiQuery {
   const query: FeedApiQuery = { sort: feed.sort };
   const school = fixedSchool ?? feed.school;
@@ -140,6 +139,7 @@ export function feedApiQuery(feed: FeedParams, fixedSchool?: string): FeedApiQue
   if (feed.size) query.size = feed.size;
   if (feed.minPrice) query.min_price = Number(feed.minPrice) * 100;
   if (feed.maxPrice) query.max_price = Number(feed.maxPrice) * 100;
+  if (feed.search) query.q = feed.search.slice(0, 100); // the API's limit
   return query;
 }
 

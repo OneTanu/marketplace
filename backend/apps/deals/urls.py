@@ -14,6 +14,12 @@ urlpatterns = [
     path("deals/<int:pk>/decline/", views.DeclineDealView.as_view(), name="deal-decline"),
     path("deals/<int:pk>/cancel/", views.CancelDealView.as_view(), name="deal-cancel"),
     path("deals/<int:pk>/counter/", views.CounterOfferView.as_view(), name="deal-counter"),
+    path(
+        "deals/<int:pk>/report-problem/",
+        views.ReportProblemView.as_view(),
+        name="deal-report-problem",
+    ),
+    path("deals/<int:pk>/archive/", views.ArchiveDealView.as_view(), name="deal-archive"),
     path("deals/<int:pk>/trade-offer/", views.TradeOfferView.as_view(), name="deal-trade-offer"),
     path(
         "deals/<int:pk>/trade-options/",

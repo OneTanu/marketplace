@@ -13,6 +13,7 @@ __pycache__/
 .ruff_cache/
 backend/staticfiles/
 backend/media/
+backend/e2e-mail/
 
 # Node / Next.js (web/ has its own .gitignore as well)
 node_modules/

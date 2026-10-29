@@ -137,6 +137,8 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "EXCEPTION_HANDLER": "config.exceptions.exception_handler",
+    # Only views that opt in with `throttle_scope` are limited.
+    "DEFAULT_THROTTLE_RATES": {"reactivate": "10/hour"},
 }
 SPECTACULAR_SETTINGS = {
     "TITLE": "Tanu API",
@@ -150,6 +152,9 @@ SPECTACULAR_SETTINGS = {
         "StatusEnum": "apps.listings.models.Listing.Status",
         "DealKind": "apps.deals.models.Deal.Kind",
         "DealStatus": "apps.deals.models.Deal.Status",
+        "DealProblemKind": "apps.deals.models.DealProblem.Kind",
+        "DealDisputeReason": "apps.deals.models.DealDispute.Reason",
+        "DealDisputeOutcome": "apps.deals.models.DealDispute.Outcome",
         "RestrictionKind": "apps.trust.models.UserRestriction.Kind",
         "ReportTargetType": "apps.trust.models.Report.TargetType",
         "ReportReason": "apps.trust.models.Report.Reason",

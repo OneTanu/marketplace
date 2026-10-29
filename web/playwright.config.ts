@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-import { API_CONTAINER, API_PORT, POSTGRES_DB, WEB_PORT } from "./e2e/slot";
-import { TEST_BUYER, TEST_MODERATOR, TEST_SECOND_BUYER, TEST_USER } from "./e2e/test-user";
+import { API_CONTAINER, API_PORT, EMAIL_DIR, POSTGRES_DB, WEB_PORT } from "./e2e/slot";
+import { TEST_BUYER, TEST_CLOSER, TEST_MODERATOR, TEST_RESET_USER, TEST_SECOND_BUYER, TEST_USER } from "./e2e/test-user";
 
 // E2E runs its own servers on their own ports and database, so it never clashes with
 // `pnpm dev` (3000), the compose API (8000), or the dev database (tanu). E2E_SLOT picks
@@ -20,8 +20,12 @@ const backendEnv = {
   E2E_BUYER_EMAIL: TEST_BUYER.email,
   E2E_SECOND_BUYER_EMAIL: TEST_SECOND_BUYER.email,
   E2E_MODERATOR_EMAIL: TEST_MODERATOR.email,
+  E2E_RESET_EMAIL: TEST_RESET_USER.email,
+  E2E_CLOSER_EMAIL: TEST_CLOSER.email,
   // Parallel tests sign the same students in at once; allauth would refuse after five.
   E2E_DISABLE_RATE_LIMITS: "1",
+  // Emails land here as files so tests can follow links in them (see e2e/email.ts).
+  E2E_EMAIL_DIR: EMAIL_DIR,
   E2E_USER_PASSWORD: TEST_USER.password,
   // So runserver's startup line reaches Playwright through the pipe right away.
   PYTHONUNBUFFERED: "1",

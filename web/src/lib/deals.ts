@@ -153,3 +153,67 @@ export function tradePackage(deal: Deal) {
   if (deal.kind !== "trade") return undefined;
   return deal.offers.at(-1);
 }
+
+export type DealProblemKind = components["schemas"]["DealProblemKind"];
+
+export const DEAL_STATUS_LABELS: Record<Deal["status"], string> = {
+  awaiting_seller: "Waiting for seller",
+  awaiting_buyer: "Waiting for buyer",
+  backup: "Backup buyer",
+  pending: "Handoff pending",
+  disputed: "Under review",
+  completed: "Completed",
+  canceled: "Canceled",
+  declined: "Declined",
+  expired: "Expired",
+};
+
+export const PROBLEM_KINDS: { value: DealProblemKind; label: string }[] = [
+  { value: "no_show", label: "The other person didn’t show up" },
+  { value: "not_as_described", label: "The item wasn’t as described" },
+  { value: "payment", label: "There was a payment problem" },
+  { value: "safety", label: "I felt unsafe" },
+  { value: "other", label: "Something else" },
+];
+
+/** What the viewer should do next, in one line. Payment happens in person; Tanu never handles
+ * or verifies it. */
+export function dealNextStep(deal: Deal): string {
+  const mine = deal.my_role === "buyer" ? deal.buyer_confirmed : deal.seller_confirmed;
+  const other = deal.my_role === "buyer" ? deal.seller_confirmed : deal.buyer_confirmed;
+  switch (deal.status) {
+    case "awaiting_seller":
+    case "awaiting_buyer":
+      return deal.awaiting_me ? "Accept, counter, or decline before the response window closes." : "Waiting for a reply. It expires if there’s no answer in 24 hours.";
+    case "backup":
+      return deal.my_role === "buyer"
+        ? `You’re #${deal.backup_position ?? "?"} in line. If the current handoff falls through, the next buyer in line gets a turn.`
+        : "This buyer is waiting in line. They get a turn, in order, if the current handoff falls through.";
+    case "pending":
+      if (mine) return other ? "Both confirmed." : "You confirmed. Waiting for the other person to confirm before the deadline.";
+      if (other) return "The other person confirmed the handoff. Confirm once you have the item or payment, or report a problem.";
+      return "Meet up, check the item, and exchange payment in person. Then both confirm the handoff.";
+    case "disputed":
+      return "A moderator is reviewing this handoff. The listing stays on hold until they decide; nobody is penalized automatically.";
+    case "completed":
+      return "Completed. Both of you confirmed the handoff.";
+    default:
+      return "This deal is closed.";
+  }
+}
+
+export async function reportDealProblem(id: number, kind: DealProblemKind, details: string) {
+  const { data, error, response } = await api.POST("/api/deals/{id}/report-problem/", {
+    params: { path: { id } },
+    body: { kind, details },
+  });
+  return data ?? failed(error, response);
+}
+
+export async function setDealArchived(id: number, archived: boolean) {
+  const path = { params: { path: { id } } };
+  const { data, error, response } = archived
+    ? await api.POST("/api/deals/{id}/archive/", path)
+    : await api.DELETE("/api/deals/{id}/archive/", path);
+  return data ?? failed(error, response);
+}

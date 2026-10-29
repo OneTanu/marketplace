@@ -87,6 +87,11 @@ class User(AbstractUser):
         blank=True,
         related_name="users",
     )
+    # Set when the student deactivates their own account (is_active is off too). Blank for
+    # active accounts and for ones switched off by moderation (a suspension or ban).
+    deactivated_at = models.DateTimeField(null=True, blank=True)
+    # Optional "why are you leaving?" answer, for product feedback only.
+    deactivation_reason = models.CharField(max_length=500, blank=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]

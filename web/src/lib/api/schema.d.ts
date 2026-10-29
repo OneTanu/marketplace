@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/api/account/reactivate/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Turn a deactivated account back on, before logging in. Same answer for wrong details
+         *     whether or not the account exists; rate limited because it checks passwords signed out.
+         */
+        post: operations["account_reactivate_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/blocks/": {
         parameters: {
             query?: never;
@@ -33,6 +53,27 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["blocks_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bookmarks/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description My saved listings, most recently saved first, a page at a time. Saved listings that
+         *     have since gone Pending or Sold are included with their status; ones that were removed or
+         *     whose seller can't be browsed come back with `listing: null`.
+         */
+        get: operations["bookmarks_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -199,6 +240,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/deals/{id}/archive/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Move a canceled, declined or expired deal into (POST) or out of (DELETE) your
+         *     Archived activity. Nothing is deleted.
+         */
+        post: operations["deals_archive_create"];
+        /**
+         * @description Move a canceled, declined or expired deal into (POST) or out of (DELETE) your
+         *     Archived activity. Nothing is deleted.
+         */
+        delete: operations["deals_archive_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/deals/{id}/cancel/": {
         parameters: {
             query?: never;
@@ -305,6 +370,28 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["deals_meetup_status_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/deals/{id}/report-problem/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Report a problem with an accepted deal: a no-show, an item not as described, a payment
+         *     or safety concern. It goes to Tanu's moderators with a snapshot of the deal; nobody is
+         *     penalized automatically. If the handoff was already confirmed by someone, the deal is held
+         *     as a dispute until a moderator decides.
+         */
+        post: operations["deals_report_problem_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -436,6 +523,24 @@ export interface paths {
         patch: operations["listings_partial_update"];
         trace?: never;
     };
+    "/api/listings/{id}/bookmark/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Save (PUT) or unsave (DELETE) a listing. Both are idempotent. */
+        put: operations["listings_bookmark_update"];
+        post?: never;
+        /** @description Save (PUT) or unsave (DELETE) a listing. Both are idempotent. */
+        delete: operations["listings_bookmark_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/listings/{id}/photos/": {
         parameters: {
             query?: never;
@@ -539,6 +644,43 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["me_appeals_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/deactivate/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Close my account after checking my password. Signs me out everywhere. */
+        post: operations["me_deactivate_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/deactivation/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description What deactivating would do now: deals that must be settled first, open deals that
+         *     would be withdrawn, and listings that would be hidden.
+         */
+        get: operations["me_deactivation_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -765,6 +907,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/password-reset/key-status/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Explains a password reset link (valid, expired, used or invalid) so the reset page can
+         *     say why it doesn't work. Checking and using the key stays with allauth's
+         *     /api/auth/.../auth/password/reset. POST, so keys stay out of URLs and access logs.
+         */
+        post: operations["password_reset_key_status_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reports/": {
         parameters: {
             query?: never;
@@ -783,6 +946,44 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/saved-searches/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description My saved searches, newest first (at most 25, so not paged). */
+        get: operations["saved_searches_list"];
+        put?: never;
+        /**
+         * @description Save the current feed filters. 400 if nothing is filtered, the same filters are
+         *     already saved, or you already have 25 saved searches.
+         */
+        post: operations["saved_searches_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/saved-searches/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["saved_searches_retrieve"];
+        put?: never;
+        post?: never;
+        delete: operations["saved_searches_destroy"];
+        options?: never;
+        head?: never;
+        /** @description Rename a saved search or turn its alerts on or off. */
+        patch: operations["saved_searches_partial_update"];
         trace?: never;
     };
     "/api/schools/": {
@@ -941,9 +1142,10 @@ export interface components {
          *     * `restrict` - Restrict a feature
          *     * `suspend` - Suspend account
          *     * `ban` - Ban account
+         *     * `resolve_deal_dispute` - Decide a disputed handoff
          * @enum {string}
          */
-        ActionEnum: "note" | "assign" | "escalate" | "request_info" | "decide_appeal" | "dismiss" | "resolve" | "remove_listing" | "restore_listing" | "warn" | "restrict" | "suspend" | "ban";
+        ActionEnum: "note" | "assign" | "escalate" | "request_info" | "decide_appeal" | "dismiss" | "resolve" | "remove_listing" | "restore_listing" | "warn" | "restrict" | "suspend" | "ban" | "resolve_deal_dispute";
         AnswerRequest: {
             answer: string;
         };
@@ -958,6 +1160,15 @@ export interface components {
          * @enum {string}
          */
         AppealStatus: "pending" | "upheld" | "overturned";
+        /**
+         * @description * `available` - available
+         *     * `pending` - pending
+         *     * `sold` - sold
+         *     * `removed` - removed
+         *     * `unavailable` - unavailable
+         * @enum {string}
+         */
+        AvailabilityEnum: "available" | "pending" | "sold" | "removed" | "unavailable";
         AvailabilityOverride: {
             readonly id: number;
             /** Format: date */
@@ -1003,6 +1214,32 @@ export interface components {
             /** Format: date-time */
             readonly created_at: string;
         };
+        /** @description A deal that has to be settled before the account can be deactivated. */
+        BlockingDeal: {
+            readonly id: number;
+            readonly status: string;
+            readonly listing_title: string;
+            readonly conversation: number;
+        };
+        /**
+         * @description A saved listing. `listing` is null when it can't be shown any more (`availability` is
+         *     "removed" or "unavailable"); keep `listing_id` to let the student unsave it.
+         */
+        Bookmark: {
+            readonly listing_id: number;
+            readonly availability: components["schemas"]["AvailabilityEnum"];
+            readonly listing: components["schemas"]["ListingCard"] | null;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        BookmarkPage: {
+            results: components["schemas"]["Bookmark"][];
+            /** @description Pass as `cursor` to get the next page. Null on the last page. */
+            next_cursor: string | null;
+        };
+        BookmarkState: {
+            readonly is_bookmarked: boolean;
+        };
         CaseActionRequest: {
             action: components["schemas"]["ActionEnum"];
             reason: string;
@@ -1014,6 +1251,8 @@ export interface components {
             /** @default  */
             user_message: string;
             appeal_id?: number;
+            deal_id?: number;
+            dispute_outcome?: components["schemas"]["DealDisputeOutcome"];
             decision?: components["schemas"]["DecisionEnum"];
             /** @default  */
             override_reason: string;
@@ -1025,6 +1264,7 @@ export interface components {
             readonly actions: components["schemas"]["Action"][];
             readonly appeals: components["schemas"]["StaffAppeal"][];
             readonly info_requests: components["schemas"]["StaffInfoRequest"][];
+            readonly deal_disputes: components["schemas"]["DealDispute"][];
             readonly subject: components["schemas"]["SubjectHistory"];
             readonly involved_users: components["schemas"]["StaffUser"][];
             readonly reporter_records: components["schemas"]["ReporterRecord"][];
@@ -1176,6 +1416,16 @@ export interface components {
             instagram_handle?: string;
             profile_description?: string;
         };
+        DeactivateRequest: {
+            password: string;
+            /** @default  */
+            reason: string;
+        };
+        DeactivationPreview: {
+            readonly blockers: components["schemas"]["BlockingDeal"][];
+            readonly open_deals: number;
+            readonly listings_to_hide: number;
+        };
         Deal: {
             readonly id: number;
             readonly listing: components["schemas"]["DealListing"];
@@ -1191,6 +1441,21 @@ export interface components {
             readonly response_deadline: string | null;
             /** Format: date-time */
             readonly handoff_deadline: string | null;
+            readonly handoff_extensions: number;
+            readonly backup_position: number | null;
+            /** Format: date-time */
+            readonly accepted_at: string | null;
+            /** Format: date-time */
+            readonly completed_at: string | null;
+            /** Format: date-time */
+            readonly closed_at: string | null;
+            readonly close_reason: string;
+            /** @description Where it belongs in the viewer's activity. */
+            readonly section: components["schemas"]["SectionEnum"];
+            readonly actions: components["schemas"]["DealActions"];
+            readonly dispute: components["schemas"]["DealDisputeSummary"] | null;
+            /** @description Kinds of problem the viewer has reported on this deal. */
+            readonly my_problems: string[];
             readonly buyer_confirmed: boolean;
             readonly seller_confirmed: boolean;
             readonly my_role: string;
@@ -1205,10 +1470,61 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
         };
+        /** @description What the viewer can do now. The server still checks every action. */
+        DealActions: {
+            accept: boolean;
+            counter: boolean;
+            decline: boolean;
+            cancel: boolean;
+            confirm_handoff: boolean;
+            report_problem: boolean;
+            archive: boolean;
+            unarchive: boolean;
+        };
+        /** @description A disputed handoff in a case, with the deal as it stood when the dispute opened. */
+        DealDispute: {
+            readonly id: number;
+            readonly deal_id: number;
+            readonly listing_title: string;
+            readonly buyer: components["schemas"]["StaffUser"];
+            readonly seller: components["schemas"]["StaffUser"];
+            readonly deal_status: string;
+            readonly reason: components["schemas"]["DealDisputeReason"];
+            readonly snapshot: unknown;
+            /** Format: date-time */
+            readonly opened_at: string;
+            readonly outcome: components["schemas"]["DealDisputeOutcome"];
+            readonly resolved_by: components["schemas"]["StaffUser"] | null;
+            /** Format: date-time */
+            readonly resolved_at: string | null;
+            readonly resolution_note: string;
+        };
+        /**
+         * @description * `completed` - Handoff happened
+         *     * `canceled` - Handoff didn't happen
+         * @enum {string}
+         */
+        DealDisputeOutcome: "completed" | "canceled";
+        /**
+         * @description * `one_sided_confirmation` - Only one side confirmed in time
+         *     * `problem_after_confirmation` - A problem was reported after a confirmation
+         * @enum {string}
+         */
+        DealDisputeReason: "one_sided_confirmation" | "problem_after_confirmation";
+        DealDisputeSummary: {
+            readonly reason: components["schemas"]["DealDisputeReason"];
+            /** Format: date-time */
+            readonly opened_at: string;
+            readonly outcome: components["schemas"]["DealDisputeOutcome"];
+            /** Format: date-time */
+            readonly resolved_at: string | null;
+        };
         DealEvent: {
             readonly id: number;
             readonly event_type: string;
             readonly actor: components["schemas"]["DealUser"] | null;
+            readonly from_status: string;
+            readonly to_status: string;
             readonly data: unknown;
             /** Format: date-time */
             readonly created_at: string;
@@ -1240,17 +1556,27 @@ export interface components {
             readonly created_at: string;
         };
         /**
+         * @description * `no_show` - The other person didn't show up
+         *     * `not_as_described` - Item wasn't as described
+         *     * `payment` - Payment problem
+         *     * `safety` - Safety concern
+         *     * `other` - Something else
+         * @enum {string}
+         */
+        DealProblemKind: "no_show" | "not_as_described" | "payment" | "safety" | "other";
+        /**
          * @description * `awaiting_seller` - Awaiting seller
          *     * `awaiting_buyer` - Awaiting buyer
          *     * `backup` - Backup
          *     * `pending` - Pending handoff
+         *     * `disputed` - Under review
          *     * `completed` - Completed
          *     * `canceled` - Canceled
          *     * `declined` - Declined
          *     * `expired` - Expired
          * @enum {string}
          */
-        DealStatus: "awaiting_seller" | "awaiting_buyer" | "backup" | "pending" | "completed" | "canceled" | "declined" | "expired";
+        DealStatus: "awaiting_seller" | "awaiting_buyer" | "backup" | "pending" | "disputed" | "completed" | "canceled" | "declined" | "expired";
         DealUser: {
             readonly id: number;
             readonly username: string;
@@ -1320,6 +1646,7 @@ export interface components {
             readonly seller: components["schemas"]["SellerSummary"];
             readonly item_details: components["schemas"]["ItemDetails"] | null;
             readonly photos: components["schemas"]["ListingPhoto"][];
+            readonly is_bookmarked: boolean;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -1342,6 +1669,7 @@ export interface components {
             readonly brand: string;
             readonly school: components["schemas"]["SchoolSummary"];
             readonly seller: components["schemas"]["SellerSummary"];
+            readonly is_bookmarked: boolean;
             /** Format: date-time */
             readonly created_at: string;
         };
@@ -1493,6 +1821,7 @@ export interface components {
             readonly username: string;
             readonly first_name: string;
             readonly school: components["schemas"]["School"] | null;
+            readonly is_available: boolean;
         };
         /**
          * @description * `note` - Note
@@ -1513,9 +1842,10 @@ export interface components {
          *     * `info_received` - Answer received
          *     * `appeal_filed` - Appeal filed
          *     * `appeal_decided` - Appeal decided
+         *     * `resolve_deal_dispute` - Deal dispute decided
          * @enum {string}
          */
-        ModerationActionKind: "note" | "assign" | "escalate" | "dismiss" | "resolve" | "remove_listing" | "auto_hide_listing" | "restore_listing" | "warn" | "restrict" | "suspend" | "ban" | "lift_restriction" | "conflict_override" | "request_info" | "info_received" | "appeal_filed" | "appeal_decided";
+        ModerationActionKind: "note" | "assign" | "escalate" | "dismiss" | "resolve" | "remove_listing" | "auto_hide_listing" | "restore_listing" | "warn" | "restrict" | "suspend" | "ban" | "lift_restriction" | "conflict_override" | "request_info" | "info_received" | "appeal_filed" | "appeal_decided" | "resolve_deal_dispute";
         ModerationStats: {
             readonly days: number;
             readonly cases_opened: number;
@@ -1598,9 +1928,11 @@ export interface components {
          *     * `info_request` - Moderator question
          *     * `appeal_update` - Appeal update
          *     * `staff_alert` - Staff alert
+         *     * `saved_search` - Saved search match
+         *     * `account` - Account
          * @enum {string}
          */
-        NotificationKind: "deal" | "moderation_notice" | "report_update" | "info_request" | "appeal_update" | "staff_alert";
+        NotificationKind: "deal" | "moderation_notice" | "report_update" | "info_request" | "appeal_update" | "staff_alert" | "saved_search" | "account";
         NotificationMarkReadRequest: {
             ids?: number[];
         };
@@ -1613,6 +1945,20 @@ export interface components {
             readonly user: components["schemas"]["StaffUser"];
             readonly count: number;
         };
+        PasswordResetKeyStatus: {
+            status: components["schemas"]["PasswordResetKeyStatusStatusEnum"];
+        };
+        PasswordResetKeyStatusRequestRequest: {
+            key: string;
+        };
+        /**
+         * @description * `valid` - valid
+         *     * `expired` - expired
+         *     * `used` - used
+         *     * `invalid` - invalid
+         * @enum {string}
+         */
+        PasswordResetKeyStatusStatusEnum: "valid" | "expired" | "used" | "invalid";
         PatchedCurrentUserRequest: {
             instagram_handle?: string;
             profile_description?: string;
@@ -1629,6 +1975,10 @@ export interface components {
             description?: string;
             price_cents?: number;
             item_details?: components["schemas"]["ItemDetailsUpdateRequest"];
+        };
+        PatchedSavedSearchUpdateRequest: {
+            name?: string;
+            alerts_enabled?: boolean;
         };
         /**
          * @description * `1` - Urgent
@@ -1670,8 +2020,13 @@ export interface components {
             readonly assigned_to_me: number;
             readonly escalated: number;
         };
+        ReactivateRequest: {
+            /** Format: email */
+            email: string;
+            password: string;
+        };
         /** @enum {string} */
-        RemovedByEnum: "seller" | "moderation";
+        RemovedByEnum: "seller" | "moderation" | "account";
         ReportCreateRequest: {
             target_type: components["schemas"]["ReportTargetType"];
             target_id: number;
@@ -1683,6 +2038,11 @@ export interface components {
             message_ids?: number[];
             /** @default false */
             block: boolean;
+        };
+        ReportProblemRequest: {
+            kind: components["schemas"]["DealProblemKind"];
+            /** @default  */
+            details: string;
         };
         /**
          * @description * `prohibited_item` - Prohibited item
@@ -1757,6 +2117,88 @@ export interface components {
             readonly username: string;
             readonly first_name: string;
         };
+        SavedSearch: {
+            readonly id: number;
+            readonly name: string;
+            readonly filters: components["schemas"]["SavedSearchFilters"];
+            readonly alerts_enabled: boolean;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        SavedSearchCreateRequest: {
+            /**
+             * @description Leave blank for a name made from the filters.
+             * @default
+             */
+            name: string;
+            filters: components["schemas"]["SavedSearchFiltersRequest"];
+            /** @default true */
+            alerts_enabled: boolean;
+        };
+        /**
+         * @description A saved search's filters, named like the feed's query parameters (GET /api/listings/).
+         *     Blank or null means "any".
+         */
+        SavedSearchFilters: {
+            /** @default  */
+            q: string;
+            /**
+             * @description A school slug, "all", or blank for your own school.
+             * @default
+             */
+            school: string;
+            category?: string | null;
+            /** @default  */
+            brand: string;
+            /** @description In cents. */
+            min_price?: number | null;
+            /** @description In cents. */
+            max_price?: number | null;
+            /**
+             * @description Exact size. Jeans and pants are "<waist>x<inseam>", e.g. 32x30.
+             * @default
+             */
+            size: string;
+            /** @default  */
+            condition: components["schemas"]["ConditionEnum"] | components["schemas"]["BlankEnum"];
+            /** @default  */
+            color: components["schemas"]["ColorEnum"] | components["schemas"]["BlankEnum"];
+            /** @default newest */
+            sort: components["schemas"]["SortEnum"];
+        };
+        /**
+         * @description A saved search's filters, named like the feed's query parameters (GET /api/listings/).
+         *     Blank or null means "any".
+         */
+        SavedSearchFiltersRequest: {
+            /** @default  */
+            q: string;
+            /**
+             * @description A school slug, "all", or blank for your own school.
+             * @default
+             */
+            school: string;
+            category?: string | null;
+            /** @default  */
+            brand: string;
+            /** @description In cents. */
+            min_price?: number | null;
+            /** @description In cents. */
+            max_price?: number | null;
+            /**
+             * @description Exact size. Jeans and pants are "<waist>x<inseam>", e.g. 32x30.
+             * @default
+             */
+            size: string;
+            /** @default  */
+            condition: components["schemas"]["ConditionEnum"] | components["schemas"]["BlankEnum"];
+            /** @default  */
+            color: components["schemas"]["ColorEnum"] | components["schemas"]["BlankEnum"];
+            /** @default newest */
+            sort: components["schemas"]["SortEnum"];
+        };
         School: {
             name: string;
             short_name: string;
@@ -1785,6 +2227,8 @@ export interface components {
             readonly short_name: string;
             readonly colors: string[];
         };
+        /** @enum {string} */
+        SectionEnum: "current" | "history" | "cancelled" | "archived";
         SellerSummary: {
             readonly id: number;
             readonly username: string;
@@ -1793,6 +2237,13 @@ export interface components {
             body: string;
             listing_id?: number;
         };
+        /**
+         * @description * `newest` - Newly listed
+         *     * `price_asc` - Price: low to high
+         *     * `price_desc` - Price: high to low
+         * @enum {string}
+         */
+        SortEnum: "newest" | "price_asc" | "price_desc";
         StaffAppeal: {
             readonly id: number;
             readonly action: components["schemas"]["Action"];
@@ -1891,6 +2342,30 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    account_reactivate_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReactivateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReactivateRequest"];
+                "multipart/form-data": components["schemas"]["ReactivateRequest"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     blocks_list: {
         parameters: {
             query?: never;
@@ -1952,6 +2427,28 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    bookmarks_retrieve: {
+        parameters: {
+            query?: {
+                /** @description `next_cursor` from the last page. */
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookmarkPage"];
+                };
             };
         };
     };
@@ -2150,6 +2647,15 @@ export interface operations {
         parameters: {
             query?: {
                 conversation?: number;
+                /**
+                 * @description current: in progress or under review. history: completed purchases, sales and trades only. cancelled: canceled deals. archived: declined and expired deals, plus canceled ones you archived.
+                 *
+                 *     * `current` - current
+                 *     * `history` - history
+                 *     * `cancelled` - cancelled
+                 *     * `archived` - archived
+                 */
+                section?: "current" | "history" | "cancelled" | "archived";
             };
             header?: never;
             path?: never;
@@ -2260,6 +2766,47 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Deal"];
                 };
+            };
+        };
+    };
+    deals_archive_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Deal"];
+                };
+            };
+        };
+    };
+    deals_archive_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -2434,6 +2981,33 @@ export interface operations {
             };
         };
     };
+    deals_report_problem_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportProblemRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReportProblemRequest"];
+                "multipart/form-data": components["schemas"]["ReportProblemRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Deal"];
+                };
+            };
+        };
+    };
     deals_trade_offer_create: {
         parameters: {
             query?: never;
@@ -2497,6 +3071,8 @@ export interface operations {
                 max_price?: number;
                 /** @description In cents. */
                 min_price?: number;
+                /** @description Keywords. Every word must appear in the title, brand or description. */
+                q?: string;
                 /** @description A school slug, or "all". Defaults to your school. */
                 school?: string;
                 /** @description Exact size, any case, e.g. 32x30. */
@@ -2668,6 +3244,61 @@ export interface operations {
             };
             /** @description The listing isn't Available, so it can't be edited. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listings_bookmark_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookmarkState"];
+                };
+            };
+            /** @description It's your own listing. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The listing isn't Available or Pending, so it can't be saved. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listings_bookmark_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2880,6 +3511,49 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MyAppeal"];
+                };
+            };
+        };
+    };
+    me_deactivate_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeactivateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DeactivateRequest"];
+                "multipart/form-data": components["schemas"]["DeactivateRequest"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    me_deactivation_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeactivationPreview"];
                 };
             };
         };
@@ -3240,6 +3914,31 @@ export interface operations {
             };
         };
     };
+    password_reset_key_status_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetKeyStatusRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PasswordResetKeyStatusRequestRequest"];
+                "multipart/form-data": components["schemas"]["PasswordResetKeyStatusRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasswordResetKeyStatus"];
+                };
+            };
+        };
+    };
     reports_create: {
         parameters: {
             query?: never;
@@ -3261,6 +3960,118 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReportReceipt"];
+                };
+            };
+        };
+    };
+    saved_searches_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedSearch"][];
+                };
+            };
+        };
+    };
+    saved_searches_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavedSearchCreateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SavedSearchCreateRequest"];
+                "multipart/form-data": components["schemas"]["SavedSearchCreateRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedSearch"];
+                };
+            };
+        };
+    };
+    saved_searches_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedSearch"];
+                };
+            };
+        };
+    };
+    saved_searches_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    saved_searches_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedSavedSearchUpdateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedSavedSearchUpdateRequest"];
+                "multipart/form-data": components["schemas"]["PatchedSavedSearchUpdateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedSearch"];
                 };
             };
         };
