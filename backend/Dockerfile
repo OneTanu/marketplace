@@ -23,5 +23,13 @@ RUN if [ "$INSTALL_DEV" = "true" ]; then uv sync --frozen --no-cache; else uv sy
 COPY --chown=app . .
 USER app
 
+# Collect static files (the admin's CSS and JS) into the image for WhiteNoise. Production
+# settings need these variables to load; these placeholders exist only for this build step and
+# are never used at runtime, where the host provides the real values.
+RUN DJANGO_SETTINGS_MODULE=config.settings.prod DJANGO_SECRET_KEY=build-only \
+    DJANGO_ALLOWED_HOSTS=localhost WEB_APP_URL=https://build.invalid \
+    POSTGRES_DB=build POSTGRES_USER=build POSTGRES_PASSWORD=build POSTGRES_HOST=localhost \
+    POSTGRES_PORT=5432 python manage.py collectstatic --noinput
+
 EXPOSE 8000
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]

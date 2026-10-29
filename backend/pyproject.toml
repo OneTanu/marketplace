@@ -12,6 +12,7 @@ dependencies = [
     "pillow>=12.3.0",
     "procrastinate[django]>=3.10.0",
     "psycopg[binary]>=3.3.6",
+    "whitenoise>=6.9",
 ]
 
 [dependency-groups]

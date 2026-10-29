@@ -24,3 +24,14 @@ SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30
+
+# Static files are collected into the image at build time (see the Dockerfile) and served by
+# WhiteNoise with hashed, compressed, long-cached names. Only production collects them, so
+# STATIC_ROOT lives here (elsewhere WhiteNoise would warn that the folder is missing).
+STATIC_ROOT = BASE_DIR / "staticfiles"  # noqa: F405
+STORAGES = {
+    # Uploaded photos still go to local disk here; production needs object storage (next step),
+    # because a host like Heroku wipes the disk on every restart and deploy.
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
