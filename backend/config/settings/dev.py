@@ -3,6 +3,9 @@ import os
 from .base import *  # noqa: F403
 
 DEBUG = True
+# Development never uses a hosted DATABASE_URL, even if one is set: a debug server must not
+# run against real students' data. Hosted Postgres is for config.settings.prod only.
+DATABASES = {"default": LOCAL_DATABASE}  # noqa: F405
 SECRET_KEY = "dev-only-insecure-secret-key"  # noqa: S105
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0"]
 

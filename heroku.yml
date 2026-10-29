@@ -1,0 +1,18 @@
+# Heroku container deploys for the Django API (the Next.js web app is hosted separately).
+# - release: runs migrations before new code goes live; a failure stops the deploy.
+# - web: gunicorn on Heroku's $PORT (WEB_CONCURRENCY sets the worker count).
+# - worker: the Procrastinate job worker (deal deadlines, alerts, thumbnails, emails).
+# Migrations and the worker use DIRECT_DATABASE_URL (config/database.py picks it).
+build:
+  docker:
+    web: backend/Dockerfile
+run:
+  web: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --access-logfile -
+  worker:
+    command:
+      - python manage.py procrastinate worker
+    image: web
+release:
+  image: web
+  command:
+    - python manage.py migrate --noinput

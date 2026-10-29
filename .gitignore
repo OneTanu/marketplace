@@ -4,6 +4,7 @@ docs/
 # Secrets and local environment files
 .env
 .env.*
+!.env.example
 
 # Python
 __pycache__/

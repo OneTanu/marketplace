@@ -3,6 +3,8 @@
 import os
 from pathlib import Path
 
+from config.database import database_from_environment
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
@@ -40,6 +42,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Serves /static (the admin's CSS and JS) from gunicorn in production.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -68,16 +72,17 @@ TEMPLATES = [
 ]
 
 # Defaults match docker-compose.yml; the db container is published on host port 5433.
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("POSTGRES_DB", "tanu"),
-        "USER": os.environ.get("POSTGRES_USER", "tanu"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "tanu"),
-        "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
-        "PORT": os.environ.get("POSTGRES_PORT", "5433"),
-    }
+# Hosted Postgres (Supabase) comes from DATABASE_URL / DIRECT_DATABASE_URL (config/database.py);
+# local Docker, CI and E2E use the separate POSTGRES_* variables.
+LOCAL_DATABASE = {
+    "ENGINE": "django.db.backends.postgresql",
+    "NAME": os.environ.get("POSTGRES_DB", "tanu"),
+    "USER": os.environ.get("POSTGRES_USER", "tanu"),
+    "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "tanu"),
+    "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
+    "PORT": os.environ.get("POSTGRES_PORT", "5433"),
 }
+DATABASES = {"default": database_from_environment() or LOCAL_DATABASE}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "accounts.User"
@@ -99,7 +104,6 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # User uploads (listing photos). Local disk in dev; cloud storage (S3/R2) in production.
 MEDIA_URL = "media/"
