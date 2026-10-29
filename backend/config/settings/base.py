@@ -3,6 +3,8 @@
 import os
 from pathlib import Path
 
+from config.database import database_from_environment
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
@@ -68,16 +70,17 @@ TEMPLATES = [
 ]
 
 # Defaults match docker-compose.yml; the db container is published on host port 5433.
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("POSTGRES_DB", "tanu"),
-        "USER": os.environ.get("POSTGRES_USER", "tanu"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "tanu"),
-        "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
-        "PORT": os.environ.get("POSTGRES_PORT", "5433"),
-    }
+# Hosted Postgres (Supabase) comes from DATABASE_URL / DIRECT_DATABASE_URL (config/database.py);
+# local Docker, CI and E2E use the separate POSTGRES_* variables.
+LOCAL_DATABASE = {
+    "ENGINE": "django.db.backends.postgresql",
+    "NAME": os.environ.get("POSTGRES_DB", "tanu"),
+    "USER": os.environ.get("POSTGRES_USER", "tanu"),
+    "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "tanu"),
+    "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
+    "PORT": os.environ.get("POSTGRES_PORT", "5433"),
 }
+DATABASES = {"default": database_from_environment() or LOCAL_DATABASE}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "accounts.User"
