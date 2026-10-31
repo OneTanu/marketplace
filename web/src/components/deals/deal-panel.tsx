@@ -10,6 +10,7 @@ import type { components } from "@/lib/api/schema";
 import { centsToDollars } from "@/lib/money";
 import { createReview, listDealReviews } from "@/lib/reviews";
 import { formatDateTime } from "@/lib/time";
+import { MeetingSpotName } from "@/components/deals/meeting-spot-name";
 
 type Deal = components["schemas"]["Deal"];
 type MeetingSpot = components["schemas"]["MeetingSpot"];
@@ -200,7 +201,7 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
           <p>Meet in a public campus location. Inspect the item and exchange payment in person. Tanu doesn’t handle or verify payment.</p>
           {acceptedMeetup && (
             <p className="mt-1 font-semibold text-ink">
-              {acceptedMeetup.meeting_spot.name} · {deadlineText(acceptedMeetup.starts_at)}
+              <MeetingSpotName spot={acceptedMeetup.meeting_spot} /> · {deadlineText(acceptedMeetup.starts_at)}
             </p>
           )}
           <p className="mt-1">
@@ -228,7 +229,7 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
             {meetups.fromOther.map((proposal) => (
               <button key={proposal.id} type="button" onClick={() => setMeetupProposalId(proposal.id)} aria-pressed={meetupProposalId === proposal.id} className={`rounded-lg border px-3 py-2 text-left text-xs ${meetupProposalId === proposal.id ? "border-ink bg-background ring-1 ring-ink" : "border-line"}`}>
                 <span className="block font-bold text-ink">{deadlineText(proposal.starts_at)}</span>
-                <span className="block text-muted">{proposal.meeting_spot.name}</span>
+                <span className="block text-muted"><MeetingSpotName spot={proposal.meeting_spot} /></span>
               </button>
             ))}
           </div>
@@ -240,7 +241,7 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
           <ul className="mt-2 space-y-2">
             {meetingSpots.map((spot) => (
               <li key={spot.id}>
-                <p className="font-semibold">{spot.name}{spot.is_indoor ? " · Indoors" : ""}</p>
+                <p className="font-semibold"><MeetingSpotName spot={spot} /></p>
                 <p className="text-xs leading-5 text-muted">{spot.directions}</p>
                 {spot.safety_note && <p className="text-xs leading-5 text-muted">{spot.safety_note}</p>}
               </li>

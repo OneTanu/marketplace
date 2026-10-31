@@ -7,6 +7,7 @@ import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
 import { getMeetupPreferences, saveMeetupPreferences } from "@/lib/deals";
 import { getCurrentUser } from "@/lib/platform";
+import { MeetingSpotName } from "@/components/deals/meeting-spot-name";
 
 type MeetingSpot = components["schemas"]["MeetingSpot"];
 type Override = components["schemas"]["AvailabilityOverrideRequest"];
@@ -158,7 +159,7 @@ export function MeetupPreferences() {
             <label key={spot.id} className="flex cursor-pointer items-start gap-3 rounded-xl border border-line p-4">
               <input type="checkbox" checked={selectedSpots.includes(spot.id)} onChange={() => toggleSpot(spot.id)} className="mt-1 size-4 accent-[var(--brand)]" />
               <span>
-                <span className="block font-bold">{spot.name}{spot.is_indoor ? " · Indoors" : ""}</span>
+                <span className="block font-bold"><MeetingSpotName spot={spot} /></span>
                 <span className="mt-1 block text-sm leading-5 text-muted">{spot.directions}</span>
                 {spot.safety_note && <span className="mt-1 block text-xs text-brand">{spot.safety_note}</span>}
               </span>

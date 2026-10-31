@@ -26,6 +26,7 @@ import {
 } from "@/lib/deals";
 import { centsToDollars } from "@/lib/money";
 import { formatDateTime } from "@/lib/time";
+import { MeetingSpotName } from "@/components/deals/meeting-spot-name";
 
 type Deal = components["schemas"]["Deal"];
 type Role = "buyer" | "seller";
@@ -278,7 +279,7 @@ function DealCard({ deal, onChange }: { deal: Deal; onChange: (deal: Deal) => vo
         <div className="mt-3 rounded-lg bg-surface p-3 text-sm">
           {acceptedMeetup ? (
             <>
-              <p className="font-bold text-ink">{acceptedMeetup.meeting_spot.name}</p>
+              <p className="font-bold text-ink"><MeetingSpotName spot={acceptedMeetup.meeting_spot} /></p>
               <p className="mt-0.5 text-muted">{deadline(acceptedMeetup.starts_at)} · {acceptedMeetup.meeting_spot.directions}</p>
             </>
           ) : (
@@ -301,7 +302,7 @@ function DealCard({ deal, onChange }: { deal: Deal; onChange: (deal: Deal) => vo
       {deal.status === "pending" && pendingFromOther && (
         <div className="mt-3 rounded-lg border border-signal bg-[var(--brand-soft)]/35 p-3 text-sm">
           <p className="font-bold">New meetup proposed</p>
-          <p className="mt-1 text-muted">{pendingFromOther.meeting_spot.name} · {deadline(pendingFromOther.starts_at)}</p>
+          <p className="mt-1 text-muted"><MeetingSpotName spot={pendingFromOther.meeting_spot} /> · {deadline(pendingFromOther.starts_at)}</p>
           <button type="button" onClick={approveReschedule} disabled={working} className="btn btn-primary btn-sm mt-3">Accept new meetup</button>
         </div>
       )}
@@ -324,7 +325,7 @@ function DealCard({ deal, onChange }: { deal: Deal; onChange: (deal: Deal) => vo
             {meetups.fromOther.map((proposal) => (
               <button key={proposal.id} type="button" onClick={() => setMeetupProposalId(proposal.id)} aria-pressed={meetupProposalId === proposal.id} className={`rounded-lg border px-3 py-2 text-left text-sm ${meetupProposalId === proposal.id ? "border-ink bg-surface ring-1 ring-ink" : "border-line"}`}>
                 <span className="block font-bold">{deadline(proposal.starts_at)}</span>
-                <span className="block text-xs text-muted">{proposal.meeting_spot.name}</span>
+                <span className="block text-xs text-muted"><MeetingSpotName spot={proposal.meeting_spot} /></span>
               </button>
             ))}
           </div>
