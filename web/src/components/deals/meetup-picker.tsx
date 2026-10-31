@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { components } from "@/lib/api/schema";
 import { getMeetupOptions } from "@/lib/deals";
 import { dayKey, formatTime, formatWeekdayDate } from "@/lib/time";
+import { MeetingSpotName } from "@/components/deals/meeting-spot-name";
 
 type MeetupOptions = components["schemas"]["MeetupOptions"];
 
@@ -87,7 +88,7 @@ export function MeetupPicker({
         <div className="mt-2 grid gap-2">
           {options.meeting_spots.map((spot) => (
             <button key={spot.id} type="button" onClick={() => setSpotId(spot.id)} aria-pressed={spot.id === spotId} className={`rounded-lg border px-3 py-2 text-left text-sm ${spot.id === spotId ? "border-ink bg-surface ring-1 ring-ink" : "border-line"}`}>
-              <span className="block font-bold">{spot.name}{spot.is_indoor ? " · Indoors" : ""}</span>
+              <span className="block font-bold"><MeetingSpotName spot={spot} /></span>
               <span className="block text-xs leading-5 text-muted">{spot.directions}</span>
             </button>
           ))}

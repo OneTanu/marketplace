@@ -17,6 +17,9 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
+      // allauth's URLs never end in "/". Route them first: on Vercel the slash rule below also
+      // matches paths without a slash and would add one, which allauth answers with 404.
+      { source: "/api/auth/:path*", destination: `${API_URL}/api/auth/:path*` },
       // ":path*" drops a trailing slash, so match the slash form first and keep it.
       { source: "/api/:path*/", destination: `${API_URL}/api/:path*/` },
       { source: "/api/:path*", destination: `${API_URL}/api/:path*` },
