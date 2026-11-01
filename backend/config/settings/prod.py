@@ -32,6 +32,18 @@ MAILERS = {
 DEFAULT_FROM_EMAIL = os.environ["DEFAULT_FROM_EMAIL"]
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
+# Rate limits (allauth's login, signup and reset limits; DRF throttles) count in the cache. A
+# memory cache would be per process, letting each gunicorn worker keep its own count, so
+# production shares one table in Postgres (created by accounts.0006).
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "tanu_cache",
+        # The default (300) would cull live counters once many students are signing in.
+        "OPTIONS": {"MAX_ENTRIES": 100_000},
+    }
+}
+
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
