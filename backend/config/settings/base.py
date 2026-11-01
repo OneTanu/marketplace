@@ -105,9 +105,16 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
-# User uploads (listing photos). Local disk in dev; cloud storage (S3/R2) in production.
+# User uploads. Local disk in dev; Cloudflare R2 in production (see prod.py). "default" holds
+# public files (listing photos); "private" holds files only moderators may see (report
+# evidence), which production serves through short-lived signed links.
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "private": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
 
 # --- Accounts (django-allauth, headless) ---
 # Signup is limited to verified emails on a domain registered to a signup-enabled School

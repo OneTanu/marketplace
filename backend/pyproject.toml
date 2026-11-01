@@ -7,6 +7,7 @@ dependencies = [
     "django>=6.1.1",
     "django-allauth[headless]>=65.19.6",
     "django-anymail[postmark]>=13",
+    "django-storages[s3]>=1.14",
     "djangorestframework>=3.18.1",
     "drf-spectacular>=0.30.0",
     "gunicorn>=26.2.0",

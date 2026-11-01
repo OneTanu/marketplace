@@ -5,8 +5,14 @@ staff action is a ModerationAction, which can't be edited or deleted once writte
 """
 
 from django.conf import settings
+from django.core.files.storage import storages
 from django.db import models
 from django.db.models import Q
+
+
+def private_storage():
+    """Where evidence files live: never public, only reachable through signed links."""
+    return storages["private"]
 
 
 class ModerationCase(models.Model):
@@ -182,7 +188,7 @@ class EvidenceFile(models.Model):
     """A copy of a reported photo. Sellers can delete their listing photos; these stay."""
 
     snapshot = models.ForeignKey(EvidenceSnapshot, on_delete=models.PROTECT, related_name="files")
-    file = models.FileField(upload_to="evidence/%Y/%m/")
+    file = models.FileField(upload_to="evidence/%Y/%m/", storage=private_storage)
     original_name = models.CharField(max_length=255, blank=True)
 
     def __str__(self):
