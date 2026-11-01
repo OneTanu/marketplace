@@ -19,6 +19,18 @@ if not (os.environ.get("DATABASE_URL") or os.environ.get("DIRECT_DATABASE_URL"))
         if _var not in os.environ:
             raise RuntimeError(f"{_var} (or DATABASE_URL) must be set in production")
 
+# Email goes through Postmark (transactional only: verification, password resets, deal
+# notifications), behind django-anymail so the provider can change without code changes.
+# The sender's domain must be verified in Postmark, with its SPF/DKIM records in DNS.
+MAILERS = {
+    "default": {
+        "BACKEND": "anymail.backends.postmark.EmailBackend",
+        "OPTIONS": {"server_token": os.environ["POSTMARK_SERVER_TOKEN"]},
+    }
+}
+DEFAULT_FROM_EMAIL = os.environ["DEFAULT_FROM_EMAIL"]
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True

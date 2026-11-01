@@ -29,7 +29,8 @@ USER app
 RUN DJANGO_SETTINGS_MODULE=config.settings.prod DJANGO_SECRET_KEY=build-only \
     DJANGO_ALLOWED_HOSTS=localhost WEB_APP_URL=https://build.invalid \
     POSTGRES_DB=build POSTGRES_USER=build POSTGRES_PASSWORD=build POSTGRES_HOST=localhost \
-    POSTGRES_PORT=5432 python manage.py collectstatic --noinput
+    POSTGRES_PORT=5432 POSTMARK_SERVER_TOKEN=build-only DEFAULT_FROM_EMAIL=build@build.invalid \
+    python manage.py collectstatic --noinput
 
 EXPOSE 8000
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
