@@ -3,6 +3,7 @@ import { Archivo } from "next/font/google";
 
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
+import { SITE_URL } from "@/lib/site";
 
 import "./globals.css";
 
@@ -12,10 +13,16 @@ const archivo = Archivo({
   axes: ["wdth"],
 });
 
+const DESCRIPTION = "Buy and sell with verified students at your school.";
+
 export const metadata: Metadata = {
+  // Makes the preview image (app/opengraph-image.tsx) an absolute URL, which link previews need.
+  metadataBase: new URL(SITE_URL),
   title: { default: "Tanu — Your campus marketplace", template: "%s · Tanu" },
-  description: "Buy and sell with verified students at your school.",
+  description: DESCRIPTION,
   appleWebApp: { capable: true, title: "Tanu", statusBarStyle: "default" },
+  openGraph: { siteName: "Tanu", type: "website", locale: "en_US", title: "Tanu — Your campus marketplace", description: DESCRIPTION },
+  twitter: { card: "summary_large_image", title: "Tanu — Your campus marketplace", description: DESCRIPTION },
 };
 
 export const viewport: Viewport = {
