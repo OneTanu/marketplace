@@ -98,3 +98,18 @@ STORAGES = {
     },
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
+
+# Error reporting: crashes and logged errors from the API and the job worker go to Sentry, so
+# someone hears about them. Optional (unset means off) so a missing DSN never blocks a deploy.
+# Students' personal data stays out: no user details, IP addresses, cookies or request bodies.
+if SENTRY_DSN := os.environ.get("SENTRY_DSN"):
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment="production",
+        send_default_pii=False,
+        max_request_body_size="never",
+        # Errors only; no performance tracing.
+        traces_sample_rate=0,
+    )
