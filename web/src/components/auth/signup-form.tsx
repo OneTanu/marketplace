@@ -46,6 +46,7 @@ export function SignupForm() {
     <Field label="Confirm password" name="confirm" type="password" autoComplete="new-password" minLength={8} required error={fieldError("confirm")} />
     <SupportedSchoolsNote />
     <SubmitButton pending={pending} pendingText="Creating your account…">Create student account</SubmitButton>
-    <p className="text-center text-xs leading-5 text-muted">By joining, you agree to Tanu’s Terms and Privacy Policy.</p>
+    {/* New tab, so following a link doesn't lose the half-filled form. */}
+    <p className="text-center text-xs leading-5 text-muted">By joining, you agree to Tanu’s <a href="/terms" target="_blank" rel="noopener" className="font-semibold text-ink underline underline-offset-2">Terms</a> and <a href="/privacy" target="_blank" rel="noopener" className="font-semibold text-ink underline underline-offset-2">Privacy Policy</a>.</p>
   </form>;
 }
