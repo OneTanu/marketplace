@@ -44,6 +44,17 @@ CACHES = {
     }
 }
 
+# Requests pass through two proxies, Vercel then Heroku's router, so X-Forwarded-For reads
+# "student, Vercel" and the student is second from the end. Without this, per-IP rate limits see
+# one internal address and every student on the site shares a single limit.
+# Vercel passes along a client-supplied X-Forwarded-For, so this address can be faked. That only
+# affects per-IP limits; per-account limits don't use it.
+ALLAUTH_TRUSTED_PROXY_COUNT = 2
+REST_FRAMEWORK["NUM_PROXIES"] = 2  # noqa: F405
+# Students on campus Wi-Fi can share a public address, so the per-IP limits are raised from
+# allauth's 20 and 30 a minute.
+ACCOUNT_RATE_LIMITS = {"signup": "60/m/ip", "login": "120/m/ip"}
+
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
