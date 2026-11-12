@@ -412,7 +412,7 @@ function DealSection({ title, description, deals, onChange, empty }: { title: st
         </div>
         <span className="text-sm font-semibold text-muted">{deals.length}</span>
       </div>
-      {deals.length ? <div className="mt-4 grid gap-3 lg:grid-cols-2">{deals.map((deal) => <DealCard key={deal.id} deal={deal} onChange={onChange} />)}</div> : <p className="rounded-xl bg-surface px-5 py-8 text-center text-sm text-muted">{empty}</p>}
+      {deals.length ? <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">{deals.map((deal) => <DealCard key={deal.id} deal={deal} onChange={onChange} />)}</div> : <p className="rounded-xl bg-surface px-5 py-8 text-center text-sm text-muted">{empty}</p>}
     </section>
   );
 }
