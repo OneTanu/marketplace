@@ -1,3 +1,6 @@
+import Image from "next/image";
+import type { ReactNode } from "react";
+
 import { schoolPalette } from "@/lib/school-colors";
 
 // The first color takes most of the stripe; the rest share what's left.
@@ -19,13 +22,17 @@ export type StudentIdCardProps = {
   schoolColors?: readonly string[];
   dateJoined: string;
   soldCount: number;
+  /** The student's profile photo; the first letter of their name shows without one. */
+  photoUrl?: string | null;
+  /** Shown over the bottom of the photo, e.g. a "Change photo" control on your own profile. */
+  photoAction?: ReactNode;
   /** The name is the page's h1 on a profile; the design lab nests the card under an h2. */
   nameAs?: "h1" | "h3";
 };
 
 // The profile header, shaped like a campus ID (a little shorter than the real 85.6 × 54 mm card)
 // without copying any school's real card: no logos, seals, ID numbers, or barcodes.
-export function StudentIdCard({ firstName, lastInitial, username, schoolName, schoolColors, dateJoined, soldCount, nameAs: Name = "h1" }: StudentIdCardProps) {
+export function StudentIdCard({ firstName, lastInitial, username, schoolName, schoolColors, dateJoined, soldCount, photoUrl, photoAction, nameAs: Name = "h1" }: StudentIdCardProps) {
   const { stripe } = schoolPalette(schoolColors);
   const name = firstName ? `${firstName}${lastInitial ? ` ${lastInitial}.` : ""}` : `@${username}`;
   const initial = (firstName[0] || username[0] || "T").toUpperCase();
@@ -36,7 +43,12 @@ export function StudentIdCard({ firstName, lastInitial, username, schoolName, sc
       <div className="absolute inset-x-0 top-0 flex h-4" aria-hidden="true">
         {stripe.map((color, index) => <span key={index} style={{ background: color, width: stripeWidth(index, stripe.length) }} />)}
       </div>
-      <div className="type-wide grid aspect-[4/5] place-items-center rounded-md bg-surface text-4xl font-black text-ink" aria-hidden="true">{initial}</div>
+      <div className="relative aspect-[4/5] overflow-hidden rounded-md bg-surface">
+        {photoUrl
+          ? <Image src={photoUrl} alt={`${name}’s profile photo`} fill unoptimized sizes="8rem" className="object-cover" />
+          : <div className="type-wide grid size-full place-items-center text-4xl font-black text-ink" aria-hidden="true">{initial}</div>}
+        {photoAction && <div className="absolute inset-x-1.5 bottom-1.5">{photoAction}</div>}
+      </div>
       <div className="min-w-0">
         <Name className="type-wide truncate text-[22px] font-black leading-none text-ink">{name}</Name>
         {schoolName && <p className="mt-1 text-[13px] text-muted">{schoolName}</p>}

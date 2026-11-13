@@ -703,6 +703,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/photo/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Upload a new profile photo, replacing any current one. It's stored as a square crop
+         *     of the photo's centre, with location and other metadata removed.
+         */
+        post: operations["me_photo_create"];
+        /** @description Set or remove my profile photo. Returns my account, with the new photo's URL. */
+        delete: operations["me_photo_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/restrictions/": {
         parameters: {
             query?: never;
@@ -1444,6 +1465,7 @@ export interface components {
             readonly school: components["schemas"]["School"] | null;
             instagram_handle?: string;
             profile_description?: string;
+            readonly profile_photo_url: string | null;
             readonly follower_count: number;
             readonly following_count: number;
             readonly sold_count: number;
@@ -1865,6 +1887,7 @@ export interface components {
             readonly id: number;
             readonly username: string;
             readonly first_name: string;
+            readonly profile_photo_url: string | null;
             readonly school: components["schemas"]["School"] | null;
             readonly is_available: boolean;
         };
@@ -2032,6 +2055,13 @@ export interface components {
          * @enum {integer}
          */
         PriorityEnum: 1 | 2 | 3;
+        ProfilePhotoUploadRequest: {
+            /**
+             * Format: binary
+             * @description A JPEG, PNG or WebP of up to 10 MB. Stored as a square crop of its centre.
+             */
+            photo: string;
+        };
         /**
          * @description * `weapon` - Weapon
          *     * `drugs` - Drugs or prescriptions
@@ -2051,6 +2081,7 @@ export interface components {
             readonly school: components["schemas"]["School"] | null;
             readonly instagram_handle: string;
             readonly profile_description: string;
+            readonly profile_photo_url: string | null;
             readonly follower_count: number;
             readonly following_count: number;
             readonly sold_count: number;
@@ -2277,6 +2308,7 @@ export interface components {
         SellerSummary: {
             readonly id: number;
             readonly username: string;
+            readonly profile_photo_url: string | null;
         };
         SendMessageRequest: {
             body: string;
@@ -3627,6 +3659,47 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["MyInfoRequest"];
                 };
+            };
+        };
+    };
+    me_photo_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ProfilePhotoUploadRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurrentUser"];
+                };
+            };
+        };
+    };
+    me_photo_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

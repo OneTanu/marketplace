@@ -12,10 +12,11 @@ class MessagingUserSerializer(serializers.ModelSerializer):
     school = SchoolSerializer(read_only=True, allow_null=True)
     # False for deactivated (or suspended) accounts: their messages stay, but no replies.
     is_available = serializers.BooleanField(source="is_active", read_only=True)
+    profile_photo_url = serializers.CharField(read_only=True, allow_null=True)
 
     class Meta:
         model = User
-        fields = ["id", "username", "first_name", "school", "is_available"]
+        fields = ["id", "username", "first_name", "profile_photo_url", "school", "is_available"]
         read_only_fields = fields
 
 

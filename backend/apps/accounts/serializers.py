@@ -17,6 +17,7 @@ class CurrentUserSerializer(serializers.ModelSerializer):
     follower_count = serializers.SerializerMethodField()
     following_count = serializers.SerializerMethodField()
     sold_count = serializers.SerializerMethodField()
+    profile_photo_url = serializers.CharField(read_only=True, allow_null=True)
     # Staff roles, so the app can show the moderation portal link.
     is_moderator = serializers.SerializerMethodField()
     is_senior_moderator = serializers.SerializerMethodField()
@@ -32,6 +33,7 @@ class CurrentUserSerializer(serializers.ModelSerializer):
             "school",
             "instagram_handle",
             "profile_description",
+            "profile_photo_url",
             "follower_count",
             "following_count",
             "sold_count",
@@ -77,6 +79,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
     sold_count = serializers.IntegerField(read_only=True)
     is_following = serializers.BooleanField(read_only=True)
     is_self = serializers.SerializerMethodField()
+    profile_photo_url = serializers.CharField(read_only=True, allow_null=True)
     # Only the initial: the full last name stays private.
     last_initial = serializers.SerializerMethodField()
 
@@ -90,6 +93,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
             "school",
             "instagram_handle",
             "profile_description",
+            "profile_photo_url",
             "follower_count",
             "following_count",
             "sold_count",
@@ -112,6 +116,12 @@ class FollowListPageSerializer(serializers.Serializer):
     next_cursor = serializers.CharField(
         allow_null=True,
         help_text="Pass as `cursor` to get the next page. Null on the last page.",
+    )
+
+
+class ProfilePhotoUploadSerializer(serializers.Serializer):
+    photo = serializers.FileField(
+        help_text="A JPEG, PNG or WebP of up to 10 MB. Stored as a square crop of its centre."
     )
 
 

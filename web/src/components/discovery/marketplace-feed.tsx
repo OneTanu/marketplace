@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { Avatar } from "@/components/profile/avatar";
 import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
 import { categoryTree, loadItemCategories, SHOE_SHORTCUTS, type CategoryTree } from "@/lib/categories";
@@ -31,9 +32,8 @@ type Feed =
   | { key: string; state: "ready"; listings: Card[]; next: string | null; loadingMore: boolean; moreFailed: boolean };
 
 function UserResult({ user }: { user: PublicUser }) {
-  const initial = (user.first_name[0] || user.username[0]).toUpperCase();
   return <Link href={`/users/${user.username}`} className="flex items-center gap-3.5 rounded-xl border border-line p-3.5 transition hover:border-ink">
-    <div className="type-wide grid size-11 shrink-0 place-items-center rounded-full bg-[var(--brand-soft)] text-base font-extrabold text-brand">{initial}</div>
+    <Avatar photoUrl={user.profile_photo_url} firstName={user.first_name} username={user.username} className="size-11 rounded-full text-base" />
     <div className="min-w-0 flex-1"><p className="font-bold">{user.first_name || `@${user.username}`}</p><p className="truncate text-sm text-muted">@{user.username}{user.school ? `, ${user.school.short_name}` : ""}</p></div>
   </Link>;
 }
