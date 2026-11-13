@@ -1803,7 +1803,10 @@ export interface components {
             readonly accessibility_notes: string;
         };
         MeetupOptions: {
+            /** @description The seller has meetup spots here and open times in the next 7 days, so a request can propose one. */
             readonly seller_configured: boolean;
+            /** @description The seller has saved meetup spots and times, even if none are open soon. */
+            readonly seller_has_preferences: boolean;
             readonly meeting_spots: components["schemas"]["MeetingSpot"][];
             readonly slots: components["schemas"]["MeetupSlot"][];
         };

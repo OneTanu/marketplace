@@ -85,6 +85,10 @@ MAX_AMOUNT_CENTS = 1_000_000
 MAX_TRADE_ITEMS = 5
 MEETUP_SLOT = timedelta(minutes=30)
 MEETUP_NOTICE = timedelta(hours=1)
+# How far ahead a meetup can be booked: from a request, and for a deal's first agreed meetup,
+# from acceptance. That meetup sets the handoff deadline if it's after HANDOFF_TIME, so a
+# listing is held for about a week at most (plus one reschedule).
+MEETUP_BOOKING_WINDOW = timedelta(days=7)
 LATE_MINUTES = {5, 10, 15}
 # A repeated identical arrival update within this window is the same update.
 STATUS_UPDATE_REPEAT = timedelta(minutes=1)
@@ -157,8 +161,9 @@ def update_meetup_preferences(*, user, meeting_spot_ids, windows, overrides) -> 
     return preference
 
 
-def meetup_slots(*, seller, now=None, days: int = 4) -> list[datetime]:
-    """Return seller-local half-hour starts after notice, bounded for pre-accept scheduling."""
+def meetup_slots(*, seller, now=None) -> list[datetime]:
+    """The seller's open half-hour meetup starts, from MEETUP_NOTICE to MEETUP_BOOKING_WINDOW
+    from now, in UTC."""
     try:
         preference = seller.meetup_preference
     except MeetupPreference.DoesNotExist:
@@ -166,7 +171,8 @@ def meetup_slots(*, seller, now=None, days: int = 4) -> list[datetime]:
     zone = _local_zone()
     now = now or timezone.now()
     earliest = now + MEETUP_NOTICE
-    latest = now + SELLER_RESPONSE_TIME + HANDOFF_TIME
+    latest = now + MEETUP_BOOKING_WINDOW
+    days = MEETUP_BOOKING_WINDOW.days
     local_now = now.astimezone(zone)
     windows = list(preference.availability_windows.all())
     overrides = list(
@@ -362,9 +368,26 @@ def _validate_meetup(*, deal: Deal, actor, meeting_spot: MeetingSpot, starts_at:
         raise ValidationError(
             {"starts_at": "Choose one of the seller's currently available times."}
         )
-    if deal.handoff_deadline is not None and starts_at > deal.handoff_deadline:
+    if deal.handoff_deadline is not None and starts_at > _meetup_limit(deal):
         if not _can_extend_to(deal, starts_at):
             raise ValidationError({"starts_at": _extension_refusal(deal)})
+
+
+def _first_meetup_limit(deal: Deal) -> datetime | None:
+    """While a Pending deal has no agreed meetup yet, the latest its first one can be (it then
+    sets the handoff deadline without using the one reschedule). None once one was agreed."""
+    if deal.accepted_at is None:
+        return None
+    agreed = deal.meetup_proposals.filter(
+        status__in=[MeetupProposal.Status.ACCEPTED, MeetupProposal.Status.SUPERSEDED]
+    )
+    return None if agreed.exists() else deal.accepted_at + MEETUP_BOOKING_WINDOW
+
+
+def _meetup_limit(deal: Deal) -> datetime:
+    """The latest a meetup on a Pending deal can be without using the one reschedule."""
+    first = _first_meetup_limit(deal)
+    return max(deal.handoff_deadline, first) if first else deal.handoff_deadline
 
 
 def _can_extend_to(deal: Deal, starts_at: datetime) -> bool:
@@ -476,7 +499,11 @@ def _accept_meetup(
         raise ValidationError("That meetup time has passed. Suggest a new time.")
     if proposal.expires_at is not None and proposal.expires_at <= now:
         raise ValidationError("That meetup suggestion expired. Suggest a new time.")
-    extends = deal.handoff_deadline is not None and proposal.starts_at > deal.handoff_deadline
+    later = deal.handoff_deadline is not None and proposal.starts_at > deal.handoff_deadline
+    # The first agreed meetup may set a later deadline; after that, moving it later is the
+    # one reschedule.
+    first = later and proposal.starts_at <= _meetup_limit(deal)
+    extends = later and not first
     if extends and not _can_extend_to(deal, proposal.starts_at):
         raise ValidationError(_extension_refusal(deal))
     # Only now is the old meetup replaced: until both agree, the confirmed one stands.
@@ -490,17 +517,20 @@ def _accept_meetup(
     proposal.save(update_fields=["status", "responded_at"])
     # When it's confirmed by accepting the deal itself, the acceptance is the news.
     _event(deal, "meetup_accepted", actor, meetup_proposal_id=proposal.pk, quiet=allow_own)
-    if extends:
+    if later:
         previous = deal.handoff_deadline
         deal.handoff_deadline = proposal.starts_at + HANDOFF_CONFIRM_GRACE
-        deal.handoff_extensions += 1
+        deal.handoff_extensions += 1 if extends else 0
         deal.save(update_fields=["handoff_deadline", "handoff_extensions", "updated_at"])
         _event(
             deal,
-            "handoff_extended",
+            # A later first meetup sets the deadline; moving the meetup later is the extension.
+            "handoff_extended" if extends else "handoff_deadline_set",
             actor,
             previous_deadline=previous.isoformat(),
             handoff_deadline=deal.handoff_deadline.isoformat(),
+            # Set by the meetup agreed with the acceptance itself: the acceptance is the news.
+            quiet=allow_own,
         )
         _schedule_expiry(deal, deal.handoff_deadline, S.PENDING)
     return proposal
@@ -1505,6 +1535,11 @@ DEAL_NOTIFICATIONS = {
         "both",
         "Handoff deadline extended for {item}",
         "The new meetup time moved the deadline. It can only be extended once.",
+    ),
+    "handoff_deadline_set": (
+        "both",
+        "Handoff deadline set for {item}",
+        "The deadline to confirm the handoff now follows your meetup time.",
     ),
     "canceled_by_moderation": (
         "both",

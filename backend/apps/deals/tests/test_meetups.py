@@ -193,3 +193,106 @@ def test_rescheduling_to_the_confirmed_meetup_is_refused():
         services.propose_meetup(
             deal=deal, actor=buyer, meeting_spot=spot, starts_at=confirmed.starts_at
         )
+
+
+@pytest.mark.django_db
+def test_meetups_can_be_booked_up_to_a_week_ahead():
+    seller, _ = seller_with_meetups("week-seller")
+    now = timezone.now()
+
+    slots = services.meetup_slots(seller=seller, now=now)
+
+    assert slots[0] >= now + services.MEETUP_NOTICE
+    assert slots[-1] <= now + timedelta(days=7)
+    assert slots[-1] > now + timedelta(days=6)
+
+
+@pytest.mark.django_db
+def test_a_meetup_agreed_at_acceptance_sets_a_later_deadline_without_using_the_reschedule():
+    seller, spot = seller_with_meetups("late-seller")
+    buyer = verified_user("late-buyer")
+    five_days = next(
+        slot
+        for slot in services.meetup_slots(seller=seller)
+        if slot > timezone.now() + timedelta(days=5)
+    )
+    deal = services.create_deal(
+        listing=listing_for(seller),
+        buyer=buyer,
+        kind=Deal.Kind.BUY_NOW,
+        meeting_spot=spot,
+        proposed_starts_at=[five_days],
+    )
+
+    services.accept_deal(deal=deal, actor=seller)
+    deal.refresh_from_db()
+
+    assert deal.status == Deal.Status.PENDING
+    assert deal.handoff_deadline == five_days + services.HANDOFF_CONFIRM_GRACE
+    assert deal.handoff_extensions == 0
+    # The acceptance is the news; the deadline change doesn't send its own notification.
+    assert deal.events.get(event_type="handoff_deadline_set").data["quiet"] is True
+
+
+@pytest.mark.django_db
+def test_an_early_meetup_keeps_the_72_hour_deadline():
+    seller, spot = seller_with_meetups("soon-seller")
+    buyer = verified_user("soon-buyer")
+    deal = offer_with_times(seller, spot, buyer, count=1)
+
+    services.accept_deal(deal=deal, actor=seller)
+    deal.refresh_from_db()
+
+    assert deal.handoff_deadline == deal.accepted_at + services.HANDOFF_TIME
+    assert not deal.events.filter(event_type="handoff_deadline_set").exists()
+
+
+@pytest.mark.django_db
+def test_first_meetup_after_acceptance_can_be_a_week_out_then_only_one_reschedule():
+    seller, spot = seller_with_meetups("first-seller")
+    buyer = verified_user("first-buyer")
+    deal = services.create_deal(listing=listing_for(seller), buyer=buyer, kind=Deal.Kind.BUY_NOW)
+    services.accept_deal(deal=deal, actor=seller)  # no meetup agreed yet
+    slots = services.meetup_slots(seller=seller)
+    six_days = next(slot for slot in slots if slot > timezone.now() + timedelta(days=6))
+
+    proposal = services.propose_meetup(
+        deal=deal, actor=buyer, meeting_spot=spot, starts_at=six_days
+    )
+    services.accept_meetup(deal=deal, actor=seller, proposal=proposal)
+    deal.refresh_from_db()
+
+    assert deal.handoff_deadline == six_days + services.HANDOFF_CONFIRM_GRACE
+    assert deal.handoff_extensions == 0
+    assert deal.events.filter(event_type="handoff_deadline_set").count() == 1
+
+    # Moving it later now is the one reschedule (within 48 hours of the deadline).
+    later = next(slot for slot in slots if slot > deal.handoff_deadline)
+    moved = services.propose_meetup(deal=deal, actor=seller, meeting_spot=spot, starts_at=later)
+    services.accept_meetup(deal=deal, actor=buyer, proposal=moved)
+    deal.refresh_from_db()
+    assert deal.handoff_extensions == 1
+    assert deal.events.filter(event_type="handoff_extended").count() == 1
+
+
+@pytest.mark.django_db
+def test_first_meetup_must_be_within_a_week_of_acceptance():
+    seller, spot = seller_with_meetups("old-seller")
+    buyer = verified_user("old-buyer")
+    deal = services.create_deal(listing=listing_for(seller), buyer=buyer, kind=Deal.Kind.BUY_NOW)
+    services.accept_deal(deal=deal, actor=seller)
+    # Accepted 4 days ago with no meetup agreed: the deadline is about now.
+    accepted = timezone.now() - timedelta(days=4)
+    Deal.objects.filter(pk=deal.pk).update(
+        accepted_at=accepted, handoff_deadline=timezone.now() + timedelta(hours=1)
+    )
+    deal.refresh_from_db()
+    six_days = next(
+        slot
+        for slot in services.meetup_slots(seller=seller)
+        if slot > timezone.now() + timedelta(days=6)
+    )
+
+    # 10 days after acceptance, and more than 48 hours past the deadline: refused.
+    with pytest.raises(ValidationError, match="48 hours"):
+        services.propose_meetup(deal=deal, actor=buyer, meeting_spot=spot, starts_at=six_days)

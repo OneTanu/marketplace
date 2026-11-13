@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.services import verified_users
+from apps.trust import checks as trust_checks
 
 from . import pagination, services
 from .models import Bookmark, Category, Listing, ListingKind, ListingPhoto
@@ -56,9 +57,12 @@ def card_queryset(listings, viewer):
 
 
 def visible_to(user, listings):
-    """The listings the user can see: all except other sellers' Removed listings, which look
-    as if they don't exist."""
-    return listings.exclude(Q(status=Listing.Status.REMOVED) & ~Q(seller=user))
+    """The listings the user can see: all except other sellers' Removed listings, and those of
+    sellers either of them has blocked. Both look as if they don't exist."""
+    listings = listings.exclude(Q(status=Listing.Status.REMOVED) & ~Q(seller=user))
+    if user.pk is not None:
+        listings = listings.exclude(seller_id__in=trust_checks.blocked_either_way_ids(user.pk))
+    return listings
 
 
 @extend_schema(
@@ -179,7 +183,12 @@ class PublicSellerListingsView(generics.ListAPIView):
     serializer_class = ListingCardSerializer
 
     def get_queryset(self):
-        seller = get_object_or_404(verified_users(), username__iexact=self.kwargs["username"])
+        seller = get_object_or_404(
+            verified_users().exclude(
+                pk__in=trust_checks.blocked_either_way_ids(self.request.user.pk)
+            ),
+            username__iexact=self.kwargs["username"],
+        )
         listing_status = self.request.query_params.get("status")
         if listing_status is not None and listing_status not in PUBLIC_PROFILE_STATUSES:
             raise serializers.ValidationError(

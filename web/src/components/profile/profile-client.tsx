@@ -229,6 +229,7 @@ export function ProfileClient() {
             <Link href="/profile/searches" className="btn btn-secondary">Saved searches</Link>
             <Link href="/profile/meetup" className="btn btn-secondary">Meetup preferences</Link>
             <Link href="/profile/standing" className="btn btn-secondary">Account status</Link>
+            <Link href="/profile/blocked" className="btn btn-secondary">Blocked accounts</Link>
             {user.is_moderator && <Link href="/moderation" className="btn btn-secondary">Moderation</Link>}
             <button onClick={() => { setEditing((value) => !value); setSaved(false); setErrors({}); }} className="btn btn-secondary">{editing ? "Cancel" : "Edit profile"}</button>
           </div>

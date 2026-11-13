@@ -254,7 +254,8 @@ def test_blocking_ends_follows_both_ways_and_stops_new_ones(client):
 
     assert not Follow.objects.exists()
     client.force_login(other)
-    assert client.post("/api/users/me/follow/").status_code == 400
+    # Blocked students are hidden from each other, so the profile is "not found".
+    assert client.post("/api/users/me/follow/").status_code == 404
     assert not Follow.objects.exists()
     with pytest.raises(ValidationError, match="isn't available"):
         follow_user(follower=other, following=me)

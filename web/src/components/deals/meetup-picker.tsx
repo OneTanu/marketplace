@@ -78,7 +78,13 @@ export function MeetupPicker({
     return <p className="mt-3 rounded-lg bg-surface p-3 text-sm text-muted">Couldn&apos;t load meetup options. Try again.</p>;
   }
   if (!options.seller_configured) {
-    return <p className="mt-3 rounded-lg border border-line bg-surface p-3 text-sm leading-6 text-muted">This seller hasn&apos;t set meetup times yet. Agree on a campus spot and time in chat.</p>;
+    const spotNames = options.meeting_spots.map((spot) => spot.name);
+    return <div className="mt-3 rounded-lg border border-line bg-surface p-3 text-sm leading-6 text-muted">
+      {options.seller_has_preferences
+        ? <p>None of this seller&apos;s usual meetup times are open in the next week. Send your request and agree on a time in chat.</p>
+        : <p>This seller hasn&apos;t set meetup times yet. Agree on a campus spot and time in chat.</p>}
+      {spotNames.length > 0 && <p className="mt-1">They usually meet at <span className="font-semibold text-ink">{spotNames.join(", ")}</span>.</p>}
+    </div>;
   }
 
   return (

@@ -48,7 +48,7 @@ export default function PrivacyPage() {
         "Signed-in students can see who follows you and who you follow.",
         "Messages are visible to the people in the conversation. Deal and meetup details are visible to the buyer and seller in that deal.",
         "Tanu moderators can see reported content and the records needed to review a report, such as the listing, the conversation, or the deal history involved. Access to evidence is logged.",
-        "If you block someone, neither of you can message or make deals with the other. They aren’t told that you blocked them.",
+        "If you block someone, neither of you can see the other’s profile or listings, follow, message, or make deals with the other. They aren’t told that you blocked them.",
       ]} />
     </LegalSection>
 

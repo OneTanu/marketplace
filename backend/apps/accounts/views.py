@@ -50,11 +50,19 @@ def follow_count(**filters):
     return Coalesce(Subquery(follows.annotate(total=Count("pk")).values("total")), 0)
 
 
+def visible_users(viewer):
+    """Verified students the viewer may see: everyone except students either of them has
+    blocked, who look as if they don't exist."""
+    from apps.trust.checks import blocked_either_way_ids
+
+    return verified_users().exclude(pk__in=blocked_either_way_ids(viewer.pk))
+
+
 def public_users(viewer):
-    """Verified users loaded for PublicUserSerializer in a fixed number of queries, however many
+    """Visible users loaded for PublicUserSerializer in a fixed number of queries, however many
     there are: follow and sold counts and the viewer's follow state are annotated."""
     return (
-        verified_users()
+        visible_users(viewer)
         .select_related("school")
         .prefetch_related("school__domains")
         .annotate(
@@ -193,7 +201,7 @@ class FollowListView(GenericAPIView):
 
     def get(self, request, username):
         viewer = request.user
-        user = get_object_or_404(verified_users(), username__iexact=username)
+        user = get_object_or_404(visible_users(viewer), username__iexact=username)
         students = follow_list(
             user=user, direction=self.direction, viewer=viewer, users=public_users(viewer)
         )
