@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
-@custom-variant desktop (@media (hover: hover) and (pointer: fine));
+/* Phone or desktop layout is decided by screen width, not by mouse vs. touch.
+   Under 1024px: bottom bar and stacked header. Hover effects use Tailwind's own hover rules. */
+@custom-variant desktop (@media (width >= 64rem));
 
 :root {
   --background: #ffffff;
@@ -18,6 +20,10 @@
   --signal: #e8336f;
   --danger: #c0262d;
   --danger-soft: #fdf0f0;
+  --success: #15803d;
+  --success-soft: #edf8f1;
+  --warning: #b45309;
+  --warning-soft: #fdf5e6;
 }
 
 @theme inline {
@@ -31,7 +37,23 @@
   --color-ink: var(--ink);
   --color-kraft: var(--kraft);
   --color-signal: var(--signal);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
   --font-sans: var(--font-archivo);
+}
+
+/* Type scale: 13, 14, 16, 18, 22, 28, 36. Tailwind already has 14 (sm), 16 (base), 18 (lg) and 36 (4xl);
+   these add the other three. Text people read is 16; nothing goes under 13.
+   Corners: rounded-lg (8px) for inputs and small buttons, rounded-xl (12px) for cards and photos,
+   rounded-full for chips and avatars. */
+@theme {
+  --text-fine: 0.8125rem;
+  --text-fine--line-height: 1.125rem;
+  --text-title: 1.375rem;
+  --text-title--line-height: 1.75rem;
+  --text-display: 1.75rem;
+  --text-display--line-height: 2.125rem;
 }
 
 @layer base {
@@ -44,6 +66,8 @@
   }
   /* In the base layer so Tailwind font utilities on buttons still apply. */
   button, input, select, textarea { font: inherit; }
+  /* Typing fields are always 16px: iPhones zoom the page when a focused field has smaller text. */
+  input, select, textarea { font-size: 1rem; }
   ::selection { background: var(--brand-soft); }
   :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 }
@@ -66,7 +90,8 @@
     transition: background-color 150ms, border-color 150ms, color 150ms;
   }
   .btn:disabled { opacity: 0.55; cursor: not-allowed; }
-  .btn-sm { min-height: 2.25rem; padding: 0 0.875rem; font-size: 0.8125rem; }
+  /* Same 44px height as .btn, so it stays easy to tap; only the text and padding are smaller. */
+  .btn-sm { padding: 0 0.875rem; font-size: var(--text-fine); }
   .btn-primary { background: var(--brand); color: #fff; }
   .btn-primary:not(:disabled):hover { background: var(--brand-strong); }
   .btn-secondary { border: 1.5px solid var(--ink); color: var(--ink); background: var(--background); }
@@ -79,12 +104,12 @@
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    min-height: 2.25rem;
+    min-height: 2.75rem;
     padding: 0 0.875rem;
     border: 1px solid var(--line);
     border-radius: 999px;
     background: var(--background);
-    font-size: 0.8125rem;
+    font-size: var(--text-fine);
     font-weight: 600;
     transition: border-color 150ms, background-color 150ms;
   }

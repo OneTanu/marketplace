@@ -76,7 +76,7 @@ export function SaveSearch({ feed, fixedSchool, categoryLabel, schoolLabel }: {
   }
   return <form onSubmit={submit} aria-label="Save this search" className="max-w-xl space-y-3 rounded-xl border border-line bg-white/70 p-4">
     <label className="block text-sm font-bold">Name
-      <input name="name" defaultValue={suggestedName} maxLength={MAX_NAME_LENGTH} required autoFocus className="field mt-2 text-[15px] font-normal" />
+      <input name="name" defaultValue={suggestedName} maxLength={MAX_NAME_LENGTH} required autoFocus className="field mt-2 font-normal" />
     </label>
     <label className="flex items-start gap-2.5 text-sm">
       <input type="checkbox" name="alerts" defaultChecked className="mt-0.5 size-4 accent-[var(--brand)]" />

@@ -37,7 +37,7 @@ export function ListingCard({ listing, showSchool = false, previousPriceCents, s
         <div className="relative aspect-[4/5] overflow-hidden rounded-md bg-surface">
           {listing.cover_url && (
             // unoptimized: Django serves /media directly, so Next's image optimizer isn't in the path.
-            <Image src={listing.cover_url} alt="" fill unoptimized sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className={`object-cover transition duration-500 desktop:group-hover:scale-[1.03] ${sold ? "opacity-60 grayscale" : ""}`} />
+            <Image src={listing.cover_url} alt="" fill unoptimized sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className={`object-cover transition duration-500 group-hover:scale-[1.03] ${sold ? "opacity-60 grayscale" : ""}`} />
           )}
           {showSchool && <span className={styles.badge} style={{ background: school.lead, color: school.text, ["--accent" as string]: school.accent }}>{listing.school.short_name}</span>}
           {listing.status === "pending" && <span className={`${styles.stamp} ${styles.onPhoto} text-ink`}>PENDING</span>}

@@ -315,7 +315,7 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
                   </button>
                 ))}
               </div>
-              <textarea value={reviewComment} onChange={(event) => setReviewComment(event.target.value)} maxLength={500} rows={2} placeholder="Optional review" className="field mt-2 resize-none text-sm" />
+              <textarea value={reviewComment} onChange={(event) => setReviewComment(event.target.value)} maxLength={500} rows={2} placeholder="Optional review" className="field mt-2 resize-none" />
               <button type="button" onClick={submitReview} disabled={working} className="btn btn-primary mt-2 h-9 px-3 text-sm">Submit review</button>
             </div>
           )}

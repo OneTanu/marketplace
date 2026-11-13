@@ -230,7 +230,7 @@ function ReportDialog({
 
             <label className="mt-4 block text-sm font-bold">
               Anything else we should know? <span className="font-normal text-muted">(optional)</span>
-              <textarea value={details} onChange={(event) => setDetails(event.target.value)} maxLength={1000} rows={3} className="field mt-1.5 w-full resize-none p-3 text-sm font-normal" />
+              <textarea value={details} onChange={(event) => setDetails(event.target.value)} maxLength={1000} rows={3} className="field mt-1.5 w-full resize-none p-3 font-normal" />
             </label>
 
             <label className="mt-3 flex items-center gap-2 text-sm">
