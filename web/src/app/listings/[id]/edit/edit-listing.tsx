@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useId, useState, type ChangeEvent, type FormEvent } from "react";
 
 import {
@@ -30,7 +29,6 @@ type ListingUpdate = components["schemas"]["PatchedListingUpdateRequest"];
 type ItemDetailsUpdate = components["schemas"]["ItemDetailsUpdateRequest"];
 type ListingPhotoUploadRequest = components["schemas"]["ListingPhotoUploadRequest"];
 
-const MY_LISTINGS_HREF = "/listings/mine";
 const OFFLINE = "Couldn't reach Tanu. Check your connection and try again.";
 const NOT_FOUND = "This listing doesn't exist.";
 
@@ -64,18 +62,9 @@ export function EditListing({ listingId }: { listingId: number }) {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Edit listing</h1>
-        <Link
-          href={MY_LISTINGS_HREF}
-          className="text-sm font-medium text-foreground/70 hover:text-foreground"
-        >
-          My listings
-        </Link>
-      </div>
-      {loaded.state === "loading" && <p className="mt-4 text-sm text-foreground/60">Loading…</p>}
+      {loaded.state === "loading" && <p className="mt-4 text-label text-foreground/60">Loading…</p>}
       {loaded.state === "blocked" && (
-        <p className="mt-4 text-sm text-foreground/70">{loaded.message}</p>
+        <p className="mt-4 text-label text-foreground/70">{loaded.message}</p>
       )}
       {loaded.state === "ready" && <EditListingForm initial={loaded.listing} />}
     </>
@@ -277,7 +266,7 @@ function EditListingForm({ initial }: { initial: Listing }) {
   }
 
   if (loadError) {
-    return <p className="mt-4 text-sm text-foreground/70">{loadError}</p>;
+    return <p className="mt-4 text-label text-foreground/70">{loadError}</p>;
   }
 
   function onFormChange(event: ChangeEvent<HTMLFormElement>) {
@@ -292,7 +281,7 @@ function EditListingForm({ initial }: { initial: Listing }) {
     <form onSubmit={save} onChange={onFormChange} noValidate className="mt-4 space-y-6">
       <fieldset>
         <legend className={labelClass}>Photos</legend>
-        <p className="text-sm text-foreground/60">
+        <p className="text-label text-foreground/60">
           Up to {MAX_PHOTOS}. The first one is the cover. Photo changes save right away.
         </p>
         <ul aria-busy={photoBusy !== null} className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -320,7 +309,7 @@ function EditListingForm({ initial }: { initial: Listing }) {
           )}
         </ul>
         {photos.length === 1 && (
-          <p className="mt-1 text-sm text-foreground/60">
+          <p className="mt-1 text-label text-foreground/60">
             A listing needs at least one photo. Add another to replace this one.
           </p>
         )}
@@ -346,7 +335,7 @@ function EditListingForm({ initial }: { initial: Listing }) {
       />
 
       {formErrors.length > 0 && (
-        <ul role="alert" className="space-y-0.5 text-sm text-red-600 dark:text-red-400">
+        <ul role="alert" className="space-y-0.5 text-label text-danger">
           {formErrors.map((message) => (
             <li key={message}>{message}</li>
           ))}
@@ -357,11 +346,11 @@ function EditListingForm({ initial }: { initial: Listing }) {
         <button
           type="submit"
           disabled={busy || !categories}
-          className="w-full rounded-full bg-foreground px-6 py-3 text-base font-semibold text-background disabled:opacity-60 sm:w-auto"
+          className="w-full rounded-full bg-foreground px-6 py-3 text-body font-semibold text-background disabled:opacity-60 sm:w-auto"
         >
           {saving ? "Saving…" : "Save changes"}
         </button>
-        <p role="status" className="text-sm text-green-700 dark:text-green-400">
+        <p role="status" className="text-label text-success">
           {saved ? "Changes saved." : ""}
         </p>
       </div>

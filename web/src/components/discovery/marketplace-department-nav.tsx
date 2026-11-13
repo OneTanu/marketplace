@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { categoryTree, loadItemCategories, SHOE_SHORTCUTS, type Category, type CategoryTree } from "@/lib/categories";
 import { feedQueryString, POPULAR_BRANDS, readFeedParams, type FeedParams } from "@/lib/discovery";
+import { ChevronDownIcon } from "@/components/ui/icons";
 
 const BRANDS = "brands";
 
@@ -51,8 +52,8 @@ export function MarketplaceDepartmentNav({ schoolSlug }: { schoolSlug?: string }
     return `${basePath}${feedQueryString({ ...feed, size: "", ...patch })}`;
   }
 
-  const tabClass = (active: boolean) => `relative flex min-h-12 min-w-max items-center gap-1 px-3 text-sm font-semibold transition hover:text-ink ${active ? "text-ink after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-ink" : "text-muted"}`;
-  const menuLink = "flex items-center justify-between border-b border-line py-3 text-sm font-semibold decoration-kraft decoration-2 underline-offset-4 hover:underline";
+  const tabClass = (active: boolean) => `relative flex min-h-12 min-w-max items-center gap-1 px-3 text-label font-semibold transition hover:text-ink ${active ? "text-ink after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-ink" : "text-muted"}`;
+  const menuLink = "flex items-center justify-between border-b border-line py-3 text-label font-semibold decoration-ink/30 decoration-2 underline-offset-4 hover:underline";
   const menuDepartment = tree?.departments.find((d) => d.slug === activeMenu);
   const menuItems: { key: string; label: string; href: string }[] = menuDepartment
     ? [
@@ -71,13 +72,13 @@ export function MarketplaceDepartmentNav({ schoolSlug }: { schoolSlug?: string }
           const active = currentDepartment?.id === department.id;
           const hasMenu = Boolean(tree.children.get(department.id)?.length);
           if (!hasMenu) return <Link key={department.id} href={href({ category: department.slug })} aria-current={active ? "page" : undefined} className={tabClass(active)}>{department.name}</Link>;
-          return <button key={department.id} type="button" className={tabClass(active)} aria-expanded={activeMenu === department.slug} onMouseEnter={(e) => hoverMenu(department.slug, e.timeStamp)} onClick={(e) => clickMenu(department.slug, e.timeStamp)}>{department.name}<svg aria-hidden="true" viewBox="0 0 12 12" className={`size-2.5 transition ${activeMenu === department.slug ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth={1.8}><path d="m2 4 4 4 4-4" /></svg></button>;
+          return <button key={department.id} type="button" className={tabClass(active)} aria-expanded={activeMenu === department.slug} onMouseEnter={(e) => hoverMenu(department.slug, e.timeStamp)} onClick={(e) => clickMenu(department.slug, e.timeStamp)}>{department.name}<ChevronDownIcon aria-hidden="true" className={`size-4 transition ${activeMenu === department.slug ? "rotate-180" : ""}`} /></button>;
         })}
         {tree && <button type="button" className={`${tabClass(Boolean(feed.brand))} ml-2 border-l border-line pl-5`} aria-expanded={activeMenu === BRANDS} onMouseEnter={(e) => hoverMenu(BRANDS, e.timeStamp)} onClick={(e) => clickMenu(BRANDS, e.timeStamp)}>Brands</button>}
       </div>
 
-      {activeMenu && <div className="absolute inset-x-4 top-full z-30 rounded-b-xl border border-line bg-background p-5 shadow-[0_24px_48px_-12px_rgb(23_22_43/18%)] sm:inset-x-6 sm:p-7">
-        <div className="flex items-center justify-between"><h2 className="type-wide text-lg font-extrabold">{menuDepartment?.name ?? "Popular brands"}</h2><button type="button" onClick={() => setActiveMenu(null)} className="grid size-9 place-items-center rounded-lg text-xl text-muted transition hover:bg-surface hover:text-ink" aria-label="Close category menu">×</button></div>
+      {activeMenu && <div className="absolute inset-x-4 top-full z-30 rounded-b-xl border border-line bg-background p-5 shadow-overlay sm:inset-x-6 sm:p-7">
+        <div className="flex items-center justify-between"><h2 className="type-wide text-title font-extrabold">{menuDepartment?.name ?? "Popular brands"}</h2><button type="button" onClick={() => setActiveMenu(null)} className="grid size-9 place-items-center rounded-lg text-title text-muted transition hover:bg-surface hover:text-ink" aria-label="Close category menu">×</button></div>
         <div className="mt-3 grid grid-cols-2 gap-x-8 sm:grid-cols-3 lg:grid-cols-4">
           {menuItems.map((item) => <Link key={item.key} href={item.href} onClick={() => setActiveMenu(null)} className={menuLink}>{item.label}</Link>)}
         </div>

@@ -29,3 +29,8 @@ export const formatShortDate = (value: DateInput) => shortDateFormat.format(new 
 export const formatDateTime = (value: DateInput) => dateTimeFormat.format(new Date(value));
 /** "Mon, Oct 12" */
 export const formatWeekdayDate = (value: DateInput) => weekdayDateFormat.format(new Date(value));
+const weekdayTimeFormat = formatter({ weekday: "short", hour: "numeric", minute: "2-digit" });
+/** "today at 4:30 PM", or "Thu 4:30 PM" on another day. */
+export function formatDeadline(value: DateInput, now: DateInput = Date.now()) {
+  return isSameCampusDay(value, now) ? `today at ${formatTime(value)}` : weekdayTimeFormat.format(new Date(value));
+}

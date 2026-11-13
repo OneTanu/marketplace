@@ -132,18 +132,18 @@ export function SellForm() {
   }
 
   if (loadError) {
-    return <p className="mt-4 text-sm text-foreground/70">{loadError}</p>;
+    return <p className="mt-4 text-label text-foreground/70">{loadError}</p>;
   }
 
   if (meetupReady === undefined) {
-    return <div className="mt-4 h-40 animate-pulse rounded-2xl bg-surface" aria-label="Checking seller setup" />;
+    return <div className="mt-4 h-40 rounded-xl skeleton" aria-label="Checking seller setup" />;
   }
 
   if (!meetupReady) {
     return (
-      <div className="mt-6 rounded-2xl border border-line bg-surface p-6 text-center">
-        <h2 className="type-wide text-xl font-black">Set up safe meetups before selling</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted">Choose approved campus locations and your usual availability so buyers can include a meetup with their request.</p>
+      <div className="mt-6 rounded-xl border border-line bg-surface p-6 text-center">
+        <h2 className="type-wide text-title font-extrabold">Set up safe meetups before selling</h2>
+        <p className="mx-auto mt-2 max-w-md text-label leading-6 text-muted">Choose approved campus locations and your usual availability so buyers can include a meetup with their request.</p>
         <Link href="/profile/meetup" className="btn btn-primary mt-5">Set meetup preferences</Link>
       </div>
     );
@@ -160,7 +160,7 @@ export function SellForm() {
     <form onSubmit={submit} onChange={clearErrorFor} noValidate className="mt-4 space-y-6">
       <fieldset>
         <legend className={labelClass}>Photos</legend>
-        <p className="text-sm text-foreground/60">
+        <p className="text-label text-foreground/60">
           Up to {MAX_PHOTOS}. The first one is the cover.
         </p>
         <ul className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -195,7 +195,7 @@ export function SellForm() {
       />
 
       {formErrors.length > 0 && (
-        <ul role="alert" className="space-y-0.5 text-sm text-red-600 dark:text-red-400">
+        <ul role="alert" className="space-y-0.5 text-label text-danger">
           {formErrors.map((message) => (
             <li key={message}>{message}</li>
           ))}
@@ -205,7 +205,7 @@ export function SellForm() {
       <button
         type="submit"
         disabled={submitting || !categories}
-        className="w-full rounded-full bg-foreground px-6 py-3 text-base font-semibold text-background disabled:opacity-60 sm:w-auto"
+        className="w-full rounded-full bg-foreground px-6 py-3 text-body font-semibold text-background disabled:opacity-60 sm:w-auto"
       >
         {submitting ? "Posting…" : "Post listing"}
       </button>

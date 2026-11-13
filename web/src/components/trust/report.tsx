@@ -49,7 +49,7 @@ export function ReportButton({
   username,
   messages,
   onBlocked,
-  className = "text-sm font-semibold text-muted hover:text-ink hover:underline",
+  className = "text-label font-semibold text-muted hover:text-ink hover:underline",
   label = "Report",
 }: {
   targetType: ReportTargetType;
@@ -161,27 +161,27 @@ function ReportDialog({
         aria-modal="true"
         aria-labelledby={titleId}
         onClick={(event) => event.stopPropagation()}
-        className="max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl bg-background p-5 shadow-xl sm:max-w-md sm:rounded-2xl"
+        className="max-h-[90dvh] w-full overflow-y-auto rounded-t-xl bg-background p-5 shadow-overlay sm:max-w-md sm:rounded-xl"
       >
         {sent ? (
           <div className="text-center">
-            <h2 id={titleId} className="type-wide text-xl font-black">Report received</h2>
-            <p className="mt-2 text-sm leading-6 text-muted">
+            <h2 id={titleId} className="type-wide text-title font-extrabold">Report received</h2>
+            <p className="mt-2 text-label leading-6 text-muted">
               Tanu&apos;s moderation team will review it. {alsoBlock && `You've also blocked @${username}.`}
             </p>
             <button type="button" onClick={onClose} autoFocus className="btn btn-primary mt-5 w-full">Done</button>
           </div>
         ) : (
           <>
-            <h2 id={titleId} className="type-wide text-xl font-black">Report {subject}</h2>
-            <p className="mt-1 text-sm text-muted">Reports are private. @{username} won&apos;t see who sent it.</p>
+            <h2 id={titleId} className="type-wide text-title font-extrabold">Report {subject}</h2>
+            <p className="mt-1 text-label text-muted">Reports are private. @{username} won&apos;t see who sent it.</p>
 
             <fieldset className="mt-4">
-              <legend className="text-sm font-bold">What&apos;s wrong?</legend>
+              <legend className="text-label font-semibold">What&apos;s wrong?</legend>
               <div className="mt-2 grid gap-1.5">
                 {REASONS[targetType].map((value, index) => (
-                  <label key={value} className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 text-sm ${reason === value ? "border-ink ring-1 ring-ink" : "border-line"}`}>
-                    <input type="radio" name="reason" value={value} checked={reason === value} onChange={() => setReason(value)} autoFocus={index === 0} className="accent-[var(--brand)]" />
+                  <label key={value} className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 text-label ${reason === value ? "border-ink ring-1 ring-ink" : "border-line"}`}>
+                    <input type="radio" name="reason" value={value} checked={reason === value} onChange={() => setReason(value)} autoFocus={index === 0} className="accent-brand" />
                     {REASON_LABELS[value]}
                   </label>
                 ))}
@@ -189,7 +189,7 @@ function ReportDialog({
             </fieldset>
 
             {reason === "prohibited_item" && (
-              <label className="mt-3 block text-sm font-bold">
+              <label className="mt-3 block text-label font-semibold">
                 What kind of item?
                 <select value={category} onChange={(event) => setCategory(event.target.value as ProhibitedCategory)} className="field mt-1.5 h-11 w-full px-3 font-normal">
                   <option value="">Choose one</option>
@@ -199,27 +199,27 @@ function ReportDialog({
             )}
 
             {reason && SAFETY_REASONS.has(reason) && (
-              <p className="mt-3 rounded-lg border border-[var(--danger)] p-3 text-sm font-semibold text-[var(--danger)]">
+              <p className="mt-3 rounded-lg border border-danger p-3 text-label font-semibold text-danger">
                 If you&apos;re in immediate danger, call 911 or your campus police now. Reports aren&apos;t monitored around the clock.
               </p>
             )}
 
             {isConversation && messages && (
               <fieldset className="mt-4">
-                <legend className="text-sm font-bold">Which messages show what happened?</legend>
-                <p className="text-xs text-muted">Moderators only see the messages you choose.</p>
+                <legend className="text-label font-semibold">Which messages show what happened?</legend>
+                <p className="text-fine text-muted">Moderators only see the messages you choose.</p>
                 <div className="mt-2 max-h-56 space-y-1.5 overflow-y-auto pr-1">
-                  {messages.length === 0 && <p className="text-sm text-muted">No messages yet.</p>}
+                  {messages.length === 0 && <p className="text-label text-muted">No messages yet.</p>}
                   {messages.map((message) => (
-                    <label key={message.id} className="flex cursor-pointer items-start gap-2 rounded-lg border border-line p-2 text-sm">
+                    <label key={message.id} className="flex cursor-pointer items-start gap-2 rounded-lg border border-line p-2 text-label">
                       <input
                         type="checkbox"
                         checked={chosen.includes(message.id)}
                         onChange={() => setChosen((current) => current.includes(message.id) ? current.filter((id) => id !== message.id) : [...current, message.id])}
-                        className="mt-1 accent-[var(--brand)]"
+                        className="mt-1 accent-brand"
                       />
                       <span className="min-w-0">
-                        <span className="block text-xs font-bold text-muted">{message.from}</span>
+                        <span className="block text-fine font-semibold text-muted">{message.from}</span>
                         <span className="line-clamp-3 break-words">{message.body}</span>
                       </span>
                     </label>
@@ -228,17 +228,17 @@ function ReportDialog({
               </fieldset>
             )}
 
-            <label className="mt-4 block text-sm font-bold">
+            <label className="mt-4 block text-label font-semibold">
               Anything else we should know? <span className="font-normal text-muted">(optional)</span>
-              <textarea value={details} onChange={(event) => setDetails(event.target.value)} maxLength={1000} rows={3} className="field mt-1.5 w-full resize-none p-3 text-sm font-normal" />
+              <textarea value={details} onChange={(event) => setDetails(event.target.value)} maxLength={1000} rows={3} className="field mt-1.5 w-full resize-none p-3 font-normal" />
             </label>
 
-            <label className="mt-3 flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={alsoBlock} onChange={(event) => setAlsoBlock(event.target.checked)} className="accent-[var(--brand)]" />
+            <label className="mt-3 flex items-center gap-2 text-label">
+              <input type="checkbox" checked={alsoBlock} onChange={(event) => setAlsoBlock(event.target.checked)} className="accent-brand" />
               Also block @{username}
             </label>
 
-            {error && <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{error}</p>}
+            {error && <p role="alert" className="mt-3 text-label text-danger">{error}</p>}
             <div className="mt-5 flex gap-2">
               <button type="button" onClick={onClose} disabled={sending} className="btn btn-secondary flex-1">Cancel</button>
               <button type="button" onClick={submit} disabled={sending} className="btn btn-primary flex-1">{sending ? "Sending…" : "Send report"}</button>
@@ -294,10 +294,10 @@ export function BlockButton({
   if (blocked === undefined) return null;
   if (confirming) {
     return (
-      <div className="rounded-lg border border-line bg-background p-3 text-sm">
+      <div className="rounded-lg border border-line bg-background p-3 text-label">
         <p className="font-semibold">Block @{username}?</p>
         <p className="mt-1 text-muted">You won&apos;t be able to message, buy from, or sell to each other, and any open requests between you are canceled. They won&apos;t be told.</p>
-        {error && <p role="alert" className="mt-2 text-[var(--danger)]">{error}</p>}
+        {error && <p role="alert" className="mt-2 text-danger">{error}</p>}
         <div className="mt-3 flex gap-2">
           <button type="button" onClick={() => setConfirming(false)} disabled={working} className="btn btn-secondary btn-sm">Cancel</button>
           <button type="button" onClick={toggle} disabled={working} className="btn btn-primary btn-sm">{working ? "Blocking…" : "Block"}</button>
@@ -310,7 +310,7 @@ export function BlockButton({
       <button type="button" onClick={() => (blocked ? toggle() : setConfirming(true))} disabled={working} className={className}>
         {blocked ? "Unblock" : "Block"}
       </button>
-      {error && <p role="alert" className="text-sm text-[var(--danger)]">{error}</p>}
+      {error && <p role="alert" className="text-label text-danger">{error}</p>}
     </>
   );
 }

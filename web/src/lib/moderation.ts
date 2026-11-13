@@ -52,7 +52,7 @@ export function caseTarget(row: CaseRow) {
 }
 
 export const PRIORITY_STYLES: Record<number, string> = {
-  1: "bg-[var(--danger)] text-white",
+  1: "bg-danger text-white",
   2: "bg-signal text-white",
   3: "bg-surface text-ink",
 };

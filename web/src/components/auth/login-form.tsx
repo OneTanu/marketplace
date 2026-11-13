@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { reactivateAccount } from "@/lib/account";
 import { authRequest, errorsFrom, pendingFlow, type AuthError, type AllauthResponse } from "@/lib/auth";
-import { homeMarketplacePath } from "@/lib/platform";
 import { Field, FormAlert, SubmitButton } from "./form-parts";
 
 /** allauth answers a correct password for a switched-off account with 401 and no step to
@@ -22,7 +21,7 @@ export function LoginForm() {
 
   async function logIn(email: string, password: string) {
     const { response, body } = await authRequest("auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
-    if (response.ok) { router.push(await homeMarketplacePath()); router.refresh(); }
+    if (response.ok) { router.push("/"); router.refresh(); }
     else if (response.status === 401 && pendingFlow(body, "verify_email")) router.push(`/account/verify-email?email=${encodeURIComponent(email)}`);
     else if (isInactiveAccount(response, body)) setInactive({ email, password });
     else setErrors(errorsFrom(body, "That email and password combination didn’t work."));
@@ -45,15 +44,15 @@ export function LoginForm() {
 
   return <form method="post" onSubmit={submit} className="space-y-5" noValidate>
     {errors.map((error) => <FormAlert key={`${error.field}-${error.message}`}>{error.message}</FormAlert>)}
-    {inactive && <div role="status" className="rounded-xl border border-line bg-surface p-4 text-sm">
-      <p className="font-bold">This account is deactivated</p>
+    {inactive && <div role="status" className="rounded-xl border border-line bg-surface p-4 text-label">
+      <p className="font-semibold">This account is deactivated</p>
       <p className="mt-1 text-muted">Reactivate it to bring back your profile and listings.</p>
       <button type="button" onClick={reactivate} disabled={pending} className="btn btn-primary mt-3 w-full">{pending ? "Reactivating…" : "Reactivate and log in"}</button>
     </div>}
     <Field label="School email" name="email" type="email" autoComplete="email" placeholder="you@umd.edu" required />
     <div>
       <Field label="Password" name="password" type="password" autoComplete="current-password" required />
-      <Link href="/account/forgot-password" className="mt-2 inline-block text-sm font-semibold text-muted hover:text-foreground hover:underline">Forgot password?</Link>
+      <Link href="/account/forgot-password" className="mt-2 inline-block text-label font-semibold text-muted hover:text-foreground hover:underline">Forgot password?</Link>
     </div>
     <SubmitButton pending={pending} pendingText="Logging you in…">Log in</SubmitButton>
   </form>;

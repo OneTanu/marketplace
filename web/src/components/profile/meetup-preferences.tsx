@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { api } from "@/lib/api/client";
@@ -8,6 +7,8 @@ import type { components } from "@/lib/api/schema";
 import { getMeetupPreferences, saveMeetupPreferences } from "@/lib/deals";
 import { getCurrentUser } from "@/lib/platform";
 import { MeetingSpotName } from "@/components/deals/meeting-spot-name";
+import { FocusedHeader } from "@/components/ui/focused-header";
+import { CloseIcon } from "@/components/ui/icons";
 
 type MeetingSpot = components["schemas"]["MeetingSpot"];
 type Override = components["schemas"]["AvailabilityOverrideRequest"];
@@ -138,73 +139,72 @@ export function MeetupPreferences() {
     }
   }
 
+  const header = <FocusedHeader title="Meetup preferences" backHref="/profile" backLabel="Back to profile" width="max-w-3xl" />;
+
   if (loading) {
-    return <main className="mx-auto min-h-[70vh] max-w-3xl animate-pulse px-4 py-10 sm:px-6"><div className="h-96 rounded-2xl bg-surface" /></main>;
+    return <>{header}<main className="mx-auto min-h-[70vh] max-w-3xl animate-pulse px-4 py-6 sm:px-6"><div className="h-96 rounded-xl bg-surface" /></main></>;
   }
 
   return (
-    <main className="mx-auto min-h-[70vh] max-w-3xl px-4 py-8 pb-28 sm:px-6 sm:py-10 desktop:pb-12">
-      <Link href="/profile" className="text-sm font-bold text-muted hover:text-ink">← Back to profile</Link>
-      <div className="mt-5">
-        <p className="text-sm font-bold uppercase tracking-[0.14em] text-signal">Seller setup</p>
-        <h1 className="type-wide mt-1 text-3xl font-black">Meetup preferences</h1>
-        <p className="mt-2 max-w-2xl leading-6 text-muted">Buyers only see approved campus locations and times that fit your schedule. You confirm every request before a meetup becomes official.</p>
+    <>{header}<main className="mx-auto min-h-[70vh] max-w-3xl px-4 pb-12 pt-4 sm:px-6">
+      <div>
+        <p className="max-w-2xl leading-6 text-muted">Buyers only see approved campus locations and times that fit your schedule. You confirm every request before a meetup becomes official.</p>
       </div>
 
-      <section className="mt-8 rounded-2xl border border-line bg-background p-5">
-        <h2 className="text-lg font-bold">Preferred campus locations</h2>
-        <p className="mt-1 text-sm text-muted">Choose at least one place where you are comfortable exchanging an item.</p>
+      <section className="mt-8 rounded-xl border border-line bg-background p-5">
+        <h2 className="type-wide text-title font-extrabold">Preferred campus locations</h2>
+        <p className="mt-1 text-label text-muted">Choose at least one place where you are comfortable exchanging an item.</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {spots.map((spot) => (
             <label key={spot.id} className="flex cursor-pointer items-start gap-3 rounded-xl border border-line p-4">
-              <input type="checkbox" checked={selectedSpots.includes(spot.id)} onChange={() => toggleSpot(spot.id)} className="mt-1 size-4 accent-[var(--brand)]" />
+              <input type="checkbox" checked={selectedSpots.includes(spot.id)} onChange={() => toggleSpot(spot.id)} className="mt-1 size-4 accent-brand" />
               <span>
-                <span className="block font-bold"><MeetingSpotName spot={spot} /></span>
-                <span className="mt-1 block text-sm leading-5 text-muted">{spot.directions}</span>
-                {spot.safety_note && <span className="mt-1 block text-xs text-brand">{spot.safety_note}</span>}
+                <span className="block font-semibold"><MeetingSpotName spot={spot} /></span>
+                <span className="mt-1 block text-label leading-5 text-muted">{spot.directions}</span>
+                {spot.safety_note && <span className="mt-1 block text-fine text-brand">{spot.safety_note}</span>}
               </span>
             </label>
           ))}
         </div>
       </section>
 
-      <section className="mt-5 rounded-2xl border border-line bg-background p-5">
-        <h2 className="text-lg font-bold">Usual weekly availability</h2>
-        <p className="mt-1 text-sm text-muted">Turn off days when you normally cannot meet, or add more than one time range for a day, like between classes and after practice.</p>
+      <section className="mt-5 rounded-xl border border-line bg-background p-5">
+        <h2 className="type-wide text-title font-extrabold">Usual weekly availability</h2>
+        <p className="mt-1 text-label text-muted">Turn off days when you normally cannot meet, or add more than one time range for a day, like between classes and after practice.</p>
         <div className="mt-4 divide-y divide-line rounded-xl border border-line">
           {DAYS.map((day, index) => (
             <div key={day} className="grid gap-3 px-3 py-3 sm:grid-cols-[7rem_1fr] sm:items-start">
-              <label className="flex items-center gap-2 font-bold sm:h-10">
-                <input type="checkbox" checked={windows[index].enabled} onChange={(event) => updateDay(index, (current) => ({ ...current, enabled: event.target.checked }))} className="size-4 accent-[var(--brand)]" />
+              <label className="flex items-center gap-2 font-semibold sm:h-10">
+                <input type="checkbox" checked={windows[index].enabled} onChange={(event) => updateDay(index, (current) => ({ ...current, enabled: event.target.checked }))} className="size-4 accent-brand" />
                 {day}
               </label>
               {windows[index].enabled ? (
                 <div className="space-y-2">
                   {windows[index].ranges.map((range, rangeIndex) => (
                     <div key={rangeIndex} className="flex items-center gap-2">
-                      <input type="time" value={range.start} onChange={(event) => updateRange(index, rangeIndex, { start: event.target.value })} className="field h-10 min-w-0 flex-1 px-3" aria-label={`${day} start time ${rangeIndex + 1}`} />
-                      <span className="text-sm text-muted">to</span>
-                      <input type="time" value={range.end} onChange={(event) => updateRange(index, rangeIndex, { end: event.target.value })} className="field h-10 min-w-0 flex-1 px-3" aria-label={`${day} end time ${rangeIndex + 1}`} />
+                      <input type="time" value={range.start} onChange={(event) => updateRange(index, rangeIndex, { start: event.target.value })} className="field h-11 min-w-0 flex-1 px-3" aria-label={`${day} start time ${rangeIndex + 1}`} />
+                      <span className="text-label text-muted">to</span>
+                      <input type="time" value={range.end} onChange={(event) => updateRange(index, rangeIndex, { end: event.target.value })} className="field h-11 min-w-0 flex-1 px-3" aria-label={`${day} end time ${rangeIndex + 1}`} />
                       <button type="button" onClick={() => removeRange(index, rangeIndex)} aria-label={`Remove ${day} time range ${rangeIndex + 1}`} className="grid size-10 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface hover:text-ink">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-4" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+                        <CloseIcon className="size-4" aria-hidden="true" />
                       </button>
                     </div>
                   ))}
-                  <button type="button" onClick={() => updateDay(index, (current) => ({ ...current, ranges: [...current.ranges, nextRange(current.ranges)] }))} className="text-sm font-bold text-brand hover:underline">
+                  <button type="button" onClick={() => updateDay(index, (current) => ({ ...current, ranges: [...current.ranges, nextRange(current.ranges)] }))} className="text-label font-semibold text-brand hover:underline">
                     + Add another time
                   </button>
                 </div>
               ) : (
-                <p className="text-sm text-muted">Unavailable</p>
+                <p className="text-label text-muted">Unavailable</p>
               )}
             </div>
           ))}
         </div>
       </section>
 
-      {error && <p role="alert" className="mt-4 text-sm text-[var(--danger)]">{error}</p>}
-      {saved && <p role="status" className="mt-4 text-sm font-bold text-brand">Meetup preferences saved.</p>}
+      {error && <p role="alert" className="mt-4 text-label text-danger">{error}</p>}
+      {saved && <p role="status" className="mt-4 text-label font-semibold text-brand">Meetup preferences saved.</p>}
       <button type="button" onClick={save} disabled={saving} className="btn btn-primary mt-5 w-full">{saving ? "Saving…" : "Save meetup preferences"}</button>
-    </main>
+    </main></>
   );
 }

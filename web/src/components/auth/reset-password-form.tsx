@@ -60,18 +60,18 @@ export function ResetPasswordForm({ resetKey }: { resetKey: string }) {
     finally { setPending(false); }
   }
 
-  if (state === "checking") return errors.length ? <FormAlert>{errors[0].message}</FormAlert> : <div role="status" className="rounded-2xl border border-line bg-white p-6 text-center text-sm text-muted">Checking your reset link…</div>;
-  if (state === "success") return <div role="status" className="rounded-2xl bg-surface p-6 text-center"><div className="mx-auto grid size-12 place-items-center rounded-full bg-ink text-xl text-white" aria-hidden="true">✓</div><p className="mt-4 font-bold text-ink">Your password has been reset.</p><p className="mt-1 text-sm leading-6 text-muted">You’ve been logged out everywhere. Log in with your new password; taking you there now…</p><Link href="/account/login" className="mt-5 inline-flex btn btn-primary">Log in</Link></div>;
+  if (state === "checking") return errors.length ? <FormAlert>{errors[0].message}</FormAlert> : <div role="status" className="rounded-xl border border-line bg-white p-6 text-center text-label text-muted">Checking your reset link…</div>;
+  if (state === "success") return <div role="status" className="rounded-xl bg-surface p-6 text-center"><div className="mx-auto grid size-12 place-items-center rounded-full bg-ink text-title text-white" aria-hidden="true">✓</div><p className="mt-4 font-semibold text-ink">Your password has been reset.</p><p className="mt-1 text-label leading-6 text-muted">You’ve been logged out everywhere. Log in with your new password; taking you there now…</p><Link href="/account/login" className="mt-5 inline-flex btn btn-primary">Log in</Link></div>;
   if (state !== "ready") {
     const { title, detail } = BROKEN_LINKS[state];
-    return <div role="alert" className="rounded-2xl border border-[var(--danger)]/25 bg-[var(--danger-soft)] p-6 text-center"><p className="font-bold text-[var(--danger)]">{title}</p><p className="mt-2 text-sm leading-6 text-muted">{detail}</p><div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center"><Link href="/account/forgot-password" className="btn btn-primary">Request a new link</Link><Link href="/account/login" className="btn btn-quiet">Return to login</Link></div></div>;
+    return <div role="alert" className="rounded-xl border border-danger/25 bg-danger-soft p-6 text-center"><p className="font-semibold text-danger">{title}</p><p className="mt-2 text-label leading-6 text-muted">{detail}</p><div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center"><Link href="/account/forgot-password" className="btn btn-primary">Request a new link</Link><Link href="/account/login" className="btn btn-quiet">Return to login</Link></div></div>;
   }
   const fieldError = (name: string) => errors.find((error) => error.field === name)?.message;
   return <form method="post" onSubmit={submit} className="space-y-5" noValidate>
     {errors.filter((error) => error.field !== "password" && error.field !== "confirm").map((error) => <FormAlert key={error.message}>{error.message}</FormAlert>)}
     {/* Tells password managers which account the new password belongs to. */}
     <input type="email" name="username" autoComplete="username" value={email} readOnly hidden />
-    {email && <p className="rounded-xl border border-line bg-white px-4 py-3 text-sm">Resetting the password for <strong className="break-all font-semibold">{email}</strong></p>}
+    {email && <p className="rounded-xl border border-line bg-white px-4 py-3 text-label">Resetting the password for <strong className="break-all font-semibold">{email}</strong></p>}
     <Field label="New password" hint="8+ characters" name="password" type="password" autoComplete="new-password" minLength={8} required error={fieldError("password")} />
     <Field label="Confirm new password" name="confirm" type="password" autoComplete="new-password" minLength={8} required error={fieldError("confirm")} />
     <SubmitButton pending={pending} pendingText="Updating your password…">Reset password</SubmitButton>

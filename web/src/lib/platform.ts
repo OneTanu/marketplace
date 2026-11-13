@@ -27,13 +27,6 @@ export async function getCurrentUser() {
   return data ?? failed(response);
 }
 
-export async function searchUsers(query: string, school?: string) {
-  const { data, response } = await api.GET("/api/users/", {
-    params: { query: { q: query, ...(school ? { school } : {}) } },
-  });
-  return data ?? failed(response);
-}
-
 export async function getPublicUser(username: string) {
   const { data, response } = await api.GET("/api/users/{username}/", {
     params: { path: { username } },
@@ -82,15 +75,6 @@ export async function setFollowing(username: string, following: boolean) {
   const { data, error } = await api.POST("/api/users/{username}/follow/", params);
   if (!data) throw new Error(errorMessage(error, "detail") ?? "We couldn’t update this follow.");
   return data;
-}
-
-export async function homeMarketplacePath() {
-  try {
-    const user = await getCurrentUser();
-    return user?.school ? `/schools/${user.school.slug}` : "/";
-  } catch {
-    return "/";
-  }
 }
 
 export type FollowDirection = "followers" | "following";

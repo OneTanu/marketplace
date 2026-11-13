@@ -5,17 +5,23 @@ import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import { DealPanel } from "@/components/deals/deal-panel";
 import { ReportButton } from "@/components/trust/report";
+import { BackLink } from "@/components/ui/focused-header";
 import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
 import { getConversation, listMessages, markConversationRead, sendMessage } from "@/lib/messaging";
 import { formatDateTime, formatTime, isSameCampusDay } from "@/lib/time";
-import { Avatar } from "./avatar";
+import { Avatar } from "@/components/ui/avatar";
+import { SendIcon } from "@/components/ui/icons";
 
 type ChatMessage = components["schemas"]["Message"];
 type Conversation = components["schemas"]["Conversation"];
 type Listing = components["schemas"]["Listing"];
 
 const MAX_LENGTH = 2000;
+
+function BackToInbox() {
+  return <BackLink href="/inbox" label="Back to inbox" />;
+}
 // A new timestamp divider appears when messages are this far apart.
 const GAP_MS = 15 * 60 * 1000;
 
@@ -181,18 +187,20 @@ export function ChatClient({ conversationId, listingId }: { conversationId: numb
     }
   }
 
-  if (conversation === undefined) return <main className="mx-auto min-h-[70vh] max-w-2xl animate-pulse px-4 py-6 sm:px-6"><div className="flex items-center gap-3"><div className="size-9 rounded-full bg-surface" /><div className="h-5 w-32 rounded bg-surface" /></div><div className="mt-8 space-y-3"><div className="h-10 w-48 rounded-2xl bg-surface" /><div className="ml-auto h-10 w-40 rounded-2xl bg-surface" /></div></main>;
-  if (conversation === null) return <main className="mx-auto grid min-h-[70vh] max-w-xl place-items-center px-4 text-center"><div><h1 className="type-wide text-3xl font-black">Conversation not found</h1><p className="mt-3 text-muted">It may have been removed, or it belongs to another account.</p><Link href="/inbox" className="btn btn-primary mt-6">Back to inbox</Link></div></main>;
+  if (conversation === undefined) return <main className="mx-auto min-h-[70vh] max-w-2xl px-2 py-2.5 sm:px-4"><div className="flex items-center gap-3"><BackToInbox /><div className="size-9 rounded-full skeleton" /><div className="h-5 w-32 rounded-lg skeleton" /></div><div className="mt-8 animate-pulse space-y-3 px-2"><div className="h-10 w-48 rounded-xl bg-surface" /><div className="ml-auto h-10 w-40 rounded-xl bg-surface" /></div></main>;
+  if (conversation === null) return <main className="mx-auto grid min-h-[70vh] max-w-xl place-items-center px-4 text-center"><div><h1 className="type-wide text-display font-extrabold">Conversation not found</h1><p className="mt-3 text-muted">It may have been removed, or it belongs to another account.</p><Link href="/inbox" className="btn btn-primary mt-6">Back to inbox</Link></div></main>;
 
   const user = conversation.other_user;
   const nearLimit = body.length > MAX_LENGTH - 200;
 
-  return <main className="mx-auto flex h-[calc(100dvh-8rem-env(safe-area-inset-bottom))] max-w-2xl flex-col desktop:h-[calc(100dvh-4rem)] desktop:border-x desktop:border-line">
+  // A focused screen: on phones there is no site header or bottom bar, so the chat fills the
+  // screen; on desktop it fills what the 65px site header leaves.
+  return <main className="mx-auto flex h-dvh max-w-2xl flex-col pb-[env(safe-area-inset-bottom)] desktop:h-[calc(100dvh-4rem-1px)] desktop:border-x desktop:border-line desktop:pb-0">
     <header className="flex items-center gap-3 border-b border-line px-2 py-2.5 sm:px-4">
-      <Link href="/inbox" aria-label="Back to inbox" className="grid size-10 place-items-center rounded-lg text-ink transition hover:bg-surface"><svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg></Link>
+      <BackToInbox />
       <Link href={`/users/${user.username}`} className="flex min-w-0 items-center gap-3 rounded-lg py-1 pr-3 transition hover:bg-surface">
         <Avatar user={user} size="sm" />
-        <div className="min-w-0"><p className="truncate font-bold leading-tight">{user.first_name || `@${user.username}`}</p><p className="truncate text-xs text-muted">@{user.username}{user.school ? `, ${user.school.short_name}` : ""}</p></div>
+        <div className="min-w-0"><p className="truncate font-semibold leading-tight">{user.first_name || `@${user.username}`}</p><p className="truncate text-fine text-muted">@{user.username}{user.school ? `, ${user.school.short_name}` : ""}</p></div>
       </Link>
       <div className="ml-auto pr-2">
         <ReportButton
@@ -208,45 +216,45 @@ export function ChatClient({ conversationId, listingId }: { conversationId: numb
     <DealPanel conversationId={conversationId} listingId={listingId} />
 
     <div ref={threadRef} onScroll={onThreadScroll} className="flex flex-1 flex-col overflow-y-auto px-4 py-5 sm:px-6" aria-live="polite">
-      {hasMore && <button type="button" onClick={loadOlder} disabled={loadingOlder} className="mx-auto mb-4 text-xs font-semibold text-brand hover:underline disabled:text-muted">{loadingOlder ? "Loading older messages…" : "Load older messages"}</button>}
+      {hasMore && <button type="button" onClick={loadOlder} disabled={loadingOlder} className="mx-auto mb-4 text-fine font-semibold text-brand hover:underline disabled:text-muted">{loadingOlder ? "Loading older messages…" : "Load older messages"}</button>}
       {messages.length ? messages.map((message, index) => {
         const newBlock = startsNewBlock(messages, index);
         const next = messages[index + 1];
         const sameSenderAsPrev = !newBlock && messages[index - 1]?.is_mine === message.is_mine;
         const lastInRun = !next || next.is_mine !== message.is_mine || startsNewBlock(messages, index + 1);
-        const tail = lastInRun ? (message.is_mine ? "rounded-br-md" : "rounded-bl-md") : "";
+        const tail = lastInRun ? (message.is_mine ? "rounded-br-lg" : "rounded-bl-lg") : "";
         return <div key={message.id}>
-          {newBlock && <p className={`mb-3 text-center text-xs font-medium text-muted ${index === 0 ? "" : "mt-5"}`}>{stamp(message.created_at)}</p>}
+          {newBlock && <p className={`mb-3 text-center text-fine font-semibold text-muted ${index === 0 ? "" : "mt-5"}`}>{stamp(message.created_at)}</p>}
           <div className={`flex ${message.is_mine ? "justify-end" : "justify-start"} ${sameSenderAsPrev ? "mt-1" : newBlock ? "" : "mt-3"}`}>
             <div className={`flex max-w-[78%] flex-col ${message.is_mine ? "items-end" : "items-start"}`}>
-              {message.listing && <Link href={`/listings/${message.listing.id}`} className="mb-1 block rounded-lg border border-line bg-background px-3 py-2 text-sm text-ink shadow-sm hover:border-brand">
-                <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted">Listing</span>
-                <span className="block truncate font-bold">{message.listing.title}</span>
+              {message.listing && <Link href={`/listings/${message.listing.id}`} className="mb-1 block rounded-lg border border-line bg-background px-3 py-2 text-label text-ink shadow-float hover:border-brand">
+                <span className="block text-fine font-semibold uppercase tracking-wide text-muted">Listing</span>
+                <span className="block truncate font-semibold">{message.listing.title}</span>
               </Link>}
-              <p title={stamp(message.created_at)} className={`w-fit max-w-full whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[15px] leading-snug ${tail} ${message.is_mine ? "bg-brand text-white" : "bg-surface text-ink"}`}>{message.body}</p>
+              <p title={stamp(message.created_at)} className={`w-fit max-w-full whitespace-pre-wrap break-words rounded-xl px-3.5 py-2 text-body leading-snug ${tail} ${message.is_mine ? "bg-brand text-white" : "bg-surface text-ink"}`}>{message.body}</p>
             </div>
           </div>
         </div>;
-      }) : <div className="m-auto max-w-xs text-center"><Avatar user={user} /><p className="mt-3 font-bold">Say hi to {user.first_name || `@${user.username}`}</p><p className="mt-1 text-sm text-muted">Ask about an item, make an offer, or pick a place to meet on campus.</p></div>}
+      }) : <div className="m-auto max-w-xs text-center"><Avatar user={user} /><p className="mt-3 font-semibold">Say hi to {user.first_name || `@${user.username}`}</p><p className="mt-1 text-label text-muted">Ask about an item, make an offer, or pick a place to meet on campus.</p></div>}
     </div>
 
     {!user.is_available ? (
-      <p role="status" className="border-t border-line px-4 py-4 text-center text-sm text-muted">
+      <p role="status" className="border-t border-line px-4 py-4 text-center text-label text-muted">
         This account isn&apos;t available right now. You can still read your messages.
       </p>
     ) : <form onSubmit={submit} className="border-t border-line px-3 py-3 sm:px-4">
-      {error && <p role="alert" className="mb-2 text-sm text-[var(--danger)]">{error}</p>}
+      {error && <p role="alert" className="mb-2 text-label text-danger">{error}</p>}
       {attachedListing && <div className="mb-2 flex items-center gap-3 rounded-lg border border-line bg-surface px-3 py-2">
-        <div className="min-w-0 flex-1"><p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Messaging about</p><p className="truncate text-sm font-bold">{attachedListing.title}</p></div>
-        <button type="button" onClick={() => setAttachedListing(null)} className="text-xs font-semibold text-muted hover:text-ink">Remove</button>
+        <div className="min-w-0 flex-1"><p className="text-fine font-semibold uppercase tracking-wide text-muted">Messaging about</p><p className="truncate text-label font-semibold">{attachedListing.title}</p></div>
+        <button type="button" onClick={() => setAttachedListing(null)} className="text-fine font-semibold text-muted hover:text-ink">Remove</button>
       </div>}
       <div className="flex items-end gap-2">
-        <textarea value={body} onChange={(event) => setBody(event.target.value)} onKeyDown={onKeyDown} maxLength={MAX_LENGTH} rows={1} placeholder="Message" aria-label="Message" className="field max-h-36 min-h-11 flex-1 resize-none rounded-[1.375rem] px-4 py-2.5 text-[15px] leading-snug [field-sizing:content]" />
+        <textarea value={body} onChange={(event) => setBody(event.target.value)} onKeyDown={onKeyDown} maxLength={MAX_LENGTH} rows={1} placeholder="Message" aria-label="Message" className="field max-h-36 min-h-11 flex-1 resize-none rounded-xl px-4 py-2.5 leading-snug [field-sizing:content]" />
         <button disabled={pending || !body.trim()} aria-label={pending ? "Sending" : "Send message"} className="grid size-11 shrink-0 place-items-center rounded-full bg-brand text-white transition hover:bg-brand-strong disabled:bg-surface disabled:text-muted">
-          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
+          <SendIcon className="size-5" strokeWidth={2.4} aria-hidden="true" />
         </button>
       </div>
-      {nearLimit && <p className="mt-1.5 text-right text-xs text-muted">{MAX_LENGTH - body.length} characters left</p>}
+      {nearLimit && <p className="mt-1.5 text-right text-fine text-muted">{MAX_LENGTH - body.length} characters left</p>}
     </form>}
   </main>;
 }

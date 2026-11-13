@@ -27,6 +27,7 @@ import {
 import { centsToDollars } from "@/lib/money";
 import { formatDateTime } from "@/lib/time";
 import { MeetingSpotName } from "@/components/deals/meeting-spot-name";
+import { ChevronDownIcon } from "@/components/ui/icons";
 
 type Deal = components["schemas"]["Deal"];
 type Role = "buyer" | "seller";
@@ -74,23 +75,23 @@ function ProblemReporter({ deal, onDone, onCancel }: { deal: Deal; onDone: (deal
 
   return (
     <div className="mt-3 border-t border-line pt-3" role="group" aria-label="Report a problem">
-      <p className="font-bold">Report a problem</p>
-      <p className="mt-1 text-sm text-muted">
+      <p className="font-semibold">Report a problem</p>
+      <p className="mt-1 text-label text-muted">
         {deal.status === "pending" && confirmed
           ? "Someone already confirmed this handoff, so a moderator will review it before anything changes."
           : deal.status === "pending" && kind === "no_show"
             ? "Reporting a no-show ends this deal and makes the item available again."
             : "Tanu’s moderators will review it. Nobody is penalized automatically."}
       </p>
-      <label className="mt-3 block text-sm font-bold">What happened?
-        <select value={kind} onChange={(event) => setKind(event.target.value as DealProblemKind)} className="field mt-2 h-11 px-3 text-sm font-normal">
+      <label className="mt-3 block text-label font-semibold">What happened?
+        <select value={kind} onChange={(event) => setKind(event.target.value as DealProblemKind)} className="field mt-2 h-11 px-3 font-normal">
           {PROBLEM_KINDS.map((option) => <option key={option.value} value={option.value} disabled={deal.my_problems.includes(option.value)}>{option.label}</option>)}
         </select>
       </label>
-      <label className="mt-3 block text-sm font-bold">Details <span className="font-normal text-muted">Optional</span>
-        <textarea value={details} onChange={(event) => setDetails(event.target.value)} maxLength={1000} rows={3} className="mt-2 w-full resize-none rounded-xl border border-line bg-white px-3 py-2 text-sm font-normal outline-none focus:border-brand" />
+      <label className="mt-3 block text-label font-semibold">Details <span className="font-normal text-muted">Optional</span>
+        <textarea value={details} onChange={(event) => setDetails(event.target.value)} maxLength={1000} rows={3} className="mt-2 w-full resize-none rounded-xl border border-line bg-white px-3 py-2 font-normal outline-none focus:border-brand" />
       </label>
-      {error && <p role="alert" className="mt-2 text-sm text-[var(--danger)]">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-label text-danger">{error}</p>}
       <div className="mt-3 flex gap-2">
         <button type="button" onClick={onCancel} disabled={working} className="btn btn-secondary btn-sm">Back</button>
         <button type="button" onClick={submit} disabled={working || deal.my_problems.includes(kind)} className="btn btn-primary btn-sm">{working ? "Sending…" : "Send report"}</button>
@@ -238,30 +239,30 @@ function DealCard({ deal, onChange }: { deal: Deal; onChange: (deal: Deal) => vo
   }
 
   return (
-    <article className={`rounded-xl border p-4 ${deal.awaiting_me ? "border-signal bg-[var(--brand-soft)]/35" : "border-line bg-background"}`}>
+    <article className={`rounded-xl border p-4 ${deal.awaiting_me ? "border-signal bg-brand-soft/35" : "border-line bg-background"}`}>
       <div className="flex gap-3">
         <Link href={`/listings/${deal.listing.id}`} className="size-20 shrink-0 overflow-hidden rounded-lg bg-surface">
           {deal.listing.cover_url ? (
             // eslint-disable-next-line @next/next/no-img-element -- uploaded media is runtime data.
             <img src={deal.listing.cover_url} alt="" className="size-full object-cover" />
           ) : (
-            <span className="grid size-full place-items-center text-xs font-semibold text-muted">No photo</span>
+            <span className="grid size-full place-items-center text-fine font-semibold text-muted">No photo</span>
           )}
         </Link>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <Link href={`/listings/${deal.listing.id}`} className="block truncate font-bold hover:underline">{deal.listing.title}</Link>
-              <p className="mt-0.5 text-sm text-muted">
+              <Link href={`/listings/${deal.listing.id}`} className="block truncate font-semibold hover:underline">{deal.listing.title}</Link>
+              <p className="mt-0.5 text-label text-muted">
                 {deal.my_role === "seller" ? "Buyer" : "Seller"}: <Link href={`/users/${counterpart.username}`} className="font-semibold text-ink hover:underline">@{counterpart.username}</Link>
               </p>
             </div>
-            <p className="type-wide shrink-0 text-lg font-black">{isTrade ? "Trade" : centsToDollars(deal.agreed_amount_cents ?? deal.current_amount_cents)}</p>
+            <p className="type-wide shrink-0 text-title font-extrabold">{isTrade ? "Trade" : centsToDollars(deal.agreed_amount_cents ?? deal.current_amount_cents)}</p>
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-            <span className={`rounded-full px-2.5 py-1 font-bold ${deal.awaiting_me ? "bg-signal text-white" : "bg-surface text-ink"}`}>{statusLabel(deal)}</span>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-fine">
+            <span className={`rounded-full px-2.5 py-1 font-semibold ${deal.awaiting_me ? "bg-signal text-white" : "bg-surface text-ink"}`}>{statusLabel(deal)}</span>
             <span className="text-muted">{deal.kind === "buy_now" ? "Buy now" : deal.kind === "trade" ? "Trade" : "Offer"}</span>
-            {deal.asap && <span className="rounded-full bg-[var(--brand-soft)] px-2.5 py-1 font-bold text-brand">ASAP</span>}
+            {deal.asap && <span className="rounded-full bg-brand-soft px-2.5 py-1 font-semibold text-brand">ASAP</span>}
             {due && open && <span className="text-muted">Due {deadline(due)}</span>}
           </div>
         </div>
@@ -273,68 +274,68 @@ function DealCard({ deal, onChange }: { deal: Deal; onChange: (deal: Deal) => vo
         </div>
       )}
       {deal.asap && deal.my_role === "seller" && open && deal.status !== "pending" && (
-        <p className="mt-3 text-sm font-semibold text-brand">@{deal.buyer.username} wants to meet as soon as possible. The earliest time works best.</p>
+        <p className="mt-3 text-label font-semibold text-brand">@{deal.buyer.username} wants to meet as soon as possible. The earliest time works best.</p>
       )}
       {deal.status === "pending" && (
-        <div className="mt-3 rounded-lg bg-surface p-3 text-sm">
+        <div className="mt-3 rounded-lg bg-surface p-3 text-label">
           {acceptedMeetup ? (
             <>
-              <p className="font-bold text-ink"><MeetingSpotName spot={acceptedMeetup.meeting_spot} /></p>
+              <p className="font-semibold text-ink"><MeetingSpotName spot={acceptedMeetup.meeting_spot} /></p>
               <p className="mt-0.5 text-muted">{deadline(acceptedMeetup.starts_at)} · {acceptedMeetup.meeting_spot.directions}</p>
             </>
           ) : (
             <p className="font-semibold text-muted">Meetup time still needs to be confirmed.</p>
           )}
           <p className="mt-2 text-muted">Buyer {deal.buyer_confirmed ? "confirmed" : "not confirmed"} · Seller {deal.seller_confirmed ? "confirmed" : "not confirmed"}</p>
-          <p className="mt-1 text-xs text-muted">Payment happens in person between you. Tanu doesn’t handle or verify it.{deal.handoff_extensions > 0 ? " The deadline was extended once for a reschedule." : ""}</p>
+          <p className="mt-1 text-fine text-muted">Payment happens in person between you. Tanu doesn’t handle or verify it.{deal.handoff_extensions > 0 ? " The deadline was extended once for a reschedule." : ""}</p>
         </div>
       )}
       {deal.status === "disputed" && (
-        <div role="status" className="mt-3 rounded-lg border border-line bg-surface p-3 text-sm">
-          <p className="font-bold">Under review by Tanu</p>
+        <div role="status" className="mt-3 rounded-lg border border-line bg-surface p-3 text-label">
+          <p className="font-semibold">Under review by Tanu</p>
           <p className="mt-1 text-muted">The handoff couldn’t be settled automatically, so a moderator will decide whether it happened. The listing stays on hold until then.</p>
         </div>
       )}
       {deal.dispute?.outcome && (
-        <p className="mt-3 rounded-lg bg-surface p-3 text-sm text-muted">A moderator reviewed this handoff and decided {deal.dispute.outcome === "completed" ? "it happened" : "it didn’t happen"}.</p>
+        <p className="mt-3 rounded-lg bg-surface p-3 text-label text-muted">A moderator reviewed this handoff and decided {deal.dispute.outcome === "completed" ? "it happened" : "it didn’t happen"}.</p>
       )}
-      {open && deal.status !== "disputed" && <p className="mt-3 text-sm text-ink">{dealNextStep(deal)}</p>}
+      {open && deal.status !== "disputed" && <p className="mt-3 text-label text-ink">{dealNextStep(deal)}</p>}
       {deal.status === "pending" && pendingFromOther && (
-        <div className="mt-3 rounded-lg border border-signal bg-[var(--brand-soft)]/35 p-3 text-sm">
-          <p className="font-bold">New meetup proposed</p>
+        <div className="mt-3 rounded-lg border border-signal bg-brand-soft/35 p-3 text-label">
+          <p className="font-semibold">New meetup proposed</p>
           <p className="mt-1 text-muted"><MeetingSpotName spot={pendingFromOther.meeting_spot} /> · {deadline(pendingFromOther.starts_at)}</p>
           <button type="button" onClick={approveReschedule} disabled={working} className="btn btn-primary btn-sm mt-3">Accept new meetup</button>
         </div>
       )}
       {(deal.status === "pending" || (negotiating && !deal.awaiting_me)) && pendingFromMe && (
-        <p className="mt-3 rounded-lg bg-surface p-3 text-sm text-muted">Waiting for @{counterpart.username} to respond to your proposed meetup: {meetups.fromMe.map((proposal) => deadline(proposal.starts_at)).join(" or ")}.</p>
+        <p className="mt-3 rounded-lg bg-surface p-3 text-label text-muted">Waiting for @{counterpart.username} to respond to your proposed meetup: {meetups.fromMe.map((proposal) => deadline(proposal.starts_at)).join(" or ")}.</p>
       )}
       {deal.status === "pending" && latestMeetupUpdate && (
-        <p className="mt-3 text-sm font-semibold text-ink">
+        <p className="mt-3 text-label font-semibold text-ink">
           @{latestMeetupUpdate.actor.username} {latestMeetupUpdate.kind === "arrived" ? "is here." : `is running about ${latestMeetupUpdate.minutes_late} minutes late.`}
         </p>
       )}
 
       {deal.awaiting_me && meetups.fromOther.length > 0 && (
         <fieldset className="mt-3">
-          <legend className="text-sm font-bold">
+          <legend className="text-label font-semibold">
             {meetups.fromOther.length > 1 ? "Choose a meetup time" : "Proposed meetup"}
           </legend>
-          <p className="mt-1 text-xs text-muted">Accepting or countering keeps this time.</p>
+          <p className="mt-1 text-fine text-muted">Accepting or countering keeps this time.</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {meetups.fromOther.map((proposal) => (
-              <button key={proposal.id} type="button" onClick={() => setMeetupProposalId(proposal.id)} aria-pressed={meetupProposalId === proposal.id} className={`rounded-lg border px-3 py-2 text-left text-sm ${meetupProposalId === proposal.id ? "border-ink bg-surface ring-1 ring-ink" : "border-line"}`}>
-                <span className="block font-bold">{deadline(proposal.starts_at)}</span>
-                <span className="block text-xs text-muted"><MeetingSpotName spot={proposal.meeting_spot} /></span>
+              <button key={proposal.id} type="button" onClick={() => setMeetupProposalId(proposal.id)} aria-pressed={meetupProposalId === proposal.id} className={`rounded-lg border px-3 py-2 text-left text-label ${meetupProposalId === proposal.id ? "border-ink bg-surface ring-1 ring-ink" : "border-line"}`}>
+                <span className="block font-semibold">{deadline(proposal.starts_at)}</span>
+                <span className="block text-fine text-muted"><MeetingSpotName spot={proposal.meeting_spot} /></span>
               </button>
             ))}
           </div>
         </fieldset>
       )}
       {deal.awaiting_me && meetups.allStale && (
-        <p className="mt-3 rounded-lg border border-signal p-3 text-sm">The proposed meetup times have passed. Suggest a new time before accepting.</p>
+        <p className="mt-3 rounded-lg border border-signal p-3 text-label">The proposed meetup times have passed. Suggest a new time before accepting.</p>
       )}
-      {error && <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{error}</p>}
+      {error && <p role="alert" className="mt-3 text-label text-danger">{error}</p>}
 
       {reporting ? (
         <ProblemReporter deal={deal} onDone={(updated) => { onChange(updated); setReporting(false); }} onCancel={() => setReporting(false)} />
@@ -356,8 +357,8 @@ function DealCard({ deal, onChange }: { deal: Deal; onChange: (deal: Deal) => vo
         </div>
       ) : rescheduling ? (
         <div className="mt-3 border-t border-line pt-3">
-          <p className="font-bold">{acceptedMeetup ? "Propose a new meetup" : "Suggest a meetup time"}</p>
-          <p className="mt-1 text-sm text-muted">
+          <p className="font-semibold">{acceptedMeetup ? "Propose a new meetup" : "Suggest a meetup time"}</p>
+          <p className="mt-1 text-label text-muted">
             {acceptedMeetup
               ? "The current meetup stays confirmed until the other person accepts this change."
               : negotiating && deal.awaiting_me
@@ -407,12 +408,12 @@ function DealSection({ title, description, deals, onChange, empty }: { title: st
     <section className="mt-8">
       <div className="flex items-end justify-between gap-4 border-b border-line pb-3">
         <div>
-          <h2 className="type-wide text-xl font-black">{title}</h2>
-          {description && <p className="mt-1 text-sm text-muted">{description}</p>}
+          <h2 className="type-wide text-title font-extrabold">{title}</h2>
+          {description && <p className="mt-1 text-label text-muted">{description}</p>}
         </div>
-        <span className="text-sm font-semibold text-muted">{deals.length}</span>
+        <span className="text-label font-semibold text-muted">{deals.length}</span>
       </div>
-      {deals.length ? <div className="mt-4 grid gap-3 lg:grid-cols-2">{deals.map((deal) => <DealCard key={deal.id} deal={deal} onChange={onChange} />)}</div> : <p className="rounded-xl bg-surface px-5 py-8 text-center text-sm text-muted">{empty}</p>}
+      {deals.length ? <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">{deals.map((deal) => <DealCard key={deal.id} deal={deal} onChange={onChange} />)}</div> : <p className="rounded-xl bg-surface px-5 py-8 text-center text-label text-muted">{empty}</p>}
     </section>
   );
 }
@@ -422,18 +423,18 @@ function CollapsedSection({ title, description, deals, onChange, empty }: { titl
     <details className="group mt-8 border-y border-line py-1">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 [&::-webkit-details-marker]:hidden">
         <div>
-          <h2 className="type-wide text-lg font-black">{title}</h2>
-          <p className="mt-1 text-sm text-muted">{description}</p>
+          <h2 className="type-wide text-title font-extrabold">{title}</h2>
+          <p className="mt-1 text-label text-muted">{description}</p>
         </div>
-        <span className="flex shrink-0 items-center gap-2 text-sm font-semibold text-muted">
+        <span className="flex shrink-0 items-center gap-2 text-label font-semibold text-muted">
           {deals.length}
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-4 transition group-open:rotate-180" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+          <ChevronDownIcon className="size-4 transition group-open:rotate-180" aria-hidden="true" />
         </span>
       </summary>
       {deals.length ? (
         <div className="grid gap-3 pb-5 lg:grid-cols-2">{deals.map((deal) => <DealCard key={deal.id} deal={deal} onChange={onChange} />)}</div>
       ) : (
-        <p className="pb-5 text-sm text-muted">{empty}</p>
+        <p className="pb-5 text-label text-muted">{empty}</p>
       )}
     </details>
   );
@@ -476,23 +477,23 @@ export function DealsClient() {
     listDeals().then(setDeals, () => {});
   }
 
-  if (deals === undefined) return <main className="mx-auto min-h-[70vh] max-w-5xl animate-pulse px-4 py-10 sm:px-6"><div className="h-9 w-36 rounded bg-surface" /><div className="mt-8 grid gap-3 lg:grid-cols-2"><div className="h-40 rounded-xl bg-surface" /><div className="h-40 rounded-xl bg-surface" /></div></main>;
-  if (deals === null) return <main className="mx-auto grid min-h-[70vh] max-w-xl place-items-center px-4 text-center"><div><h1 className="type-wide text-3xl font-black">Log in to see your deals</h1><p className="mt-3 text-muted">Offers, purchase requests, and transaction history are tied to your verified account.</p><Link href="/account/login" className="btn btn-primary mt-6">Log in</Link></div></main>;
+  if (deals === undefined) return <main className="mx-auto min-h-[70vh] max-w-5xl animate-pulse px-4 py-10 sm:px-6"><div className="h-9 w-36 rounded-lg bg-surface" /><div className="mt-8 grid gap-3 lg:grid-cols-2"><div className="h-40 rounded-xl bg-surface" /><div className="h-40 rounded-xl bg-surface" /></div></main>;
+  if (deals === null) return <main className="mx-auto grid min-h-[70vh] max-w-xl place-items-center px-4 text-center"><div><h1 className="type-wide text-display font-extrabold">Log in to see your deals</h1><p className="mt-3 text-muted">Offers, purchase requests, and transaction history are tied to your verified account.</p><Link href="/account/login" className="btn btn-primary mt-6">Log in</Link></div></main>;
 
   return (
-    <main className="mx-auto min-h-[70vh] max-w-5xl px-4 py-8 pb-28 sm:px-6 sm:py-10 desktop:pb-12">
+    <main className="mx-auto min-h-[70vh] max-w-5xl px-4 py-8 pb-12 sm:px-6 sm:py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm font-bold uppercase tracking-[0.14em] text-signal">Offers and purchases</p>
-          <h1 className="type-wide mt-1 text-3xl font-black">Deals</h1>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-muted">Manage every offer and purchase here. Use messages to coordinate details after you choose who to deal with.</p>
+          <p className="text-label font-semibold uppercase tracking-[0.14em] text-signal">Offers and purchases</p>
+          <h1 className="type-wide mt-1 text-display font-extrabold">Deals</h1>
+          <p className="mt-2 max-w-xl text-label leading-6 text-muted">Manage every offer and purchase here. Use messages to coordinate details after you choose who to deal with.</p>
         </div>
         <Link href="/sell" className="btn btn-primary">Sell an item</Link>
       </div>
 
       <div className="mt-7 grid grid-cols-2 rounded-xl bg-surface p-1" role="tablist" aria-label="Deal role">
-        <button type="button" role="tab" aria-selected={role === "buyer"} onClick={() => setRole("buyer")} className={`rounded-lg px-4 py-2.5 text-sm font-bold transition ${role === "buyer" ? "bg-background shadow-sm" : "text-muted hover:text-ink"}`}>Buying{buyingCount ? ` · ${buyingCount}` : ""}</button>
-        <button type="button" role="tab" aria-selected={role === "seller"} onClick={() => setRole("seller")} className={`rounded-lg px-4 py-2.5 text-sm font-bold transition ${role === "seller" ? "bg-background shadow-sm" : "text-muted hover:text-ink"}`}>Selling{sellingCount ? ` · ${sellingCount}` : ""}</button>
+        <button type="button" role="tab" aria-selected={role === "buyer"} onClick={() => setRole("buyer")} className={`rounded-lg px-4 py-2.5 text-label font-semibold transition ${role === "buyer" ? "bg-background shadow-float" : "text-muted hover:text-ink"}`}>Buying{buyingCount ? ` · ${buyingCount}` : ""}</button>
+        <button type="button" role="tab" aria-selected={role === "seller"} onClick={() => setRole("seller")} className={`rounded-lg px-4 py-2.5 text-label font-semibold transition ${role === "seller" ? "bg-background shadow-float" : "text-muted hover:text-ink"}`}>Selling{sellingCount ? ` · ${sellingCount}` : ""}</button>
       </div>
 
       <DealSection title="Current deals" description={role === "seller" ? "Offers that need your answer, backup buyers, handoffs, and anything under review." : "Requests, offers, handoffs, and anything under review."} deals={current} onChange={update} empty={role === "seller" ? "No active offers on your listings." : "You have no active purchases or offers."} />

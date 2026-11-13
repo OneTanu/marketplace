@@ -82,42 +82,42 @@ export function CaseDetailView({ caseId }: { caseId: number }) {
     setDetail(await getCase(caseId));
   }
 
-  if (detail === undefined) return <main className="mx-auto min-h-[70vh] max-w-6xl animate-pulse px-4 py-10 sm:px-6"><div className="h-8 w-64 rounded bg-surface" /><div className="mt-6 h-96 rounded-xl bg-surface" /></main>;
+  if (detail === undefined) return <main className="mx-auto min-h-[70vh] max-w-6xl animate-pulse px-4 py-10 sm:px-6"><div className="h-8 w-64 rounded-lg bg-surface" /><div className="mt-6 h-96 rounded-xl bg-surface" /></main>;
   if (detail === null) return <ModeratorsOnly message={denied} />;
 
   const row = detail.case;
   return (
-    <main className="mx-auto min-h-[70vh] max-w-6xl px-4 py-8 pb-28 sm:px-6 desktop:pb-12">
-      <Link href="/moderation" className="text-sm font-bold text-muted hover:text-ink">← Moderation queue</Link>
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-        <span className={`rounded-full px-2.5 py-1 font-bold ${PRIORITY_STYLES[row.priority]}`}>{row.priority_label}</span>
+    <main className="mx-auto min-h-[70vh] max-w-6xl px-4 py-8 pb-12 sm:px-6">
+      <Link href="/moderation" className="text-label font-semibold text-muted hover:text-ink">← Moderation queue</Link>
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-fine">
+        <span className={`rounded-full px-2.5 py-1 font-semibold ${PRIORITY_STYLES[row.priority]}`}>{row.priority_label}</span>
         <span className="rounded-full bg-surface px-2.5 py-1 font-semibold capitalize">{row.status}</span>
-        {row.escalated && <span className="rounded-full border border-ink px-2.5 py-1 font-bold">Escalated</span>}
-        {detail.legal_hold && <span className="rounded-full border border-ink px-2.5 py-1 font-bold">Legal hold</span>}
+        {row.escalated && <span className="rounded-full border border-ink px-2.5 py-1 font-semibold">Escalated</span>}
+        {detail.legal_hold && <span className="rounded-full border border-ink px-2.5 py-1 font-semibold">Legal hold</span>}
         <span className="text-muted">Case #{row.id}{row.school_name ? ` · ${row.school_name}` : ""} · opened {formatDateTime(row.created_at)}</span>
       </div>
-      <h1 className="type-wide mt-2 text-2xl font-black">{row.reasons.map((reason) => REASON_LABELS[reason as ReportReason] ?? reason).join(" · ")}</h1>
+      <h1 className="type-wide mt-2 text-display font-extrabold">{row.reasons.map((reason) => REASON_LABELS[reason as ReportReason] ?? reason).join(" · ")}</h1>
       <p className="mt-1">
         {caseTarget(row)}
         {row.listing && <> · <span className="text-muted">now {row.listing.status}{row.listing.removed_by ? ` (by ${row.listing.removed_by})` : ""}</span></>}
       </p>
-      <p className="mt-1 text-sm text-muted">{row.assigned_to ? `Assigned to @${row.assigned_to.username}` : "Unassigned"}</p>
+      <p className="mt-1 text-label text-muted">{row.assigned_to ? `Assigned to @${row.assigned_to.username}` : "Unassigned"}</p>
 
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_21rem]">
         <div className="min-w-0 space-y-6">
           <section aria-labelledby="reports-heading">
-            <h2 id="reports-heading" className="text-lg font-black">Reports ({detail.reports.length})</h2>
+            <h2 id="reports-heading" className="text-title font-extrabold">Reports ({detail.reports.length})</h2>
             <ul className="mt-3 space-y-3">
               {detail.reports.map((report) => <ReportCard key={report.id} report={report} />)}
             </ul>
             {detail.reporter_records.some((record) => record.reviewed > 0) && (
-              <div className="mt-3 rounded-xl bg-surface p-3 text-sm">
-                <p className="font-bold">Reporters&apos; track record</p>
+              <div className="mt-3 rounded-xl bg-surface p-3 text-label">
+                <p className="font-semibold">Reporters&apos; track record</p>
                 <ul className="mt-1 space-y-1">
                   {detail.reporter_records.filter((record) => record.reviewed > 0).map((record) => (
                     <li key={record.user.id}>
                       @{record.user.username}: {record.upheld} of {record.reviewed} reviewed reports led to action
-                      {record.possible_false_reporter && <span className="ml-2 rounded-full border border-signal px-2 py-0.5 text-xs font-bold">Mostly dismissed</span>}
+                      {record.possible_false_reporter && <span className="ml-2 rounded-full border border-signal px-2 py-0.5 text-fine font-semibold">Mostly dismissed</span>}
                     </li>
                   ))}
                 </ul>
@@ -140,16 +140,16 @@ function ReportCard({ report }: { report: Report }) {
   return (
     <li className="rounded-xl border border-line p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="font-bold">
+        <p className="font-semibold">
           {report.reason_label}
-          {report.prohibited_category && <span className="font-semibold text-[var(--danger)]"> · {report.prohibited_category}</span>}
+          {report.prohibited_category && <span className="font-semibold text-danger"> · {report.prohibited_category}</span>}
         </p>
-        <p className="text-xs text-muted">@{report.reporter.username} · {formatDateTime(report.created_at)} · {report.target_type}</p>
+        <p className="text-fine text-muted">@{report.reporter.username} · {formatDateTime(report.created_at)} · {report.target_type}</p>
       </div>
-      {report.details && <p className="mt-2 whitespace-pre-line text-sm">“{report.details}”</p>}
+      {report.details && <p className="mt-2 whitespace-pre-line text-label">“{report.details}”</p>}
       {report.evidence.length > 0 && (
         <div className="mt-3 space-y-2 rounded-lg bg-surface p-3">
-          <p className="text-xs font-bold uppercase tracking-wide text-muted">Evidence saved at report time</p>
+          <p className="text-fine font-semibold uppercase tracking-wide text-muted">Evidence saved at report time</p>
           {report.evidence.map((snapshot) => <EvidenceView key={snapshot.id} snapshot={snapshot} />)}
         </div>
       )}
@@ -161,14 +161,14 @@ function EvidenceView({ snapshot }: { snapshot: Evidence }) {
   const data = snapshot.data as Record<string, unknown>;
   if (snapshot.kind === "listing") {
     return (
-      <div className="text-sm">
-        <p className="font-bold">{text(data.title)} · {centsToDollars(Number(data.price_cents ?? 0))}</p>
-        <p className="text-xs text-muted">{[data.category, data.condition, data.brand, `status: ${text(data.status)}`].filter(Boolean).map(text).join(" · ")}</p>
+      <div className="text-label">
+        <p className="font-semibold">{text(data.title)} · {centsToDollars(Number(data.price_cents ?? 0))}</p>
+        <p className="text-fine text-muted">{[data.category, data.condition, data.brand, `status: ${text(data.status)}`].filter(Boolean).map(text).join(" · ")}</p>
         {text(data.description) && <p className="mt-1 whitespace-pre-line">{text(data.description)}</p>}
         {snapshot.files.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
             {snapshot.files.map((url) => (
-              <a key={url} href={url} target="_blank" rel="noreferrer" className="block size-24 overflow-hidden rounded-md bg-background">
+              <a key={url} href={url} target="_blank" rel="noreferrer" className="block size-24 overflow-hidden rounded-lg bg-background">
                 {/* eslint-disable-next-line @next/next/no-img-element -- evidence copies are runtime media. */}
                 <img src={url} alt="Reported listing photo" className="size-full object-cover" />
               </a>
@@ -180,18 +180,18 @@ function EvidenceView({ snapshot }: { snapshot: Evidence }) {
   }
   if (snapshot.kind === "message") {
     return (
-      <div className="rounded-lg bg-background p-2 text-sm">
-        <p className="text-xs font-bold text-muted">@{text(data.sender)} · {data.sent_at ? formatDateTime(text(data.sent_at)) : ""}</p>
+      <div className="rounded-lg bg-background p-2 text-label">
+        <p className="text-fine font-semibold text-muted">@{text(data.sender)} · {data.sent_at ? formatDateTime(text(data.sent_at)) : ""}</p>
         <p className="whitespace-pre-line break-words">{text(data.body)}</p>
       </div>
     );
   }
   if (snapshot.kind === "profile") {
     return (
-      <div className="text-sm">
-        <p className="font-bold">@{text(data.username)} {text(data.first_name)}</p>
+      <div className="text-label">
+        <p className="font-semibold">@{text(data.username)} {text(data.first_name)}</p>
         {text(data.profile_description) && <p className="mt-1">{text(data.profile_description)}</p>}
-        {text(data.instagram_handle) && <p className="text-xs text-muted">Instagram: @{text(data.instagram_handle)}</p>}
+        {text(data.instagram_handle) && <p className="text-fine text-muted">Instagram: @{text(data.instagram_handle)}</p>}
       </div>
     );
   }
@@ -199,14 +199,14 @@ function EvidenceView({ snapshot }: { snapshot: Evidence }) {
     const events = (data.events as { type: string; at: string }[] | undefined) ?? [];
     const meetups = (data.meetups as { spot: string; starts_at: string; status: string }[] | undefined) ?? [];
     return (
-      <div className="text-sm">
-        <p className="font-bold">{text(data.listing)} · {text(data.kind)} · {text(data.status)}</p>
+      <div className="text-label">
+        <p className="font-semibold">{text(data.listing)} · {text(data.kind)} · {text(data.status)}</p>
         {meetups.length > 0 && (
-          <ul className="mt-1 text-xs">
+          <ul className="mt-1 text-fine">
             {meetups.map((meetup, index) => <li key={index}>Meetup: {meetup.spot}, {formatDateTime(meetup.starts_at)} ({meetup.status})</li>)}
           </ul>
         )}
-        <ol className="mt-1 space-y-0.5 text-xs text-muted">
+        <ol className="mt-1 space-y-0.5 text-fine text-muted">
           {events.map((event, index) => <li key={index}>{formatDateTime(event.at)} · {event.type.replaceAll("_", " ")}</li>)}
         </ol>
       </div>
@@ -214,39 +214,39 @@ function EvidenceView({ snapshot }: { snapshot: Evidence }) {
   }
   if (snapshot.kind === "review") {
     return (
-      <div className="text-sm">
-        <p className="font-bold">{text(data.rating)}/5 by @{text(data.author)}</p>
+      <div className="text-label">
+        <p className="font-semibold">{text(data.rating)}/5 by @{text(data.author)}</p>
         {text(data.comment) && <p className="mt-1">{text(data.comment)}</p>}
       </div>
     );
   }
-  return <pre className="overflow-x-auto text-xs">{JSON.stringify(data, null, 2)}</pre>;
+  return <pre className="overflow-x-auto text-fine">{JSON.stringify(data, null, 2)}</pre>;
 }
 
 function SubjectHistory({ detail, onChanged }: { detail: CaseDetail; onChanged: () => Promise<void> }) {
   const subject = detail.subject;
   return (
     <section aria-labelledby="subject-heading" className="rounded-xl border border-line p-4">
-      <h2 id="subject-heading" className="text-lg font-black">
+      <h2 id="subject-heading" className="text-title font-extrabold">
         <Link href={`/users/${subject.user.username}`} className="hover:underline">@{subject.user.username}</Link>
-        <span className="ml-2 text-sm font-semibold text-muted">{subject.user.first_name}</span>
+        <span className="ml-2 text-label font-semibold text-muted">{subject.user.first_name}</span>
       </h2>
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 text-label text-muted">
         {subject.email} · {subject.school_name || "No school"} · joined {formatDateTime(subject.date_joined)}
-        {!subject.is_active && <span className="font-bold text-[var(--danger)]"> · account off</span>}
+        {!subject.is_active && <span className="font-semibold text-danger"> · account off</span>}
       </p>
       {subject.repeat_offender && (
-        <p className="mt-2 inline-block rounded-full border border-[var(--danger)] px-2.5 py-1 text-xs font-bold text-[var(--danger)]">
+        <p className="mt-2 inline-block rounded-full border border-danger px-2.5 py-1 text-fine font-semibold text-danger">
           Repeat offender · {subject.recent_consequences} consequences in 90 days
         </p>
       )}
-      <p className="mt-1 text-sm">
+      <p className="mt-1 text-label">
         Reported {subject.reports_received} {subject.reports_received === 1 ? "time" : "times"} · has filed {subject.reports_made} {subject.reports_made === 1 ? "report" : "reports"}
       </p>
 
-      <h3 className="mt-4 text-sm font-bold">Active restrictions</h3>
+      <h3 className="mt-4 text-label font-semibold">Active restrictions</h3>
       {subject.active_restrictions.length === 0 ? (
-        <p className="text-sm text-muted">None.</p>
+        <p className="text-label text-muted">None.</p>
       ) : (
         <ul className="mt-1 space-y-2">
           {subject.active_restrictions.map((restriction) => (
@@ -255,11 +255,11 @@ function SubjectHistory({ detail, onChanged }: { detail: CaseDetail; onChanged: 
         </ul>
       )}
 
-      <h3 className="mt-4 text-sm font-bold">Earlier warnings and actions</h3>
+      <h3 className="mt-4 text-label font-semibold">Earlier warnings and actions</h3>
       {subject.past_actions.length === 0 ? (
-        <p className="text-sm text-muted">None.</p>
+        <p className="text-label text-muted">None.</p>
       ) : (
-        <ul className="mt-1 space-y-1 text-sm">
+        <ul className="mt-1 space-y-1 text-label">
           {subject.past_actions.map((action) => (
             <li key={action.id}>
               <span className="font-semibold">{action.kind_label}</span> · {formatDateTime(action.created_at)}
@@ -270,11 +270,11 @@ function SubjectHistory({ detail, onChanged }: { detail: CaseDetail; onChanged: 
         </ul>
       )}
 
-      <h3 className="mt-4 text-sm font-bold">Other cases about them</h3>
+      <h3 className="mt-4 text-label font-semibold">Other cases about them</h3>
       {subject.other_cases.length === 0 ? (
-        <p className="text-sm text-muted">None.</p>
+        <p className="text-label text-muted">None.</p>
       ) : (
-        <ul className="mt-1 space-y-1 text-sm">
+        <ul className="mt-1 space-y-1 text-label">
           {subject.other_cases.map((other) => (
             <li key={other.id}>
               <Link href={`/moderation/cases/${other.id}`} className="underline">Case #{other.id}</Link> · {other.reasons.map((reason) => REASON_LABELS[reason as ReportReason] ?? reason).join(", ")} · {other.status}
@@ -303,22 +303,22 @@ function RestrictionRow({ restriction, caseId, senior, onLifted }: { restriction
   }
 
   return (
-    <li className="rounded-lg bg-surface p-3 text-sm">
+    <li className="rounded-lg bg-surface p-3 text-label">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span>
-          <span className="font-bold">{restriction.kind_label}</span> · {restriction.expires_at ? `until ${formatDateTime(restriction.expires_at)}` : "until lifted"}
+          <span className="font-semibold">{restriction.kind_label}</span> · {restriction.expires_at ? `until ${formatDateTime(restriction.expires_at)}` : "until lifted"}
         </span>
-        {!lifting && (!needsSenior || senior) && <button type="button" onClick={() => setLifting(true)} className="text-sm font-semibold underline">Lift</button>}
+        {!lifting && (!needsSenior || senior) && <button type="button" onClick={() => setLifting(true)} className="text-label font-semibold underline">Lift</button>}
       </div>
       <p className="mt-1 text-muted">{restriction.reason}</p>
       {lifting && (
         <div className="mt-2 flex flex-wrap gap-2">
-          <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Why lift it?" aria-label="Reason for lifting" className="field h-9 min-w-0 flex-1 px-3" />
+          <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Why lift it?" aria-label="Reason for lifting" className="field h-11 min-w-0 flex-1 px-3" />
           <button type="button" onClick={lift} className="btn btn-primary btn-sm">Lift</button>
           <button type="button" onClick={() => setLifting(false)} className="btn btn-secondary btn-sm">Cancel</button>
         </div>
       )}
-      {error && <p role="alert" className="mt-1 text-[var(--danger)]">{error}</p>}
+      {error && <p role="alert" className="mt-1 text-danger">{error}</p>}
     </li>
   );
 }
@@ -326,15 +326,15 @@ function RestrictionRow({ restriction, caseId, senior, onLifted }: { restriction
 function ActivityLog({ actions }: { actions: Action[] }) {
   return (
     <section aria-labelledby="activity-heading">
-      <h2 id="activity-heading" className="text-lg font-black">Activity</h2>
+      <h2 id="activity-heading" className="text-title font-extrabold">Activity</h2>
       {actions.length === 0 ? (
-        <p className="mt-2 text-sm text-muted">No actions yet.</p>
+        <p className="mt-2 text-label text-muted">No actions yet.</p>
       ) : (
         <ol className="mt-3 space-y-3 border-l border-line pl-4">
           {actions.map((action) => (
-            <li key={action.id} className="text-sm">
+            <li key={action.id} className="text-label">
               <p>
-                <span className="font-bold">{action.kind_label}</span>
+                <span className="font-semibold">{action.kind_label}</span>
                 {action.target_user && <> · @{action.target_user.username}</>}
                 <span className="text-muted"> · {action.actor ? `@${action.actor.username}` : "System"} · {formatDateTime(action.created_at)}</span>
               </p>
@@ -410,8 +410,8 @@ function ActionPanel({ detail, onChange }: { detail: CaseDetail; onChange: (deta
   return (
     <aside className="space-y-4 lg:sticky lg:top-24" aria-label="Actions">
       {!viewer.can_act && (
-        <div className="rounded-xl border border-[var(--danger)] p-4 text-sm">
-          <p className="font-bold">You can&apos;t act on this case because {viewer.conflict}.</p>
+        <div className="rounded-xl border border-danger p-4 text-label">
+          <p className="font-semibold">You can&apos;t act on this case because {viewer.conflict}.</p>
           {viewer.conflict_overridable && viewer.is_senior ? (
             <label className="mt-2 block">
               <span className="text-muted">As a senior moderator you can override it. Your reason is logged.</span>
@@ -424,9 +424,9 @@ function ActionPanel({ detail, onChange }: { detail: CaseDetail; onChange: (deta
       )}
 
       <div className="rounded-xl border border-line p-4">
-        <h2 className="font-black">Assign</h2>
+        <h2 className="font-extrabold">Assign</h2>
         <div className="mt-2 flex gap-2">
-          <select value={assignee} onChange={(event) => setAssignee(event.target.value)} aria-label="Moderator" className="field h-10 min-w-0 flex-1 px-2 text-sm">
+          <select value={assignee} onChange={(event) => setAssignee(event.target.value)} aria-label="Moderator" className="field h-11 min-w-0 flex-1 px-2">
             <option value="">Choose a moderator</option>
             {detail.eligible_assignees.map((user) => <option key={user.id} value={user.id}>@{user.username}</option>)}
           </select>
@@ -435,7 +435,7 @@ function ActionPanel({ detail, onChange }: { detail: CaseDetail; onChange: (deta
       </div>
 
       <div className="rounded-xl border border-line p-4">
-        <h2 className="font-black">Take action</h2>
+        <h2 className="font-extrabold">Take action</h2>
         <div className="mt-2 grid gap-1.5" role="group" aria-label="Action">
           {available.map((action) => {
             const locked = action.senior && !viewer.is_senior;
@@ -453,7 +453,7 @@ function ActionPanel({ detail, onChange }: { detail: CaseDetail; onChange: (deta
                   setSaved("");
                 }}
                 aria-pressed={chosen === action.value}
-                className={`rounded-lg border px-3 py-2 text-left text-sm font-semibold disabled:opacity-50 ${chosen === action.value ? "border-ink ring-1 ring-ink" : "border-line"} ${action.tone === "danger" ? "text-[var(--danger)]" : ""}`}
+                className={`rounded-lg border px-3 py-2 text-left text-label font-semibold disabled:opacity-50 ${chosen === action.value ? "border-ink ring-1 ring-ink" : "border-line"} ${action.tone === "danger" ? "text-danger" : ""}`}
               >
                 {action.label}{locked ? " (senior only)" : ""}
               </button>
@@ -462,19 +462,19 @@ function ActionPanel({ detail, onChange }: { detail: CaseDetail; onChange: (deta
         </div>
 
         {current && (
-          <div className="mt-4 space-y-3 border-t border-line pt-3 text-sm">
+          <div className="mt-4 space-y-3 border-t border-line pt-3 text-label">
             {current.needsUser && (
-              <label className="block font-bold">
+              <label className="block font-semibold">
                 Student
-                <select value={userId} onChange={(event) => setUserId(Number(event.target.value))} className="field mt-1 h-10 w-full px-2 font-normal">
+                <select value={userId} onChange={(event) => setUserId(Number(event.target.value))} className="field mt-1 h-11 w-full px-2 font-normal">
                   {detail.involved_users.map((user, index) => <option key={user.id} value={user.id}>@{user.username}{index === 0 ? " (reported)" : " (reporter)"}</option>)}
                 </select>
               </label>
             )}
             {current.value === "restrict" && (
-              <label className="block font-bold">
+              <label className="block font-semibold">
                 Restrict
-                <select value={kind} onChange={(event) => setKind(event.target.value as typeof kind)} className="field mt-1 h-10 w-full px-2 font-normal">
+                <select value={kind} onChange={(event) => setKind(event.target.value as typeof kind)} className="field mt-1 h-11 w-full px-2 font-normal">
                   <option value="selling">Selling</option>
                   <option value="messaging">Messaging</option>
                   <option value="deals">Buying and deals</option>
@@ -482,9 +482,9 @@ function ActionPanel({ detail, onChange }: { detail: CaseDetail; onChange: (deta
               </label>
             )}
             {(current.value === "restrict" || current.value === "suspend") && (
-              <label className="block font-bold">
+              <label className="block font-semibold">
                 For
-                <select value={days} onChange={(event) => setDays(Number(event.target.value))} className="field mt-1 h-10 w-full px-2 font-normal">
+                <select value={days} onChange={(event) => setDays(Number(event.target.value))} className="field mt-1 h-11 w-full px-2 font-normal">
                   {DURATIONS.map(([label, value]) => <option key={value} value={value}>{label}</option>)}
                   {current.value === "restrict" && <option value={0}>Until lifted</option>}
                 </select>
@@ -492,29 +492,29 @@ function ActionPanel({ detail, onChange }: { detail: CaseDetail; onChange: (deta
             )}
             {current.value === "suspend" && <p className="text-muted">Signs them out and cancels all their open deals, including Pending ones.</p>}
             {current.value === "ban" && (
-              <label className="flex items-start gap-2 font-semibold text-[var(--danger)]">
+              <label className="flex items-start gap-2 font-semibold text-danger">
                 <input type="checkbox" checked={confirmBan} onChange={(event) => setConfirmBan(event.target.checked)} className="mt-0.5" />
                 I understand this is permanent: their deals are canceled, listings removed, and their email can&apos;t sign up again.
               </label>
             )}
             {NOTICE_ACTIONS.has(current.value) && (
-              <label className="block font-bold">
+              <label className="block font-semibold">
                 Message to the student <span className="font-normal text-muted">(optional)</span>
                 <textarea value={userMessage} onChange={(event) => setUserMessage(event.target.value)} rows={3} placeholder="Leave blank to send Tanu's standard message for this action." className="field mt-1 w-full resize-none p-2 font-normal" />
               </label>
             )}
-            <label className="block font-bold">
+            <label className="block font-semibold">
               {current.value === "note" ? "Note" : current.value === "request_info" ? "Question" : "Internal reason"}{" "}
               <span className="font-normal text-muted">{current.value === "request_info" ? "(the student sees this)" : "(required, staff only, logged permanently)"}</span>
               <textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={3} className="field mt-1 w-full resize-none p-2 font-normal" />
             </label>
-            <button type="button" onClick={submit} disabled={working || blocked || !reason.trim() || (current.value === "ban" && !confirmBan)} className={`btn w-full ${current.tone === "danger" ? "bg-[var(--danger)] text-white" : "btn-primary"}`}>
+            <button type="button" onClick={submit} disabled={working || blocked || !reason.trim() || (current.value === "ban" && !confirmBan)} className={`btn w-full ${current.tone === "danger" ? "bg-danger text-white" : "btn-primary"}`}>
               {working ? "Saving…" : current.label}
             </button>
           </div>
         )}
-        {error && <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{error}</p>}
-        {saved && <p role="status" className="mt-3 text-sm font-semibold text-brand">{saved}</p>}
+        {error && <p role="alert" className="mt-3 text-label text-danger">{error}</p>}
+        {saved && <p role="status" className="mt-3 text-label font-semibold text-brand">{saved}</p>}
       </div>
     </aside>
   );
@@ -529,8 +529,8 @@ const DISPUTE_REASONS: Record<DealDispute["reason"], string> = {
 function DealDisputes({ disputes, caseId, onChange }: { disputes: DealDispute[]; caseId: number; onChange: (detail: CaseDetail) => void }) {
   return (
     <section aria-labelledby="disputes-heading" className="rounded-xl border border-signal p-4">
-      <h2 id="disputes-heading" className="text-lg font-black">Disputed handoffs</h2>
-      <p className="mt-1 text-sm text-muted">Payment happens off-platform; Tanu can’t verify it. Decide from the evidence, and don’t penalize anyone on one person’s word alone.</p>
+      <h2 id="disputes-heading" className="text-title font-extrabold">Disputed handoffs</h2>
+      <p className="mt-1 text-label text-muted">Payment happens off-platform; Tanu can’t verify it. Decide from the evidence, and don’t penalize anyone on one person’s word alone.</p>
       <ul className="mt-3 space-y-3">
         {disputes.map((dispute) => <DisputeItem key={dispute.id} dispute={dispute} caseId={caseId} onChange={onChange} />)}
       </ul>
@@ -559,8 +559,8 @@ function DisputeItem({ dispute, caseId, onChange }: { dispute: DealDispute; case
   }
 
   return (
-    <li className="rounded-lg bg-surface p-3 text-sm">
-      <p className="font-bold">“{dispute.listing_title}” <span className="font-normal text-muted">· deal #{dispute.deal_id} · opened {formatDateTime(dispute.opened_at)}</span></p>
+    <li className="rounded-lg bg-surface p-3 text-label">
+      <p className="font-semibold">“{dispute.listing_title}” <span className="font-normal text-muted">· deal #{dispute.deal_id} · opened {formatDateTime(dispute.opened_at)}</span></p>
       <p className="mt-1">{DISPUTE_REASONS[dispute.reason]}.</p>
       <p className="mt-1 text-muted">
         Buyer @{dispute.buyer.username} {confirmedIds.has(dispute.buyer.id) ? "confirmed" : "did not confirm"} · Seller @{dispute.seller.username} {confirmedIds.has(dispute.seller.id) ? "confirmed" : "did not confirm"}
@@ -578,7 +578,7 @@ function DisputeItem({ dispute, caseId, onChange }: { dispute: DealDispute; case
             <button type="button" disabled={working || !reason.trim()} onClick={() => decide("completed")} className="btn btn-primary btn-sm">It happened: mark Sold</button>
             <button type="button" disabled={working || !reason.trim()} onClick={() => decide("canceled")} className="btn btn-secondary btn-sm">It didn’t: release the listing</button>
           </div>
-          {error && <p role="alert" className="text-[var(--danger)]">{error}</p>}
+          {error && <p role="alert" className="text-danger">{error}</p>}
         </div>
       )}
     </li>
@@ -588,7 +588,7 @@ function DisputeItem({ dispute, caseId, onChange }: { dispute: DealDispute; case
 function Appeals({ appeals, caseId, onChange }: { appeals: Appeal[]; caseId: number; onChange: (detail: CaseDetail) => void }) {
   return (
     <section aria-labelledby="appeals-heading" className="rounded-xl border border-signal p-4">
-      <h2 id="appeals-heading" className="text-lg font-black">Appeals</h2>
+      <h2 id="appeals-heading" className="text-title font-extrabold">Appeals</h2>
       <ul className="mt-3 space-y-3">
         {appeals.map((appeal) => <AppealItem key={appeal.id} appeal={appeal} caseId={caseId} onChange={onChange} />)}
       </ul>
@@ -614,8 +614,8 @@ function AppealItem({ appeal, caseId, onChange }: { appeal: Appeal; caseId: numb
   }
 
   return (
-    <li className="rounded-lg bg-surface p-3 text-sm">
-      <p className="font-bold">
+    <li className="rounded-lg bg-surface p-3 text-label">
+      <p className="font-semibold">
         @{appeal.user.username} appealed: {appeal.action.kind_label}
         <span className="font-normal text-muted"> by {appeal.action.actor ? `@${appeal.action.actor.username}` : "System"} · {formatDateTime(appeal.created_at)}</span>
       </p>
@@ -627,8 +627,8 @@ function AppealItem({ appeal, caseId, onChange }: { appeal: Appeal; caseId: numb
             <button type="button" disabled={working || !reason.trim()} onClick={() => decide("uphold")} className="btn btn-secondary btn-sm">Uphold decision</button>
             <button type="button" disabled={working || !reason.trim()} onClick={() => decide("overturn")} className="btn btn-primary btn-sm">Overturn and undo</button>
           </div>
-          <p className="text-xs text-muted">A different moderator from the one who made the decision has to review it.</p>
-          {error && <p role="alert" className="text-[var(--danger)]">{error}</p>}
+          <p className="text-fine text-muted">A different moderator from the one who made the decision has to review it.</p>
+          {error && <p role="alert" className="text-danger">{error}</p>}
         </div>
       ) : (
         <p className="mt-2 font-semibold">
@@ -642,11 +642,11 @@ function AppealItem({ appeal, caseId, onChange }: { appeal: Appeal; caseId: numb
 function InfoRequests({ requests }: { requests: InfoRequest[] }) {
   return (
     <section aria-labelledby="questions-heading" className="rounded-xl border border-line p-4">
-      <h2 id="questions-heading" className="text-lg font-black">Questions to students</h2>
-      <ul className="mt-3 space-y-3 text-sm">
+      <h2 id="questions-heading" className="text-title font-extrabold">Questions to students</h2>
+      <ul className="mt-3 space-y-3 text-label">
         {requests.map((request) => (
           <li key={request.id}>
-            <p><span className="font-bold">To @{request.recipient.username}</span> <span className="text-muted">from @{request.asked_by.username} · {formatDateTime(request.created_at)}</span></p>
+            <p><span className="font-semibold">To @{request.recipient.username}</span> <span className="text-muted">from @{request.asked_by.username} · {formatDateTime(request.created_at)}</span></p>
             <p className="mt-1">Q: {request.question}</p>
             <p className="mt-1 text-muted">{request.answer ? `A: ${request.answer}` : "Waiting for an answer."}</p>
           </li>

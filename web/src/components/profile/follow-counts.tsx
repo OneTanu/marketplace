@@ -1,10 +1,10 @@
 import Link from "next/link";
 
-/** "12 Followers · 4 Following" on a profile, each opening its list. */
+/** "12 followers · 4 following" on a profile, each opening its list. */
 export function FollowCounts({ username, followers, following }: { username: string; followers: number; following: number }) {
-  const link = "rounded hover:underline hover:decoration-kraft hover:decoration-2 hover:underline-offset-4";
-  return <div className="flex gap-6">
-    <Link href={`/users/${username}/followers`} className={link}><strong className="text-base">{followers}</strong> <span className="text-muted">{followers === 1 ? "Follower" : "Followers"}</span></Link>
-    <Link href={`/users/${username}/following`} className={link}><strong className="text-base">{following}</strong> <span className="text-muted">Following</span></Link>
+  const link = "inline-flex min-h-11 items-center gap-1 underline-offset-4 decoration-ink/30 hover:underline";
+  return <div className="flex gap-5">
+    <Link href={`/users/${username}/followers`} className={link}><b className="text-body tabular-nums">{followers}</b> <span className="text-muted">{followers === 1 ? "follower" : "followers"}</span></Link>
+    <Link href={`/users/${username}/following`} className={link}><b className="text-body tabular-nums">{following}</b> <span className="text-muted">following</span></Link>
   </div>;
 }

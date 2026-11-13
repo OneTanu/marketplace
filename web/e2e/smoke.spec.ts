@@ -40,4 +40,33 @@ test("signs in through the proxy and loads the app shell", async ({ context, pag
     const status = await page.evaluate(async (url) => (await fetch(url)).status, `${AUTH}/auth/session`);
     expect(status, `session status from ${path}`).toBe(200);
   }
+
+  // Desktop: the account menu holds Profile, My listings, Saved and Log out.
+  await page.goto("/deals");
+  await page.getByRole("button", { name: "Account menu" }).click();
+  const menu = page.getByRole("menu", { name: "Account menu" });
+  await expect(menu.getByRole("menuitem")).toHaveText(["Profile", "My listings", "Saved", "Log out"]);
+  await menu.getByRole("menuitem", { name: "Saved" }).click();
+  await expect(page).toHaveURL("/profile/saved");
+  await expect(page.getByRole("heading", { level: 1, name: "Saved" })).toBeVisible();
+  await expect(menu).toHaveCount(0);
+
+  // Saved used to be a profile tab; the old link lands on its page.
+  await page.goto("/profile?tab=bookmarks");
+  await expect(page).toHaveURL("/profile/saved");
+
+  // Escape closes the menu and gives focus back to its button.
+  const menuButton = page.getByRole("button", { name: "Account menu" });
+  await menuButton.focus();
+  await page.keyboard.press("Enter");
+  await expect(menu.getByRole("menuitem", { name: "Profile" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(menu).toHaveCount(0);
+  await expect(menuButton).toBeFocused();
+
+  await menuButton.click();
+  await menu.getByRole("menuitem", { name: "Log out" }).click();
+  await expect(page).toHaveURL("/");
+  await expect(page.getByRole("link", { name: "Join Tanu" })).toBeVisible();
+  expect((await api.get(`${AUTH}/auth/session`)).status()).toBe(401);
 });
