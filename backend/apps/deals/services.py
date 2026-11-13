@@ -52,7 +52,7 @@ from django.utils import timezone
 from apps.accounts.services import verified_users
 from apps.listings import services as listing_services
 from apps.listings.models import Listing
-from apps.messaging.services import send_message, start_direct_conversation
+from apps.messaging.services import start_direct_conversation
 from apps.notifications import services as notification_services
 from apps.schools.models import MeetingSpot
 from apps.trust import checks as trust_checks
@@ -656,24 +656,6 @@ def create_deal(
         amount_cents=amount_cents,
         kind=kind,
         asap=asap,
-    )
-    amount = _dollars(amount_cents)
-    if kind == Deal.Kind.TRADE:
-        message = (
-            "Wants to trade for this item. Look through their listings and pick what you'd take."
-        )
-    elif kind == Deal.Kind.OFFER:
-        message = f"Made an offer of {amount} for this item."
-    else:
-        message = f"Sent a request to buy this item for {amount}."
-    if asap:
-        message += " They'd like to meet as soon as possible."
-    send_message(
-        conversation=conversation,
-        sender=buyer,
-        body=message,
-        listing=listing,
-        automated=True,
     )
     proposed_starts_at = proposed_starts_at or []
     if meeting_spot is not None:
@@ -1433,7 +1415,7 @@ DEAL_NOTIFICATIONS = {
     "request_created": (
         "seller",
         "New request for {item}",
-        "{actor} wants it. Reply within 24 hours.",
+        "{actor} {request} Reply within 24 hours.",
     ),
     "countered": (
         "other",
@@ -1571,7 +1553,7 @@ def _notify_event(deal: Deal, event: DealEvent) -> None:
         recipients = [deal.buyer_id, deal.seller_id]
     else:
         recipients = [deal.buyer_id if who == "buyer" else deal.seller_id]
-    values = {"item": _title(deal), "actor": _name(event.actor)}
+    values = {"item": _title(deal), "actor": _name(event.actor), "request": _request_summary(event)}
     for user_id in recipients:
         notification_services.notify(
             deal.buyer if user_id == deal.buyer_id else deal.seller,
@@ -1579,8 +1561,26 @@ def _notify_event(deal: Deal, event: DealEvent) -> None:
             title=title.format(**values),
             body=body.format(**values),
             link="/deals",
+            # Deal moves have deadlines, so both sides hear about them even when away.
+            email=True,
             dedupe_key=f"deal-event:{event.pk}",
         )
+
+
+def _request_summary(event: DealEvent) -> str:
+    """What a new request asks for, e.g. "offered $42.00." (blank for other events)."""
+    if event.event_type != "request_created":
+        return ""
+    kind, amount = event.data.get("kind"), _dollars(event.data.get("amount_cents") or 0)
+    if kind == Deal.Kind.TRADE:
+        summary = "wants to trade for it."
+    elif kind == Deal.Kind.OFFER:
+        summary = f"offered {amount}."
+    else:
+        summary = f"wants to buy it for {amount}."
+    if event.data.get("asap"):
+        summary += " They'd like to meet as soon as possible."
+    return summary
 
 
 # --- Moderation (called by Trust, never by students) ---

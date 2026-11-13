@@ -141,6 +141,5 @@ def test_asap_requests_are_flagged_for_the_seller():
     seller, buyer, listing, deal = trade_request(asap=True)
 
     assert deal.asap is True
-    assert (
-        "as soon as possible" in Message.objects.filter(conversation=deal.conversation).last().body
-    )
+    assert "as soon as possible" in seller.notifications.get().body
+    assert not Message.objects.filter(conversation=deal.conversation).exists()

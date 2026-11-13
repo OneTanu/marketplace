@@ -66,11 +66,14 @@ def conversation_queryset(user):
 
 
 class ConversationListCreateView(ListAPIView):
+    """My conversations with at least one message. One with none yet (a deal request, or a
+    Message tap with nothing sent) opens by its id but stays out of the inbox."""
+
     serializer_class = ConversationSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return conversation_queryset(self.request.user)
+        return conversation_queryset(self.request.user).filter(last_message_at__isnull=False)
 
     @extend_schema(
         request=StartConversationSerializer,
