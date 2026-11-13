@@ -6,7 +6,7 @@ import type { components } from "@/lib/api/schema";
 import { MAX_PHOTO_BYTES, PHOTO_TYPES } from "@/lib/listing-options";
 import { removeProfilePhoto, uploadProfilePhoto } from "@/lib/platform";
 
-import { Avatar } from "./avatar";
+import { Avatar } from "@/components/ui/avatar";
 
 type CurrentUser = components["schemas"]["CurrentUser"];
 
@@ -51,7 +51,7 @@ export function ProfilePhotoField({ user, onChange }: { user: CurrentUser; onCha
   return (
     <div>
       <div className="flex items-center gap-4">
-        <Avatar photoUrl={user.profile_photo_url} firstName={user.first_name} username={user.username} className="size-18 rounded-full text-2xl" />
+        <Avatar user={user} size="lg" />
         <div className="flex flex-wrap gap-2">
           <input ref={input} type="file" accept={PHOTO_TYPES.join(",")} onChange={choose} className="sr-only" tabIndex={-1} aria-hidden="true" />
           <button type="button" onClick={() => input.current?.click()} disabled={Boolean(busy)} className="btn btn-secondary btn-sm">
@@ -60,7 +60,7 @@ export function ProfilePhotoField({ user, onChange }: { user: CurrentUser; onCha
           {hasPhoto && <button type="button" onClick={remove} disabled={Boolean(busy)} className="btn btn-quiet btn-sm">{busy === "remove" ? "Removing…" : "Remove"}</button>}
         </div>
       </div>
-      {error && <p role="alert" className="mt-2 text-sm text-[var(--danger)]">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-label text-danger">{error}</p>}
     </div>
   );
 }

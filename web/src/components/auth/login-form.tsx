@@ -44,15 +44,15 @@ export function LoginForm() {
 
   return <form method="post" onSubmit={submit} className="space-y-5" noValidate>
     {errors.map((error) => <FormAlert key={`${error.field}-${error.message}`}>{error.message}</FormAlert>)}
-    {inactive && <div role="status" className="rounded-xl border border-line bg-surface p-4 text-sm">
-      <p className="font-bold">This account is deactivated</p>
+    {inactive && <div role="status" className="rounded-xl border border-line bg-surface p-4 text-label">
+      <p className="font-semibold">This account is deactivated</p>
       <p className="mt-1 text-muted">Reactivate it to bring back your profile and listings.</p>
       <button type="button" onClick={reactivate} disabled={pending} className="btn btn-primary mt-3 w-full">{pending ? "Reactivating…" : "Reactivate and log in"}</button>
     </div>}
     <Field label="School email" name="email" type="email" autoComplete="email" placeholder="you@umd.edu" required />
     <div>
       <Field label="Password" name="password" type="password" autoComplete="current-password" required />
-      <Link href="/account/forgot-password" className="mt-2 inline-block text-sm font-semibold text-muted hover:text-foreground hover:underline">Forgot password?</Link>
+      <Link href="/account/forgot-password" className="mt-2 inline-block text-label font-semibold text-muted hover:text-foreground hover:underline">Forgot password?</Link>
     </div>
     <SubmitButton pending={pending} pendingText="Logging you in…">Log in</SubmitButton>
   </form>;

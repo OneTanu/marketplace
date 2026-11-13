@@ -8,7 +8,7 @@ import { refusalMessage, toFieldErrors } from "@/components/listings/listing-for
 import { PhotoGallery } from "@/components/listings/photo-gallery";
 import { MeetupPicker, type MeetupSelection } from "@/components/deals/meetup-picker";
 import { BookmarkButton } from "@/components/discovery/bookmark-button";
-import { Avatar } from "@/components/profile/avatar";
+import { Avatar } from "@/components/ui/avatar";
 import { ReportButton } from "@/components/trust/report";
 import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
@@ -22,6 +22,7 @@ import {
 import { startConversation } from "@/lib/messaging";
 import { centsToDollars } from "@/lib/money";
 import { formatShortDate } from "@/lib/time";
+import { ShareIcon } from "@/components/ui/icons";
 
 type Listing = components["schemas"]["Listing"];
 
@@ -87,8 +88,8 @@ export function ListingDetail({ listingId }: { listingId: number }) {
       <div className="mx-auto max-w-6xl animate-pulse sm:px-6 sm:pt-6 lg:grid lg:grid-cols-[1.2fr_1fr] lg:gap-10">
         <div className="aspect-[4/5] bg-surface sm:rounded-lg" />
         <div className="space-y-3 px-4 pt-5 sm:px-0">
-          <div className="h-7 w-24 rounded bg-surface" />
-          <div className="h-5 w-3/4 rounded bg-surface" />
+          <div className="h-7 w-24 rounded-lg bg-surface" />
+          <div className="h-5 w-3/4 rounded-lg bg-surface" />
         </div>
       </div>
     );
@@ -97,7 +98,7 @@ export function ListingDetail({ listingId }: { listingId: number }) {
   if (loaded.state === "blocked") {
     return (
       <section className="mx-auto max-w-xl px-4 py-20 text-center">
-        <h1 className="type-wide text-2xl font-black">{loaded.title}</h1>
+        <h1 className="type-wide text-display font-extrabold">{loaded.title}</h1>
         <p className="mt-3 text-muted">{loaded.message}</p>
         {loaded.signIn ? (
           <Link href="/account/login" className="btn btn-primary mt-6">
@@ -147,22 +148,22 @@ function ListingView({
         {isSeller && <SellerBanner listing={listing} />}
 
         <div className="flex items-start justify-between gap-3">
-          <p className="type-wide text-3xl font-black">
+          <p className="type-wide text-display font-extrabold">
             {listing.price_cents === 0 ? "Free" : centsToDollars(listing.price_cents)}
           </p>
           {listing.status !== "available" && (
             <span
-              className={`mt-1 rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_BADGE_CLASSES[listing.status]}`}
+              className={`mt-1 rounded-full px-2.5 py-1 text-fine font-semibold ${STATUS_BADGE_CLASSES[listing.status]}`}
             >
               {STATUS_LABELS[listing.status]}
             </span>
           )}
         </div>
-        <h1 className="mt-1 text-lg font-semibold leading-snug">{listing.title}</h1>
+        <h1 className="mt-1 text-title font-semibold leading-snug">{listing.title}</h1>
 
         <ul aria-label="Details" className="mt-3 flex flex-wrap gap-1.5">
           {chips.map((chip, index) => (
-            <li key={index} className="rounded-md bg-surface px-2.5 py-1 text-[13px] font-medium">
+            <li key={index} className="rounded-lg bg-surface px-2.5 py-1 text-fine font-semibold">
               {chip}
             </li>
           ))}
@@ -173,9 +174,9 @@ function ListingView({
         )}
 
         <div className="mt-5 flex items-center gap-3 border-t border-line pt-4">
-          <Avatar photoUrl={listing.seller.profile_photo_url} username={listing.seller.username} className="size-10 rounded-full" />
-          <div className="min-w-0 flex-1 text-sm">
-            <Link href={`/users/${listing.seller.username}`} className="font-bold hover:underline">
+          <Avatar user={listing.seller} />
+          <div className="min-w-0 flex-1 text-label">
+            <Link href={`/users/${listing.seller.username}`} className="font-semibold hover:underline">
               @{listing.seller.username}
             </Link>
             <p className="text-muted">
@@ -187,7 +188,7 @@ function ListingView({
           <ShareButton title={listing.title} />
         </div>
 
-        <p className="mt-4 rounded-lg bg-surface p-3 text-sm leading-6 text-muted">
+        <p className="mt-4 rounded-lg bg-surface p-3 text-label leading-6 text-muted">
           <span className="font-semibold text-ink">Meet in a public spot.</span> Hand off on
           campus where other people are around, and check the item before you pay.
         </p>
@@ -290,13 +291,13 @@ function BuyerActions({ listing }: { listing: Listing }) {
         <p className="font-semibold">
           {mode === "offer" ? "Make an offer" : mode === "trade" ? "Propose a trade" : `Request to buy for ${centsToDollars(listing.price_cents)}`}
         </p>
-        <p className="mt-1 text-sm leading-5 text-muted">
+        <p className="mt-1 text-label leading-5 text-muted">
           {mode === "trade"
             ? "The seller looks through your listings and picks what they'd take, maybe with some cash. You can accept, counter, or cancel anytime."
             : "No money moves through Tanu. The seller must accept, then you arrange a public-campus handoff."}
         </p>
         {mode === "trade" && tradable === 0 && (
-          <p className="mt-3 rounded-lg border border-line bg-surface p-3 text-sm">
+          <p className="mt-3 rounded-lg border border-line bg-surface p-3 text-label">
             You don&apos;t have any available listings to trade yet. <Link href="/sell" className="font-semibold underline">List an item</Link> first.
           </p>
         )}
@@ -313,8 +314,8 @@ function BuyerActions({ listing }: { listing: Listing }) {
             />
           </label>
         )}
-        <label className="mt-3 flex items-start gap-3 rounded-lg border border-line p-3 text-sm">
-          <input type="checkbox" checked={asap} onChange={(event) => setAsap(event.target.checked)} className="mt-0.5 size-4 accent-[var(--brand)]" />
+        <label className="mt-3 flex items-start gap-3 rounded-lg border border-line p-3 text-label">
+          <input type="checkbox" checked={asap} onChange={(event) => setAsap(event.target.checked)} className="mt-0.5 size-4 accent-brand" />
           <span>
             <span className="block font-semibold">I want this as soon as possible</span>
             <span className="block text-muted">Lets the seller know the earliest meetup works best for you.</span>
@@ -325,7 +326,7 @@ function BuyerActions({ listing }: { listing: Listing }) {
           allowTwo={mode !== "buy_now"}
           onChange={setMeetup}
         />
-        {error && <p role="alert" className="mt-2 text-sm text-[var(--danger)]">{error}</p>}
+        {error && <p role="alert" className="mt-2 text-label text-danger">{error}</p>}
         <div className="mt-3 flex gap-2">
           <button type="button" onClick={() => { setMode(null); setError(""); }} disabled={starting} className="btn btn-secondary flex-1">
             Back
@@ -341,7 +342,7 @@ function BuyerActions({ listing }: { listing: Listing }) {
   return (
     <div className={actionBarClass}>
       {error && (
-        <p role="alert" className="mb-2 text-sm text-[var(--danger)]">
+        <p role="alert" className="mb-2 text-label text-danger">
           {error}
         </p>
       )}
@@ -357,14 +358,14 @@ function BuyerActions({ listing }: { listing: Listing }) {
         </button>
       </div>
       {canBuy && (
-        <button type="button" onClick={() => setMode("trade")} disabled={starting} className="mt-2 w-full text-center text-sm font-semibold text-brand hover:underline">
+        <button type="button" onClick={() => setMode("trade")} disabled={starting} className="mt-2 w-full text-center text-label font-semibold text-brand hover:underline">
           Or propose a trade with your items
         </button>
       )}
       <div className="mt-1 text-center">
-        <ReportButton targetType="listing" targetId={listing.id} subject="this listing" username={listing.seller.username} label="Report listing" className="text-xs font-semibold text-muted hover:text-ink hover:underline" />
+        <ReportButton targetType="listing" targetId={listing.id} subject="this listing" username={listing.seller.username} label="Report listing" className="text-fine font-semibold text-muted hover:text-ink hover:underline" />
       </div>
-      <p className="mt-2 text-center text-xs text-muted">
+      <p className="mt-2 text-center text-fine text-muted">
         {canBuy
           ? "The seller has 24 hours to respond. Payment happens when you meet."
           : `This item is ${STATUS_LABELS[listing.status].toLowerCase()}.`}
@@ -384,7 +385,7 @@ function SellerBanner({ listing }: { listing: Listing }) {
   }
   if (!text) return null;
   return (
-    <p role="status" className="mb-4 rounded-lg bg-surface p-3 text-sm font-medium">
+    <p role="status" className="mb-4 rounded-lg bg-surface p-3 text-label font-semibold">
       {text}
     </p>
   );
@@ -429,12 +430,12 @@ function SellerActions({
   if (confirming) {
     return (
       <div role="group" aria-label="Remove this listing" className={actionBarClass}>
-        <p className="text-sm">
+        <p className="text-label">
           <span className="font-semibold">Remove this listing?</span> Buyers won&apos;t see it
           anymore. This can&apos;t be undone.
         </p>
         {error && (
-          <p role="alert" className="mt-1 text-sm text-[var(--danger)]">
+          <p role="alert" className="mt-1 text-label text-danger">
             {error}
           </p>
         )}
@@ -442,7 +443,7 @@ function SellerActions({
           <button type="button" onClick={() => setConfirming(false)} disabled={removing} className="btn btn-secondary flex-1">
             Cancel
           </button>
-          <button type="button" onClick={remove} disabled={removing} className="btn flex-1 bg-[var(--danger)] text-white">
+          <button type="button" onClick={remove} disabled={removing} className="btn flex-1 bg-danger text-white">
             {removing ? "Removing…" : "Remove listing"}
           </button>
         </div>
@@ -488,9 +489,7 @@ function ShareButton({ title }: { title: string }) {
 
   return (
     <button type="button" onClick={share} className="btn btn-sm btn-quiet shrink-0">
-      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-        <path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" />
-      </svg>
+      <ShareIcon className="size-4" aria-hidden="true" />
       <span aria-live="polite">{copied ? "Link copied" : "Share"}</span>
     </button>
   );

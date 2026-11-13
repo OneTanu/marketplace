@@ -9,10 +9,10 @@ export default function MyListingsPage() {
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-6">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">My listings</h1>
+        <h1 className="type-wide text-display font-extrabold">My listings</h1>
         <Link
           href="/sell"
-          className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background"
+          className="rounded-full bg-foreground px-4 py-2 text-label font-semibold text-background"
         >
           Sell an item
         </Link>

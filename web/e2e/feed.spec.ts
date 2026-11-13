@@ -90,7 +90,7 @@ test("scrolling loads the next page without duplicates", async ({ context, page,
   // The page loads more as the end of the grid comes into view.
   await cards.last().scrollIntoViewIfNeeded();
   await expect(cards).toHaveCount(count);
-  const titles = await cards.locator("h3").allTextContents();
+  const titles = await cards.getByRole("heading").allTextContents();
   expect(new Set(titles).size).toBe(count);
   await expect(page.getByText("You’ve seen everything here.")).toBeVisible();
 });

@@ -1,9 +1,15 @@
 @import "tailwindcss";
+/* The lint rule and codemod mention old class names; they aren't app code. */
+@source not "../../eslint-rules";
 
 /* Phone or desktop layout is decided by screen width, not by mouse vs. touch.
-   Under 1024px: bottom bar and stacked header. Hover effects use Tailwind's own hover rules. */
+   Under 1024px: bottom bar and stacked header. Hover effects use Tailwind's own hover rules,
+   which only apply on devices that can hover. */
 @custom-variant desktop (@media (width >= 64rem));
 
+/* The design system. DESIGN.md at the repo root explains each value; /dev/styleguide shows them.
+   The lint rule in eslint-rules/design-tokens.mjs rejects sizes, weights, corners, shadows and
+   colours that aren't defined here. */
 :root {
   --background: #ffffff;
   --foreground: #17162b;
@@ -12,12 +18,16 @@
   --line: #e4e3eb;
   --ink: #17162b;
   --ink-soft: #efeef5;
-  /* Ink does the work (buttons, focus); kraft is the hang-tag accent. Kraft is too pale for text on white. */
+  /* Ink does the work (buttons, focus); kraft is the price tag and nothing else. */
   --brand: var(--ink);
   --brand-strong: #34324f;
   --brand-soft: #f3e9d7;
   --kraft: #d7b98e;
-  --signal: #e8336f;
+  /* "Needs you" and unread counts only. Deep enough for white 13px text on it (4.7:1). */
+  --signal: #dc2463;
+  /* Pink text on the pink tint (the "Needs you" badge): 6.6:1. */
+  --signal-soft: #fde8ef;
+  --signal-ink: #a3103f;
   --danger: #c0262d;
   --danger-soft: #fdf0f0;
   --success: #15803d;
@@ -34,31 +44,104 @@
   --color-line: var(--line);
   --color-brand: var(--brand);
   --color-brand-strong: var(--brand-strong);
+  --color-brand-soft: var(--brand-soft);
   --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
   --color-kraft: var(--kraft);
   --color-signal: var(--signal);
+  --color-signal-soft: var(--signal-soft);
+  --color-signal-ink: var(--signal-ink);
   --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
   --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
   --font-sans: var(--font-archivo);
 }
 
-/* Type scale: 13, 14, 16, 18, 22, 28, 36. Tailwind already has 14 (sm), 16 (base), 18 (lg) and 36 (4xl);
-   these add the other three. Text people read is 16; nothing goes under 13.
-   Corners: rounded-lg (8px) for inputs and small buttons, rounded-xl (12px) for cards and photos,
-   rounded-full for chips and avatars. */
 @theme {
+  /* Avatar tints: each person gets one pair, picked from their username (ui/avatar.tsx). */
+  --color-tint-1: #dfe7f5;
+  --color-tint-1-ink: #1f3a6b;
+  --color-tint-2: #e3f0e4;
+  --color-tint-2-ink: #1f5130;
+  --color-tint-3: #f6e3e8;
+  --color-tint-3-ink: #7a1f3a;
+  --color-tint-4: #efe6f7;
+  --color-tint-4-ink: #4a2a78;
+  --color-tint-5: #f5ead6;
+  --color-tint-5-ink: #6b4410;
+
+  /* Five type roles, replacing Tailwind's sizes. Nothing goes under 13px; text people read is 16.
+     Display and Title are set stretched (add type-wide); Body, Label and Fine never are. */
+  --text-*: initial;
+  --text-display: 1.75rem;
+  --text-display--line-height: 2rem;
+  --text-title: 1.125rem;
+  --text-title--line-height: 1.5rem;
+  --text-body: 1rem;
+  --text-body--line-height: 1.5rem;
+  --text-label: 0.875rem;
+  --text-label--line-height: 1.25rem;
   --text-fine: 0.8125rem;
   --text-fine--line-height: 1.125rem;
-  --text-title: 1.375rem;
-  --text-title--line-height: 1.75rem;
-  --text-display: 1.75rem;
-  --text-display--line-height: 2.125rem;
+
+  /* Three weights. */
+  --font-weight-*: initial;
+  --font-weight-normal: 400;
+  --font-weight-semibold: 600;
+  --font-weight-extrabold: 800;
+
+  /* Three corners: rounded-lg for controls and fields, rounded-xl for photos, cards, sheets and
+     menus, rounded-full for chips, avatars and round buttons. */
+  --radius-*: initial;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+
+  /* Depth: pages are flat. Cards on the grey account pages get shadow-card; things that sit on
+     a photo get shadow-float; menus, sheets and dialogs get shadow-overlay. */
+  --shadow-*: initial;
+  --shadow-float: 0 1px 2px rgb(23 22 43 / 0.12);
+  --shadow-card: 0 1px 2px rgb(23 22 43 / 0.06), 0 8px 24px -12px rgb(23 22 43 / 0.18);
+  --shadow-overlay: 0 16px 40px -12px rgb(23 22 43 / 0.22);
+
+  /* Motion: press 120ms, colour and state 160ms, sheets in 280ms and out 200ms. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+  --default-transition-duration: 160ms;
+  --default-transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* The "tanu" wordmark is a logo, not text, so it sits outside the type roles. */
+@utility wordmark {
+  font-stretch: 125%;
+  letter-spacing: -0.02em;
+  font-weight: 800;
+  font-size: 1.375rem;
+  line-height: 1;
+  @variant desktop { font-size: 1.625rem; }
+}
+
+/* The guest Home's marketing headline only, until slice 6 redesigns that page. Not a type role:
+   nothing else in the app may use it. */
+@utility text-hero {
+  font-size: 2.75rem;
+  line-height: 0.95;
+  @media (width >= 40rem) { font-size: 3.75rem; }
+  @media (width >= 64rem) { font-size: 4.5rem; }
+}
+
+/* Display and Title type: stretched Archivo, like a garment label. */
+@utility type-wide {
+  font-stretch: 125%;
+  letter-spacing: -0.02em;
 }
 
 @layer base {
   * { box-sizing: border-box; }
-  html { background: var(--background); scroll-behavior: smooth; }
+  /* The grey flash phones paint on a tap is replaced by each control's own pressed state. */
+  html { background: var(--background); scroll-behavior: smooth; -webkit-tap-highlight-color: transparent; }
   body {
     background: var(--background);
     color: var(--foreground);
@@ -67,15 +150,22 @@
   /* In the base layer so Tailwind font utilities on buttons still apply. */
   button, input, select, textarea { font: inherit; }
   /* Typing fields are always 16px: iPhones zoom the page when a focused field has smaller text. */
-  input, select, textarea { font-size: 1rem; }
+  input, select, textarea { font-size: 1rem; caret-color: var(--ink); }
+  /* Placeholders in muted, which reads at 5.3:1 (the browser's default grey is 3.4:1). */
+  ::placeholder { color: var(--muted); opacity: 1; }
+  /* Taps fire at once (no double-tap wait), and a long press doesn't select a control's label. */
+  a, button, [role="button"], summary { touch-action: manipulation; }
+  button, [role="button"] { -webkit-user-select: none; user-select: none; }
+  /* The three weights apply to the browser's own bold too. */
+  b, strong { font-weight: 600; }
+  h1, h2, h3 { text-wrap: balance; }
+  p { text-wrap: pretty; }
   ::selection { background: var(--brand-soft); }
   :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 }
 
 @layer components {
-  /* Stretched Archivo for headings and prices: reads like a garment label. */
-  .type-wide { font-stretch: 125%; letter-spacing: -0.02em; }
-
+  /* Buttons. One filled (primary) button per screen; everything else is secondary, quiet or danger. */
   .btn {
     display: inline-flex;
     align-items: center;
@@ -83,23 +173,32 @@
     gap: 0.5rem;
     min-height: 2.75rem;
     padding: 0 1.25rem;
-    border-radius: 0.625rem;
-    font-size: 0.875rem;
-    font-weight: 700;
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
+    font-weight: 600;
     white-space: nowrap;
-    transition: background-color 150ms, border-color 150ms, color 150ms;
+    transition: background-color 160ms, border-color 160ms, color 160ms, transform 120ms var(--ease-out);
   }
-  .btn:disabled { opacity: 0.55; cursor: not-allowed; }
-  /* Same 44px height as .btn, so it stays easy to tap; only the text and padding are smaller. */
+  .btn:not(:disabled):active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  /* Same 44px height, so it stays easy to tap; only the text and padding are smaller. */
   .btn-sm { padding: 0 0.875rem; font-size: var(--text-fine); }
-  .btn-primary { background: var(--brand); color: #fff; }
-  .btn-primary:not(:disabled):hover { background: var(--brand-strong); }
-  .btn-secondary { border: 1.5px solid var(--ink); color: var(--ink); background: var(--background); }
-  .btn-secondary:not(:disabled):hover { background: var(--kraft); }
+  /* The main action in a sheet or at the end of a form. */
+  .btn-lg { min-height: 3rem; font-size: var(--text-body); }
+  .btn-primary { background: var(--ink); color: #fff; }
+  .btn-secondary { border-color: var(--line); background: var(--background); color: var(--ink); }
   .btn-quiet { color: var(--ink); padding: 0 0.75rem; }
-  .btn-quiet:hover { background: var(--surface); }
+  .btn-danger { background: var(--danger-soft); color: var(--danger); }
+  @media (hover: hover) and (pointer: fine) {
+    .btn-primary:not(:disabled):hover { background: var(--brand-strong); }
+    .btn-secondary:not(:disabled):hover { border-color: #cfcedb; background: var(--surface); }
+    .btn-quiet:not(:disabled):hover { background: var(--surface); }
+    .btn-danger:not(:disabled):hover { background: #fae1e1; }
+  }
 
-  /* Filter and category chips are the only pill-shaped controls. */
+  /* Chips: filters and categories. The only pill-shaped controls. */
   .chip {
     display: inline-flex;
     align-items: center;
@@ -107,38 +206,99 @@
     min-height: 2.75rem;
     padding: 0 0.875rem;
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: calc(infinity * 1px);
     background: var(--background);
     font-size: var(--text-fine);
+    line-height: var(--text-fine--line-height);
     font-weight: 600;
-    transition: border-color 150ms, background-color 150ms;
+    transition: border-color 160ms, background-color 160ms, color 160ms;
   }
-  .chip:hover { border-color: var(--ink); }
+  @media (hover: hover) and (pointer: fine) { .chip:hover { border-color: var(--ink); } }
   .chip[aria-pressed="true"], .chip[aria-expanded="true"], .chip[aria-current="page"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+  /* A checkbox is the one control under 44px drawn by hand; its 4px corner keeps it from reading as a radio. */
+  .checkbox { border-radius: 0.25rem; }
 
   .field {
     height: 3rem;
     width: 100%;
     border: 1px solid var(--line);
-    border-radius: 0.625rem;
+    border-radius: var(--radius-lg);
     background: var(--background);
     padding: 0 1rem;
     outline: none;
-    transition: border-color 150ms, box-shadow 150ms;
+    transition: border-color 160ms, box-shadow 160ms;
   }
-  .field:focus, .field:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .field:focus, .field:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px rgb(23 22 43 / 0.12); }
+
+  /* Loading placeholders: a soft shimmer, still under reduced motion. A bg-* class recolours the
+     box (white on the grey account pages); the highlight sweeps over whatever colour it is. */
+  .skeleton {
+    background-color: var(--surface);
+    background-image: linear-gradient(100deg, transparent 40%, rgb(255 255 255 / 0.6) 50%, transparent 60%);
+    background-size: 200% 100%;
+    animation: skeleton 1.4s linear infinite;
+  }
 }
+
+/* Sheet (ui/sheet.tsx): a bottom sheet on phones, a centred dialog on desktop. In 280ms, out 200ms. */
+.sheet {
+  margin: auto auto 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: 90dvh;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  background: var(--background);
+  color: inherit;
+  box-shadow: var(--shadow-overlay);
+  overscroll-behavior: contain;
+  transform: translateY(100%);
+  transition: transform 200ms var(--ease-out), overlay 200ms allow-discrete, display 200ms allow-discrete;
+}
+.sheet[open] { transform: none; transition: transform 280ms var(--ease-sheet), overlay 280ms allow-discrete, display 280ms allow-discrete; }
+@starting-style { .sheet[open] { transform: translateY(100%); } }
+.sheet::backdrop { background: rgb(23 22 43 / 0); transition: background-color 200ms, overlay 200ms allow-discrete, display 200ms allow-discrete; }
+.sheet[open]::backdrop { background: rgb(23 22 43 / 0.4); }
+@starting-style { .sheet[open]::backdrop { background: rgb(23 22 43 / 0); } }
+.sheet-body { max-height: 90dvh; overflow-y: auto; overscroll-behavior: contain; padding: 0.5rem 1rem calc(1.25rem + env(safe-area-inset-bottom)); }
+@media (width >= 64rem) {
+  .sheet { margin: auto; width: min(28rem, calc(100% - 2rem)); border-radius: var(--radius-xl); opacity: 0; transform: translateY(0.5rem) scale(0.98);
+           transition: transform 200ms var(--ease-out), opacity 200ms, overlay 200ms allow-discrete, display 200ms allow-discrete; }
+  .sheet[open] { opacity: 1; transform: none; transition: transform 280ms var(--ease-out), opacity 160ms, overlay 280ms allow-discrete, display 280ms allow-discrete; }
+  @starting-style { .sheet[open] { opacity: 0; transform: translateY(0.5rem) scale(0.98); } }
+  .sheet-body { padding: 1.5rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet, .sheet[open] { transform: none; transition: opacity 160ms, overlay 160ms allow-discrete, display 160ms allow-discrete; }
+  .sheet { opacity: 0; }
+  .sheet[open] { opacity: 1; }
+  @starting-style { .sheet[open] { opacity: 0; transform: none; } }
+}
+
+/* Account and settings pages sit on the grey page with white cards (spec C3); pages with listing
+   photos stay white. A page opts in with data-page-tint on its outer element. */
+body:has([data-page-tint]) { background: var(--surface); }
+
+/* An open sheet or dialog holds the page behind it still. */
+body:has(dialog[open]) { overflow: hidden; }
 
 /* A signed-in student's Home has no footer (spec: footer on guest Home, legal pages and Profile).
    The layout renders it for everyone on "/", since it can't tell who is signed in. */
 body:has([data-home-feed]) [data-site-footer] { display: none; }
 
+@keyframes skeleton {
+  from { background-position: 120% 0; }
+  to { background-position: -80% 0; }
+}
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.animate-in { animation: fade-up 500ms ease-out both; }
+.animate-in { animation: fade-up 280ms var(--ease-out) both; }
 @media (prefers-reduced-motion: reduce) {
-  .animate-in { animation: none; }
+  .animate-in, .skeleton, .animate-pulse { animation: none; }
+  .btn:not(:disabled):active { transform: none; }
   html { scroll-behavior: auto; }
 }

@@ -6,7 +6,7 @@ import { SUPPORT_EMAIL } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Privacy Policy", description: "What Tanu collects, why, and the choices you have." };
 
-const Email = () => <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold underline decoration-kraft decoration-2 underline-offset-4">{SUPPORT_EMAIL}</a>;
+const Email = () => <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold underline decoration-ink/30 decoration-2 underline-offset-4">{SUPPORT_EMAIL}</a>;
 
 export default function PrivacyPage() {
   return <LegalPage
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
 
     <LegalSection title="6. Your choices">
       <LegalList items={[
-        <>Edit your profile and listings at any time, and manage your saved searches from your <Link href="/profile" className="font-semibold underline decoration-kraft decoration-2 underline-offset-4">profile</Link>.</>,
+        <>Edit your profile and listings at any time, and manage your saved searches from your <Link href="/profile" className="font-semibold underline decoration-ink/30 decoration-2 underline-offset-4">profile</Link>.</>,
         "Deactivate your account from your profile settings.",
         <>Ask for a copy of your information, a correction, or deletion of your account by emailing <Email />. We’ll delete or de-identify what we can, apart from the records described in section 5.</>,
       ]} />

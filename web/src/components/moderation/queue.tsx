@@ -47,8 +47,8 @@ export function ModeratorsOnly({ message }: { message: string }) {
   return (
     <main className="mx-auto grid min-h-[70vh] max-w-xl place-items-center px-4 text-center">
       <div>
-        <p className="text-sm font-bold uppercase tracking-[0.14em] text-muted">403</p>
-        <h1 className="type-wide mt-1 text-3xl font-black">Moderators only</h1>
+        <p className="text-label font-semibold uppercase tracking-[0.14em] text-muted">403</p>
+        <h1 className="type-wide mt-1 text-display font-extrabold">Moderators only</h1>
         <p className="mt-3 text-muted">{message}</p>
         <Link href="/" className="btn btn-primary mt-6">Back to Tanu</Link>
       </div>
@@ -99,7 +99,7 @@ export function ModerationQueue() {
     });
   }
 
-  if (summary === undefined) return <main className="mx-auto min-h-[70vh] max-w-5xl animate-pulse px-4 py-10 sm:px-6"><div className="h-9 w-48 rounded bg-surface" /><div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className="h-20 rounded-xl bg-surface" />)}</div></main>;
+  if (summary === undefined) return <main className="mx-auto min-h-[70vh] max-w-5xl animate-pulse px-4 py-10 sm:px-6"><div className="h-9 w-48 rounded-lg bg-surface" /><div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className="h-20 rounded-xl bg-surface" />)}</div></main>;
   if (summary === null) return <ModeratorsOnly message={denied} />;
 
   const tiles: [string, number, () => void][] = [
@@ -115,17 +115,17 @@ export function ModerationQueue() {
     <main className="mx-auto min-h-[70vh] max-w-5xl px-4 py-8 pb-12 sm:px-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-sm font-bold uppercase tracking-[0.14em] text-signal">Staff</p>
-          <h1 className="type-wide mt-1 text-3xl font-black">Moderation</h1>
+          <p className="text-label font-semibold uppercase tracking-[0.14em] text-signal">Staff</p>
+          <h1 className="type-wide mt-1 text-display font-extrabold">Moderation</h1>
         </div>
         <Link href="/moderation/stats" className="btn btn-secondary btn-sm">Stats</Link>
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {tiles.map(([label, count, onClick]) => (
-          <button key={label} type="button" onClick={() => { setRows(undefined); onClick(); }} className={`rounded-xl border p-4 text-left transition hover:border-ink ${label === "Urgent" && count ? "border-[var(--danger)]" : "border-line"}`}>
-            <span className="block text-2xl font-black">{count}</span>
-            <span className="text-sm text-muted">{label}</span>
+          <button key={label} type="button" onClick={() => { setRows(undefined); onClick(); }} className={`rounded-xl border p-4 text-left transition hover:border-ink ${label === "Urgent" && count ? "border-danger" : "border-line"}`}>
+            <span className="block text-display font-extrabold">{count}</span>
+            <span className="text-label text-muted">{label}</span>
           </button>
         ))}
       </div>
@@ -157,31 +157,31 @@ export function ModerationQueue() {
           <option value="me">Assigned to me</option>
           <option value="none">Unassigned</option>
         </select>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={Boolean(filters.repeat)} onChange={(e) => setFilter("repeat", e.target.checked)} className="accent-[var(--brand)]" />
+        <label className="flex items-center gap-2 text-label">
+          <input type="checkbox" checked={Boolean(filters.repeat)} onChange={(e) => setFilter("repeat", e.target.checked)} className="accent-brand" />
           Repeat reports
         </label>
       </div>
 
       <section className="mt-5" aria-label="Cases">
-        {rows === undefined && <div className="space-y-2">{[0, 1, 2].map((i) => <div key={i} className="h-24 animate-pulse rounded-xl bg-surface" />)}</div>}
-        {rows === null && <p className="rounded-xl bg-surface p-6 text-center text-sm text-muted">Couldn&apos;t load the queue. Refresh to try again.</p>}
-        {rows && rows.length === 0 && <p className="rounded-xl bg-surface p-8 text-center text-sm text-muted">No cases match these filters.</p>}
+        {rows === undefined && <div className="space-y-2">{[0, 1, 2].map((i) => <div key={i} className="h-24 rounded-xl skeleton" />)}</div>}
+        {rows === null && <p className="rounded-xl bg-surface p-6 text-center text-label text-muted">Couldn&apos;t load the queue. Refresh to try again.</p>}
+        {rows && rows.length === 0 && <p className="rounded-xl bg-surface p-8 text-center text-label text-muted">No cases match these filters.</p>}
         {rows && rows.length > 0 && (
           <ul className="space-y-2">
             {rows.map((row) => (
               <li key={row.id}>
                 <Link href={`/moderation/cases/${row.id}`} className="block rounded-xl border border-line p-4 transition hover:border-ink">
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <span className={`rounded-full px-2.5 py-1 font-bold ${PRIORITY_STYLES[row.priority]}`}>{row.priority_label}</span>
-                    {row.escalated && <span className="rounded-full border border-ink px-2.5 py-1 font-bold">Escalated</span>}
-                    {row.recent_consequences >= 2 && <span className="rounded-full border border-[var(--danger)] px-2.5 py-1 font-bold text-[var(--danger)]">Repeat offender · {row.recent_consequences} in 90 days</span>}
+                  <div className="flex flex-wrap items-center gap-2 text-fine">
+                    <span className={`rounded-full px-2.5 py-1 font-semibold ${PRIORITY_STYLES[row.priority]}`}>{row.priority_label}</span>
+                    {row.escalated && <span className="rounded-full border border-ink px-2.5 py-1 font-semibold">Escalated</span>}
+                    {row.recent_consequences >= 2 && <span className="rounded-full border border-danger px-2.5 py-1 font-semibold text-danger">Repeat offender · {row.recent_consequences} in 90 days</span>}
                     {row.prior_case_count > 0 && <span className="rounded-full bg-surface px-2.5 py-1 font-semibold">{row.prior_case_count} earlier {row.prior_case_count === 1 ? "case" : "cases"}</span>}
                     <span className="text-muted">{row.status === "open" ? "New" : row.status}</span>
                   </div>
-                  <p className="mt-2 font-bold">{row.reasons.map((reason) => REASON_LABELS[reason as ReportReason] ?? reason).join(" · ")}</p>
-                  <p className="mt-0.5 text-sm">{caseTarget(row)}</p>
-                  <p className="mt-1 text-xs text-muted">
+                  <p className="mt-2 font-semibold">{row.reasons.map((reason) => REASON_LABELS[reason as ReportReason] ?? reason).join(" · ")}</p>
+                  <p className="mt-0.5 text-label">{caseTarget(row)}</p>
+                  <p className="mt-1 text-fine text-muted">
                     Reported by {row.reporter_count} {row.reporter_count === 1 ? "student" : "students"}
                     {row.school_name ? ` · ${row.school_name}` : ""}
                     {row.latest_report_at ? ` · ${ago(row.latest_report_at)}` : ""}

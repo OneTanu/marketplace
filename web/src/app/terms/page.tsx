@@ -6,8 +6,8 @@ import { SUPPORT_EMAIL } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Terms of Service", description: "The rules for buying and selling on Tanu." };
 
-const Email = () => <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold underline decoration-kraft decoration-2 underline-offset-4">{SUPPORT_EMAIL}</a>;
-const PrivacyLink = () => <Link href="/privacy" className="font-semibold underline decoration-kraft decoration-2 underline-offset-4">Privacy Policy</Link>;
+const Email = () => <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold underline decoration-ink/30 decoration-2 underline-offset-4">{SUPPORT_EMAIL}</a>;
+const PrivacyLink = () => <Link href="/privacy" className="font-semibold underline decoration-ink/30 decoration-2 underline-offset-4">Privacy Policy</Link>;
 
 export default function TermsPage() {
   return <LegalPage

@@ -40,10 +40,11 @@ export const STATUS_LABELS: Record<Status, string> = {
 };
 
 export const STATUS_BADGE_CLASSES: Record<Status, string> = {
-  available: "bg-green-600/10 text-green-700 dark:text-green-400",
-  pending: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-  sold: "bg-foreground/10 text-foreground/70",
-  removed: "bg-red-600/10 text-red-700 dark:text-red-400",
+  // The same tones as ui/badge.tsx.
+  available: "bg-success-soft text-success",
+  pending: "bg-warning-soft text-warning",
+  sold: "bg-ink text-white",
+  removed: "bg-danger-soft text-danger",
 };
 
 export const conditionLabel = (value: Condition) =>

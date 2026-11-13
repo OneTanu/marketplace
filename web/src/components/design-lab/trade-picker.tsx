@@ -14,12 +14,12 @@ function Item({ item, selected, onSelect }: { item: (typeof ITEMS)[number]; sele
   return (
     <button type="button" onClick={onSelect} aria-pressed={selected} className={`flex w-full items-center gap-3 rounded-lg border p-2 text-left ${selected ? "border-ink ring-1 ring-ink" : "border-line"}`}>
       {/* eslint-disable-next-line @next/next/no-img-element -- local design-lab image. */}
-      <img src={item.image} alt="" className="size-14 rounded-md object-cover" />
+      <img src={item.image} alt="" className="size-14 rounded-lg object-cover" />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-bold">{item.title}</span>
-        <span className="text-xs text-muted">{item.price}</span>
+        <span className="block truncate text-label font-semibold">{item.title}</span>
+        <span className="text-fine text-muted">{item.price}</span>
       </span>
-      <span className={`grid size-5 place-items-center rounded-full border text-xs ${selected ? "border-ink bg-ink text-background" : "border-line"}`}>{selected ? "✓" : ""}</span>
+      <span className={`grid size-5 place-items-center rounded-full border text-fine ${selected ? "border-ink bg-ink text-background" : "border-line"}`}>{selected ? "✓" : ""}</span>
     </button>
   );
 }
@@ -45,16 +45,16 @@ export function TradePickerMock() {
       {pattern === "inline" && (
         <div className="mt-5 grid gap-5 rounded-xl border border-line p-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <div>
-            <p className="type-wide text-lg font-black">Pick what you want from @mayasells</p>
-            <p className="mt-1 text-sm text-muted">Choose up to five available listings, then adjust cash if the values differ.</p>
+            <p className="type-wide text-title font-extrabold">Pick what you want from @mayasells</p>
+            <p className="mt-1 text-label text-muted">Choose up to five available listings, then adjust cash if the values differ.</p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">{ITEMS.map((item) => <Item key={item.id} item={item} selected={selected.includes(item.id)} onSelect={() => toggle(item.id)} />)}</div>
           </div>
           <aside className="rounded-lg bg-surface p-4">
-            <p className="text-xs font-bold uppercase tracking-wide text-muted">Trade summary</p>
-            <p className="mt-2 font-bold">Your leather jacket</p>
-            <p className="my-2 text-center text-sm text-muted">for</p>
-            <p className="text-sm font-semibold">{selected.length ? `${selected.length} selected item${selected.length === 1 ? "" : "s"}` : "Choose an item"}</p>
-            <label className="mt-4 block text-xs font-bold">Cash adjustment<div className="field mt-1 flex h-10 items-center px-3"><span className="text-muted">$</span><input value={cash} onChange={(event) => setCash(event.target.value.replace(/\D/g, ""))} className="min-w-0 flex-1 bg-transparent pl-1 outline-none" /></div></label>
+            <p className="text-fine font-semibold uppercase tracking-wide text-muted">Trade summary</p>
+            <p className="mt-2 font-semibold">Your leather jacket</p>
+            <p className="my-2 text-center text-label text-muted">for</p>
+            <p className="text-label font-semibold">{selected.length ? `${selected.length} selected item${selected.length === 1 ? "" : "s"}` : "Choose an item"}</p>
+            <label className="mt-4 block text-fine font-semibold">Cash adjustment<div className="field mt-1 flex h-10 items-center px-3"><span className="text-muted">$</span><input value={cash} onChange={(event) => setCash(event.target.value.replace(/\D/g, ""))} className="min-w-0 flex-1 bg-transparent pl-1 outline-none" /></div></label>
             <button type="button" disabled={!selected.length} className="btn btn-primary mt-4 w-full">Send counter-trade</button>
           </aside>
         </div>
@@ -63,22 +63,22 @@ export function TradePickerMock() {
       {pattern === "side-by-side" && (
         <div className="mt-5 rounded-xl border border-line p-4">
           <div className="grid items-stretch gap-3 md:grid-cols-[1fr_auto_1fr]">
-            <div className="rounded-lg bg-surface p-4"><p className="text-xs font-bold uppercase tracking-wide text-muted">They receive</p><p className="mt-2 font-bold">Brown leather jacket</p><p className="text-sm text-muted">Listed at $42</p></div>
-            <span className="self-center text-center text-sm font-black text-muted">TRADE FOR</span>
-            <div className="rounded-lg bg-surface p-4"><p className="text-xs font-bold uppercase tracking-wide text-muted">You receive</p><p className="mt-2 font-bold">Faded zip hoodie + $10</p><button type="button" className="mt-3 text-sm font-bold underline">Change items</button></div>
+            <div className="rounded-lg bg-surface p-4"><p className="text-fine font-semibold uppercase tracking-wide text-muted">They receive</p><p className="mt-2 font-semibold">Brown leather jacket</p><p className="text-label text-muted">Listed at $42</p></div>
+            <span className="self-center text-center text-label font-extrabold text-muted">TRADE FOR</span>
+            <div className="rounded-lg bg-surface p-4"><p className="text-fine font-semibold uppercase tracking-wide text-muted">You receive</p><p className="mt-2 font-semibold">Faded zip hoodie + $10</p><button type="button" className="mt-3 text-label font-semibold underline">Change items</button></div>
           </div>
-          <p className="mt-4 text-sm text-muted">Best when both people need to compare the complete package before accepting or countering.</p>
+          <p className="mt-4 text-label text-muted">Best when both people need to compare the complete package before accepting or countering.</p>
         </div>
       )}
 
       {pattern === "wishlist" && (
         <div className="mt-5 grid gap-5 rounded-xl border border-line p-4 md:grid-cols-2">
-          <div><p className="type-wide text-lg font-black">Items Jordan would trade for</p><p className="mt-1 text-sm text-muted">Jordan marks acceptable items first. Maya can then build a trade from this shorter list.</p><div className="mt-4 space-y-2">{ITEMS.slice(0, 2).map((item) => <Item key={item.id} item={item} selected onSelect={() => undefined} />)}</div></div>
-          <div className="rounded-lg bg-surface p-4"><p className="font-bold">Less negotiation, more setup</p><p className="mt-2 text-sm leading-6 text-muted">This is faster during a deal, but asks users to maintain an “open to trade” shortlist on every listing or profile.</p><button type="button" className="btn btn-secondary mt-4">Build from shortlist</button></div>
+          <div><p className="type-wide text-title font-extrabold">Items Jordan would trade for</p><p className="mt-1 text-label text-muted">Jordan marks acceptable items first. Maya can then build a trade from this shorter list.</p><div className="mt-4 space-y-2">{ITEMS.slice(0, 2).map((item) => <Item key={item.id} item={item} selected onSelect={() => undefined} />)}</div></div>
+          <div className="rounded-lg bg-surface p-4"><p className="font-semibold">Less negotiation, more setup</p><p className="mt-2 text-label leading-6 text-muted">This is faster during a deal, but asks users to maintain an “open to trade” shortlist on every listing or profile.</p><button type="button" className="btn btn-secondary mt-4">Build from shortlist</button></div>
         </div>
       )}
 
-      <p className="mt-4 text-sm"><strong>Recommended:</strong> the inline picker. It adds the missing choice directly to the existing Deals flow without creating another inbox or requiring users to maintain a wishlist.</p>
+      <p className="mt-4 text-label"><strong>Recommended:</strong> the inline picker. It adds the missing choice directly to the existing Deals flow without creating another inbox or requiring users to maintain a wishlist.</p>
     </div>
   );
 }

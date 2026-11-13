@@ -64,19 +64,19 @@ export function PublicProfile({ username }: { username: string }) {
   }
 
   if (user === undefined) {
-    return <main className="mx-auto min-h-[70vh] max-w-6xl animate-pulse px-4 py-10 sm:px-6"><div className="h-72 rounded-3xl bg-foreground/5" /></main>;
+    return <main className="mx-auto min-h-[70vh] max-w-6xl animate-pulse px-4 py-10 sm:px-6"><div className="h-72 rounded-xl bg-foreground/5" /></main>;
   }
   if (user === null) {
-    return <main className="mx-auto min-h-[70vh] max-w-2xl px-4 py-20 text-center"><h1 className="text-3xl font-black">Profile unavailable</h1><p className="mt-3 text-muted">This account does not exist, is not verified, or requires you to log in.</p><Link href="/account/login" className="mt-6 inline-flex btn btn-primary">Log in</Link></main>;
+    return <main className="mx-auto min-h-[70vh] max-w-2xl px-4 py-20 text-center"><h1 className="text-display font-extrabold">Profile unavailable</h1><p className="mt-3 text-muted">This account does not exist, is not verified, or requires you to log in.</p><Link href="/account/login" className="mt-6 inline-flex btn btn-primary">Log in</Link></main>;
   }
 
   return <main className="mx-auto min-h-[70vh] max-w-6xl px-4 py-10 pb-12 sm:px-6">
-    {user.is_self && <p className="mb-6 rounded-xl bg-surface px-4 py-3 text-sm">This is how other students see your profile.</p>}
+    {user.is_self && <p className="mb-6 rounded-xl bg-surface px-4 py-3 text-label">This is how other students see your profile.</p>}
     <section className="grid items-start gap-6 lg:grid-cols-[minmax(0,26rem)_1fr] lg:gap-8">
       <StudentIdCard firstName={user.first_name} lastInitial={user.last_initial} username={user.username} schoolName={user.school?.name} schoolColors={user.school?.colors} dateJoined={user.date_joined} soldCount={user.sold_count} photoUrl={user.profile_photo_url} />
       <div>
         <p className="max-w-2xl leading-7 text-foreground/80">{user.profile_description || "This student has not added a profile description yet."}</p>
-        <div className="mt-4 flex flex-wrap items-center gap-x-7 gap-y-3 text-sm">
+        <div className="mt-4 flex flex-wrap items-center gap-x-7 gap-y-3 text-label">
           <FollowCounts username={user.username} followers={user.follower_count} following={user.following_count} />
           {user.instagram_handle && <InstagramLink handle={user.instagram_handle} />}
         </div>
@@ -86,16 +86,16 @@ export function PublicProfile({ username }: { username: string }) {
         {!user.is_self && (
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
             <ReportButton targetType="user" targetId={user.id} subject={`@${user.username}`} username={user.username} label="Report profile" />
-            <BlockButton username={user.username} className="text-sm font-semibold text-muted hover:text-ink hover:underline" />
+            <BlockButton username={user.username} className="text-label font-semibold text-muted hover:text-ink hover:underline" />
           </div>
         )}
-        {error && <p className="mt-3 text-sm text-[var(--danger)]">{error}</p>}
+        {error && <p className="mt-3 text-label text-danger">{error}</p>}
       </div>
     </section>
     <section className="mt-8">
       <div className="mb-5 flex gap-1 overflow-x-auto border-b border-line" role="tablist" aria-label="Seller listings">
-        <button type="button" role="tab" aria-selected={listingTab === "selling"} onClick={() => setListingTab("selling")} className="relative min-w-max px-5 py-3 text-sm font-bold text-muted transition hover:text-foreground aria-[selected=true]:text-foreground after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-brand after:opacity-0 aria-[selected=true]:after:opacity-100">Selling</button>
-        <button type="button" role="tab" aria-selected={listingTab === "sold"} onClick={() => setListingTab("sold")} className="relative min-w-max px-5 py-3 text-sm font-bold text-muted transition hover:text-foreground aria-[selected=true]:text-foreground after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-brand after:opacity-0 aria-[selected=true]:after:opacity-100">Sold</button>
+        <button type="button" role="tab" aria-selected={listingTab === "selling"} onClick={() => setListingTab("selling")} className="relative min-w-max px-5 py-3 text-label font-semibold text-muted transition hover:text-foreground aria-[selected=true]:text-foreground after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-brand after:opacity-0 aria-[selected=true]:after:opacity-100">Selling</button>
+        <button type="button" role="tab" aria-selected={listingTab === "sold"} onClick={() => setListingTab("sold")} className="relative min-w-max px-5 py-3 text-label font-semibold text-muted transition hover:text-foreground aria-[selected=true]:text-foreground after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-brand after:opacity-0 aria-[selected=true]:after:opacity-100">Sold</button>
       </div>
       <PublicListings tab={listingTab} listings={listings} isSelf={user.is_self} />
     </section>
@@ -104,14 +104,14 @@ export function PublicProfile({ username }: { username: string }) {
 
 function PublicListings({ tab, listings, isSelf }: { tab: "selling" | "sold"; listings: Card[] | null | undefined; isSelf: boolean }) {
   if (listings === undefined) {
-    return <div aria-busy="true" aria-label="Loading listings" className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="aspect-[4/5] animate-pulse rounded-md bg-surface" />)}</div>;
+    return <div aria-busy="true" aria-label="Loading listings" className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="aspect-[4/5] rounded-lg skeleton" />)}</div>;
   }
   if (listings === null) {
-    return <p className="rounded-xl bg-surface px-5 py-8 text-center text-sm text-muted">Couldn’t load this seller’s listings. Refresh to try again.</p>;
+    return <p className="rounded-xl bg-surface px-5 py-8 text-center text-label text-muted">Couldn’t load this seller’s listings. Refresh to try again.</p>;
   }
   const shown = listings.filter((listing) => tab === "sold" ? listing.status === "sold" : listing.status === "available" || listing.status === "pending");
   if (!shown.length) {
-    return <div className="grid min-h-56 place-items-center rounded-3xl border border-dashed border-line bg-white/45 p-8 text-center"><div><p className="font-bold">{tab === "sold" ? "No sold items yet" : "No active listings"}</p><p className="mt-2 text-sm text-muted">{tab === "sold" ? "Completed sales will appear here." : "This student is not currently selling anything."}</p></div></div>;
+    return <div className="grid min-h-56 place-items-center rounded-xl border border-dashed border-line bg-white/45 p-8 text-center"><div><p className="font-semibold">{tab === "sold" ? "No sold items yet" : "No active listings"}</p><p className="mt-2 text-label text-muted">{tab === "sold" ? "Completed sales will appear here." : "This student is not currently selling anything."}</p></div></div>;
   }
   return <ul aria-label={tab === "sold" ? "Sold listings" : "Listings for sale"} className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-8 lg:grid-cols-4">{shown.map((listing) => <li key={listing.id}><ListingCard listing={listing} showBookmark={!isSelf} /></li>)}</ul>;
 }

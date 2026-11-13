@@ -4,11 +4,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { NotificationBell } from "@/components/notifications/notification-bell";
-import { Avatar } from "@/components/messaging/avatar";
+import { Avatar } from "@/components/ui/avatar";
 import { Menu, MenuButton, MenuDivider, MenuLink } from "@/components/ui/menu";
 import type { components } from "@/lib/api/schema";
 import { authRequest } from "@/lib/auth";
 import { getCurrentUser } from "@/lib/platform";
+import { ChevronDownIcon } from "@/components/ui/icons";
 
 type CurrentUser = components["schemas"]["CurrentUser"];
 
@@ -42,14 +43,14 @@ export function AuthActions() {
     return () => { active = false; };
   }, [pathname]);
 
-  if (user === undefined) return <div className="h-11 w-11 animate-pulse rounded-lg bg-surface desktop:w-40" aria-hidden="true" />;
+  if (user === undefined) return <div className="h-11 w-11 rounded-lg desktop:w-40 skeleton" aria-hidden="true" />;
   if (user) return <div className="flex shrink-0 items-center gap-1">
     <NotificationBell />
     <Link href="/sell" className="btn btn-primary btn-sm ml-2 hidden desktop:inline-flex">Sell</Link>
     <div className="ml-1 hidden desktop:block">
       <Menu label="Account menu" triggerClassName="flex h-11 items-center gap-1.5 rounded-full pl-1 pr-2 transition hover:bg-surface aria-expanded:bg-surface" trigger={<>
         <Avatar user={user} size="sm" />
-        <svg aria-hidden="true" viewBox="0 0 12 12" className="size-2.5 text-muted" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="m2 4 4 4 4-4" /></svg>
+        <ChevronDownIcon className="size-4 text-muted" aria-hidden="true" />
       </>}>
         <p role="none" className="px-4 pb-2 pt-1.5 text-fine text-muted">Signed in as <span className="font-semibold text-ink">@{user.username}</span></p>
         <MenuDivider />

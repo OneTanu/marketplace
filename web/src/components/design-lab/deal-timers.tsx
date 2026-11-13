@@ -40,13 +40,13 @@ export function RequestRow({ buyer, action, image, receivedAt, now }: {
 
   return (
     <div className="flex items-center gap-3 py-3">
-      <div className="h-14 w-11 shrink-0 rounded-md bg-surface bg-cover bg-center" style={{ backgroundImage: `url(${image})` }} />
+      <div className="h-14 w-11 shrink-0 rounded-lg bg-surface bg-cover bg-center" style={{ backgroundImage: `url(${image})` }} />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-bold text-ink">{buyer} {action}</p>
-        <p className={`mt-0.5 text-[13px] ${urgent ? "font-bold text-[var(--danger)]" : "text-muted"}`}>
+        <p className="text-label font-semibold text-ink">{buyer} {action}</p>
+        <p className={`mt-0.5 text-fine ${urgent ? "font-semibold text-danger" : "text-muted"}`}>
           {expired ? "Expired. The buyer was told to look at other listings." : `Answer by ${formatDeadline(deadline, now)}, ${timeLeft(remaining)}`}
         </p>
-        <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-surface"><div className={`h-full ${urgent || expired ? "bg-[var(--danger)]" : "bg-ink"}`} style={{ width: `${used}%` }} /></div>
+        <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-surface"><div className={`h-full ${urgent || expired ? "bg-danger" : "bg-ink"}`} style={{ width: `${used}%` }} /></div>
       </div>
       <button type="button" disabled={expired} className="btn btn-secondary btn-sm">Reply</button>
     </div>
@@ -81,28 +81,28 @@ export function HoldSlip({ title, price, seller, buyer, acceptedAt, now, sellerC
     <div className="overflow-hidden rounded-lg border-[1.5px] border-ink bg-background">
       <div className="flex items-start justify-between gap-3 p-4">
         <div>
-          <p className={`type-wide text-xl font-black leading-tight ${urgent ? "text-[var(--danger)]" : "text-ink"}`}>{heading}</p>
-          <p className="mt-1 text-[13px] text-muted">{title}, {price}, for {buyer}</p>
+          <p className={`type-wide text-title font-extrabold leading-tight ${urgent ? "text-danger" : "text-ink"}`}>{heading}</p>
+          <p className="mt-1 text-fine text-muted">{title}, {price}, for {buyer}</p>
         </div>
-        {!released && <span className={`${card.stamp} shrink-0 ${sold ? "text-[#d42b33]" : "text-brand"}`}>{sold ? "SOLD" : "PENDING"}</span>}
+        {!released && <span className={`${card.stamp} shrink-0 ${sold ? "text-danger" : "text-brand"}`}>{sold ? "SOLD" : "PENDING"}</span>}
       </div>
       <div className={`grid grid-cols-3 ${styles.perforated}`}>
         {[0, 1, 2].map((day) => {
           const fill = Math.min(1, Math.max(0, elapsedDays - day));
           const ends = new Date(acceptedAt.getTime() + (day + 1) * 24 * HOUR);
-          return <div key={day} className="relative px-3 py-2 text-xs font-bold text-ink">
+          return <div key={day} className="relative px-3 py-2 text-fine font-semibold text-ink">
             <div className="absolute inset-y-0 left-0 bg-ink/15" style={{ width: `${fill * 100}%` }} aria-hidden="true" />
-            <span className="relative">Day {day + 1}<span className="block font-medium text-muted">Ends {weekday(ends)}</span></span>
+            <span className="relative">Day {day + 1}<span className="block font-semibold text-muted">Ends {weekday(ends)}</span></span>
           </div>;
         })}
       </div>
-      <ul className="grid gap-1.5 border-t-[1.5px] border-ink px-4 py-3 text-[13px] text-ink">
+      <ul className="grid gap-1.5 border-t-[1.5px] border-ink px-4 py-3 text-fine text-ink">
         {[[seller, "handed it off", sellerConfirmed], [buyer, "got it", buyerConfirmed]].map(([name, verb, done]) => <li key={String(verb)} className="flex items-center gap-2">
-          <span className={`grid size-4 place-items-center rounded border-[1.5px] border-ink text-[10px] font-black ${done ? "bg-ink text-white" : ""}`} aria-hidden="true">{done ? "✓" : ""}</span>
+          <span className={`grid size-4 place-items-center rounded-lg border-[1.5px] border-ink text-fine font-extrabold ${done ? "bg-ink text-white" : ""}`} aria-hidden="true">{done ? "✓" : ""}</span>
           <span>{name} {verb}{done ? "" : <span className="sr-only"> (not yet)</span>}</span>
         </li>)}
       </ul>
-      <p className="px-4 pb-4 text-xs leading-5 text-muted">{footnote}</p>
+      <p className="px-4 pb-4 text-fine leading-5 text-muted">{footnote}</p>
     </div>
   );
 }

@@ -17,6 +17,8 @@ import {
   PHOTO_TYPES,
 } from "@/lib/listing-options";
 import { dollarsToCents } from "@/lib/money";
+import type { LucideIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, PlusIcon } from "@/components/ui/icons";
 
 export type { Category };
 export type Errors = Partial<Record<string, string[]>>;
@@ -39,8 +41,8 @@ export const FIELDS = new Set([
 ]);
 
 export const inputClass =
-  "mt-1 block w-full rounded-lg border border-black/15 bg-background px-3 py-2.5 text-base outline-none focus:border-foreground disabled:opacity-60 aria-[invalid=true]:border-red-600 dark:border-white/20";
-export const labelClass = "block text-sm font-medium";
+  "mt-1 block w-full rounded-lg border border-line bg-background px-3 py-2.5 text-body outline-none focus:border-foreground disabled:opacity-60 aria-[invalid=true]:border-danger";
+export const labelClass = "block text-label font-semibold";
 
 /** Element ids for a form's fields and their error lists, so labels and errors line up. */
 export function formIds(formId: string) {
@@ -86,7 +88,7 @@ export function refusalMessage(
 export function FieldError({ id, messages }: { id: string; messages?: string[] }) {
   if (!messages?.length) return null;
   return (
-    <ul id={id} className="mt-1 space-y-0.5 text-sm text-red-600 dark:text-red-400">
+    <ul id={id} className="mt-1 space-y-0.5 text-label text-danger">
       {messages.map((message) => (
         <li key={message}>{message}</li>
       ))}
@@ -226,13 +228,13 @@ function IconButton({
   onClick,
   disabled,
   className,
-  path,
+  icon: Icon,
 }: {
   label: string;
   onClick: () => void;
   disabled?: boolean;
   className: string;
-  path: string;
+  icon: LucideIcon;
 }) {
   return (
     <button
@@ -243,9 +245,7 @@ function IconButton({
       title={label}
       className={`absolute flex size-8 items-center justify-center rounded-full bg-black/70 text-white disabled:opacity-40 ${className}`}
     >
-      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-        <path d={path} />
-      </svg>
+      <Icon className="size-4" aria-hidden="true" />
     </button>
   );
 }
@@ -277,7 +277,7 @@ export function PhotoTile({
       {/* unoptimized: previews are blob: URLs, and Django serves /media directly. */}
       <Image src={src} alt={`Photo ${number}`} fill unoptimized className="object-cover" />
       {index === 0 && (
-        <span className="absolute left-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white">
+        <span className="absolute left-1 top-1 rounded-lg bg-black/70 px-1.5 py-0.5 text-fine font-semibold text-white">
           Cover
         </span>
       )}
@@ -287,7 +287,7 @@ export function PhotoTile({
           onClick={onRemove}
           disabled={disabled}
           className="right-1 top-1"
-          path="M6 6l12 12M18 6 6 18"
+          icon={CloseIcon}
         />
       )}
       {onMove && count > 1 && (
@@ -297,14 +297,14 @@ export function PhotoTile({
             onClick={() => onMove(-1)}
             disabled={disabled || index === 0}
             className="bottom-1 left-1"
-            path="M15 6l-6 6 6 6"
+            icon={ChevronLeftIcon}
           />
           <IconButton
             label={`Move photo ${number} later`}
             onClick={() => onMove(1)}
             disabled={disabled || index === count - 1}
             className="bottom-1 right-1"
-            path="M9 6l6 6-6 6"
+            icon={ChevronRightIcon}
           />
         </>
       )}
@@ -332,11 +332,9 @@ export function AddPhotoTile({
       <label
         htmlFor={inputId}
         aria-disabled={disabled || undefined}
-        className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-black/20 text-sm text-foreground/70 hover:bg-foreground/5 aria-disabled:cursor-wait aria-disabled:opacity-60 dark:border-white/25"
+        className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-black/20 text-label text-foreground/70 hover:bg-foreground/5 aria-disabled:cursor-wait aria-disabled:opacity-60"
       >
-        <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
-          <path d="M12 5v14M5 12h14" />
-        </svg>
+        <PlusIcon className="size-6" aria-hidden="true" />
         {busy ? "Uploading…" : "Add photos"}
       </label>
       <input
@@ -451,7 +449,7 @@ export function ListingFields({
               className={`${inputClass} pl-7`}
             />
           </div>
-          {isFree && <p className="mt-1 text-sm text-foreground/60">Items in Free are always $0.</p>}
+          {isFree && <p className="mt-1 text-label text-foreground/60">Items in Free are always $0.</p>}
           <FieldError id={errorId("price_cents")} messages={errors.price_cents} />
         </div>
       </div>
@@ -490,7 +488,7 @@ export function ListingFields({
             initial={initial.size ?? ""}
           />
           <div>
-            <label htmlFor={fieldId("brand")} className="block text-sm text-foreground/70">
+            <label htmlFor={fieldId("brand")} className="block text-label text-foreground/70">
               Brand
             </label>
             <input
@@ -505,7 +503,7 @@ export function ListingFields({
             <FieldError id={errorId("brand")} messages={errors.brand} />
           </div>
           <div>
-            <label htmlFor={fieldId("color")} className="block text-sm text-foreground/70">
+            <label htmlFor={fieldId("color")} className="block text-label text-foreground/70">
               Color
             </label>
             <select
@@ -528,8 +526,8 @@ export function ListingFields({
         </div>
       </fieldset>
 
-      <p className="rounded-lg bg-foreground/5 p-3 text-sm text-foreground/70">
-        <span className="font-medium text-foreground">Not allowed on Tanu:</span> {PROHIBITED}.
+      <p className="rounded-lg bg-foreground/5 p-3 text-label text-foreground/70">
+        <span className="font-semibold text-foreground">Not allowed on Tanu:</span> {PROHIBITED}.
         Listings for these are removed.
       </p>
     </>
@@ -654,7 +652,7 @@ function SizeField({
   if (!pants || (initial && !parsed && !initialLetterSize)) {
     return (
       <div>
-        <label htmlFor={fieldId("size")} className="block text-sm text-foreground/70">
+        <label htmlFor={fieldId("size")} className="block text-label text-foreground/70">
           Size
         </label>
         <input
@@ -674,24 +672,24 @@ function SizeField({
 
   return (
     <fieldset>
-      <legend className="block text-sm text-foreground/70">Size</legend>
+      <legend className="block text-label text-foreground/70">Size</legend>
       <input
         type="hidden"
         name="size"
         value={pantsSizeType === "letter" ? letterSize : waist && length ? `${waist}x${length}` : ""}
       />
-      <div className="mb-2 grid grid-cols-2 rounded-lg bg-surface p-1 text-sm">
+      <div className="mb-2 grid grid-cols-2 rounded-lg bg-surface p-1 text-label">
         <button
           type="button"
           onClick={() => setPantsSizeType("letter")}
-          className={`rounded-md px-3 py-2 font-semibold ${pantsSizeType === "letter" ? "bg-background shadow-sm" : "text-muted"}`}
+          className={`rounded-lg px-3 py-2 font-semibold ${pantsSizeType === "letter" ? "bg-background shadow-float" : "text-muted"}`}
         >
           Letter size
         </button>
         <button
           type="button"
           onClick={() => setPantsSizeType("measurements")}
-          className={`rounded-md px-3 py-2 font-semibold ${pantsSizeType === "measurements" ? "bg-background shadow-sm" : "text-muted"}`}
+          className={`rounded-lg px-3 py-2 font-semibold ${pantsSizeType === "measurements" ? "bg-background shadow-float" : "text-muted"}`}
         >
           Waist × length
         </button>

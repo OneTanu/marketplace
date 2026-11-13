@@ -133,11 +133,11 @@ export function MarketplaceFeed({ school, variant = "browse", above }: { school?
     <section className="mx-auto max-w-6xl px-4 pt-6 pb-12 sm:px-6 sm:pt-9 desktop:pb-16">
       {above}
       {home ? <div className="mb-5 flex items-end justify-between gap-4">
-        <h1 className="type-wide text-2xl font-black sm:text-[2rem]">{heading}</h1>
-        <Link href="/search" className="flex min-h-11 shrink-0 items-center text-sm font-bold text-ink underline decoration-kraft decoration-2 underline-offset-4 hover:decoration-ink">Filters</Link>
+        <h1 className="type-wide text-display font-extrabold ">{heading}</h1>
+        <Link href="/search" className="flex min-h-11 shrink-0 items-center text-label font-semibold text-ink underline decoration-ink/30 decoration-2 underline-offset-4 hover:decoration-ink">Filters</Link>
       </div> : <div className="mb-5">
-        <p className="text-sm font-semibold text-muted">{scopeName}</p>
-        <h1 className="type-wide mt-1 text-2xl font-black sm:text-[2rem]">{heading}</h1>
+        <p className="text-label font-semibold text-muted">{scopeName}</p>
+        <h1 className="type-wide mt-1 text-display font-extrabold ">{heading}</h1>
       </div>}
 
       {department && (subcategories.length > 0 || shoeShortcut) && <nav aria-label={`${department.name} categories`} className="-mx-1 mb-5 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
@@ -152,24 +152,24 @@ export function MarketplaceFeed({ school, variant = "browse", above }: { school?
       {/* Keyed on the URL too, so a half-written name starts over when the filters change. */}
       {!home && viewerId !== undefined && hasSearchFilters(feed) && current.state !== "invalid" && <div className="-mt-3 mb-6"><SaveSearch key={searchParams.toString()} feed={feed} fixedSchool={school?.slug} categoryLabel={category ? heading : undefined} schoolLabel={school ? school.short_name : feed.school === "all" ? "All schools" : feed.school ? scopeShort : undefined} /></div>}
 
-      {current.state === "loading" && <div aria-busy="true" aria-label="Loading listings" className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4">{Array.from({ length: 8 }).map((_, index) => <div key={index} className="aspect-[4/5] animate-pulse rounded-md bg-surface" />)}</div>}
+      {current.state === "loading" && <div aria-busy="true" aria-label="Loading listings" className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4">{Array.from({ length: 8 }).map((_, index) => <div key={index} className="aspect-[4/5] rounded-lg skeleton" />)}</div>}
 
-      {current.state === "signed-out" && <div className="grid min-h-80 place-items-center rounded-xl bg-surface px-6 text-center"><div><h2 className="type-wide text-xl font-extrabold">Log in to browse</h2><p className="mt-2 max-w-sm text-sm leading-6 text-muted">Listings on Tanu are only visible to verified students.</p><Link href="/account/login" className="btn btn-primary mt-5">Log in</Link></div></div>}
+      {current.state === "signed-out" && <div className="grid min-h-80 place-items-center rounded-xl bg-surface px-6 text-center"><div><h2 className="type-wide text-title font-extrabold">Log in to browse</h2><p className="mt-2 max-w-sm text-label leading-6 text-muted">Listings on Tanu are only visible to verified students.</p><Link href="/account/login" className="btn btn-primary mt-5">Log in</Link></div></div>}
 
-      {current.state === "error" && <div className="grid min-h-80 place-items-center rounded-xl bg-surface px-6 text-center"><div><h2 className="type-wide text-xl font-extrabold">Couldn’t load listings</h2><p className="mt-2 max-w-sm text-sm leading-6 text-muted">Check your connection and try again.</p><button type="button" onClick={retry} className="btn btn-secondary mt-5">Try again</button></div></div>}
+      {current.state === "error" && <div className="grid min-h-80 place-items-center rounded-xl bg-surface px-6 text-center"><div><h2 className="type-wide text-title font-extrabold">Couldn’t load listings</h2><p className="mt-2 max-w-sm text-label leading-6 text-muted">Check your connection and try again.</p><button type="button" onClick={retry} className="btn btn-secondary mt-5">Try again</button></div></div>}
 
-      {current.state === "invalid" && <div className="grid min-h-80 place-items-center rounded-xl bg-surface px-6 text-center"><div><h2 className="type-wide text-xl font-extrabold">This link’s filters don’t work</h2><p className="mt-2 max-w-sm text-sm leading-6 text-muted">A category, school or price in it isn’t valid anymore.</p><button type="button" onClick={() => router.replace(pathname)} className="btn btn-secondary mt-5">Clear filters</button></div></div>}
+      {current.state === "invalid" && <div className="grid min-h-80 place-items-center rounded-xl bg-surface px-6 text-center"><div><h2 className="type-wide text-title font-extrabold">This link’s filters don’t work</h2><p className="mt-2 max-w-sm text-label leading-6 text-muted">A category, school or price in it isn’t valid anymore.</p><button type="button" onClick={() => router.replace(pathname)} className="btn btn-secondary mt-5">Clear filters</button></div></div>}
 
       {current.state === "ready" && (current.listings.length ? <>
         <ul aria-label="Listings" className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-8 lg:grid-cols-4">
           {current.listings.map((listing) => <li key={listing.id}><ListingCard listing={listing} showSchool={!school && feed.school === "all"} showBookmark={viewerId !== undefined && listing.seller.id !== viewerId} /></li>)}
         </ul>
         <div ref={sentinel} className="mt-8 flex min-h-10 justify-center">
-          {current.loadingMore && <p role="status" className="text-sm text-muted">Loading more…</p>}
+          {current.loadingMore && <p role="status" className="text-label text-muted">Loading more…</p>}
           {current.moreFailed && <button type="button" onClick={loadMore} className="btn btn-secondary">Couldn’t load more. Try again</button>}
-          {!current.next && current.listings.length > 8 && <p className="text-sm text-muted">You’ve seen everything here.</p>}
+          {!current.next && current.listings.length > 8 && <p className="text-label text-muted">You’ve seen everything here.</p>}
         </div>
-      </> : home ? <div className="grid min-h-80 place-items-center rounded-xl bg-surface px-6 text-center"><div><h2 className="type-wide text-xl font-extrabold">Nothing for sale here yet</h2><p className="mt-2 max-w-sm text-sm leading-6 text-muted">Be the first: what you post shows up here for students at your school.</p><Link href="/sell" className="btn btn-primary mt-5">Sell an item</Link></div></div> : <div className="grid min-h-80 place-items-center rounded-xl bg-surface px-6 text-center"><div><h2 className="type-wide text-xl font-extrabold">Nothing here yet</h2><p className="mt-2 max-w-sm text-sm leading-6 text-muted">Try another category, fewer filters, or another school.</p><button type="button" onClick={() => router.replace(pathname)} className="btn btn-secondary mt-5">Clear filters</button></div></div>)}
+      </> : home ? <div className="grid min-h-80 place-items-center rounded-xl bg-surface px-6 text-center"><div><h2 className="type-wide text-title font-extrabold">Nothing for sale here yet</h2><p className="mt-2 max-w-sm text-label leading-6 text-muted">Be the first: what you post shows up here for students at your school.</p><Link href="/sell" className="btn btn-primary mt-5">Sell an item</Link></div></div> : <div className="grid min-h-80 place-items-center rounded-xl bg-surface px-6 text-center"><div><h2 className="type-wide text-title font-extrabold">Nothing here yet</h2><p className="mt-2 max-w-sm text-label leading-6 text-muted">Try another category, fewer filters, or another school.</p><button type="button" onClick={() => router.replace(pathname)} className="btn btn-secondary mt-5">Clear filters</button></div></div>)}
     </section>
   );
 }
