@@ -392,7 +392,15 @@ class MeetupSlotSerializer(serializers.Serializer):
 
 
 class MeetupOptionsSerializer(serializers.Serializer):
-    seller_configured = serializers.BooleanField(read_only=True)
+    seller_configured = serializers.BooleanField(
+        read_only=True,
+        help_text="The seller has meetup spots here and open times in the next 7 days, so a "
+        "request can propose one.",
+    )
+    seller_has_preferences = serializers.BooleanField(
+        read_only=True,
+        help_text="The seller has saved meetup spots and times, even if none are open soon.",
+    )
     meeting_spots = MeetingSpotSerializer(many=True, read_only=True)
     slots = MeetupSlotSerializer(many=True, read_only=True)
 

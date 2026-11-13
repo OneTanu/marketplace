@@ -737,8 +737,12 @@ def browse_listings(viewer, filters: FeedFilters):
             | Q(item_details__brand__icontains=word)
             | Q(description__icontains=word)
         )
-    # Sellers who are restricted from selling, suspended, or banned drop out of browsing.
-    return listings.exclude(seller_id__in=trust_checks.hidden_seller_ids())
+    # Sellers who are restricted from selling, suspended, or banned drop out of browsing, and
+    # so do sellers the viewer has blocked or been blocked by.
+    listings = listings.exclude(seller_id__in=trust_checks.hidden_seller_ids())
+    if viewer.pk is not None:
+        listings = listings.exclude(seller_id__in=trust_checks.blocked_either_way_ids(viewer.pk))
+    return listings
 
 
 def category_and_descendants(category: Category) -> list[int]:

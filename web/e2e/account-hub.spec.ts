@@ -15,7 +15,7 @@ test.describe("on a phone", () => {
     await signIn(context, baseURL!, TEST_BUYER);
     await page.goto("/profile");
     const account = page.getByRole("navigation", { name: "Account" });
-    await expect(account.getByRole("listitem")).toHaveText(["My listings", "Saved", "Saved searches", "Meetup preferences", "Account status", "Log out"]);
+    await expect(account.getByRole("listitem")).toHaveText(["My listings", "Saved", "Saved searches", "Meetup preferences", "Account status", "Blocked accounts", "Log out"]);
     // The Selling, Sold and Bookmarks tabs are gone.
     await expect(page.getByRole("tab")).toHaveCount(0);
     await expect(page.getByText(/^\d+ followers?$/)).toBeVisible();

@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { useLogOut } from "@/components/auth/auth-actions";
 import { RestrictionNotice } from "@/components/trust/restriction-notice";
 import { Skeleton } from "@/components/ui/card";
-import { HeartIcon, LogOutIcon, MapPinIcon, ModerationIcon, SearchIcon, ShieldCheckIcon, StoreIcon } from "@/components/ui/icons";
+import { BlockedIcon, HeartIcon, LogOutIcon, MapPinIcon, ModerationIcon, SearchIcon, ShieldCheckIcon, StoreIcon } from "@/components/ui/icons";
 import { ListButton, ListGroup, ListRow } from "@/components/ui/list-row";
 import { getCurrentUser } from "@/lib/platform";
 import type { components } from "@/lib/api/schema";
@@ -84,6 +84,7 @@ export function ProfileClient() {
     { href: "/profile/searches", label: "Saved searches", icon: SearchIcon },
     { href: "/profile/meetup", label: "Meetup preferences", icon: MapPinIcon },
     { href: "/profile/standing", label: "Account status", icon: ShieldCheckIcon },
+    { href: "/profile/blocked", label: "Blocked accounts", icon: BlockedIcon },
     ...(user.is_moderator ? [{ href: "/moderation", label: "Moderation", icon: ModerationIcon }] : []),
   ];
 

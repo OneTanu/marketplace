@@ -4026,6 +4026,13 @@ components:
         seller_configured:
           type: boolean
           readOnly: true
+          description: The seller has meetup spots here and open times in the next
+            7 days, so a request can propose one.
+        seller_has_preferences:
+          type: boolean
+          readOnly: true
+          description: The seller has saved meetup spots and times, even if none are
+            open soon.
         meeting_spots:
           type: array
           items:
@@ -4039,6 +4046,7 @@ components:
       required:
       - meeting_spots
       - seller_configured
+      - seller_has_preferences
       - slots
     MeetupPreference:
       type: object

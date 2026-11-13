@@ -12,7 +12,7 @@ const PrivacyLink = () => <Link href="/privacy" className="font-semibold underli
 export default function TermsPage() {
   return <LegalPage
     title="Terms of Service"
-    updated="November 8, 2026"
+    updated="November 13, 2026"
     intro={<>
       <p>These Terms are an agreement between you and the team that operates Tanu (“Tanu,” “we,” “us”). By creating an account or using tanu.one, you agree to them and to our <PrivacyLink />. If you don’t agree, please don’t use Tanu.</p>
       <p>Tanu is independent and is not affiliated with or endorsed by any university.</p>
@@ -45,7 +45,7 @@ export default function TermsPage() {
       <LegalList items={[
         "An offer, counteroffer, or Buy now request is a request to the seller, not a completed purchase. A deal starts when the seller accepts.",
         "Whoever’s turn it is has 24 hours to respond to a request or offer, or it expires.",
-        "While a deal is pending, the item is held for that buyer. If the handoff isn’t confirmed within 72 hours, the deal ends and the item becomes available again. A meetup can be rescheduled once, which may extend this deadline.",
+        "Meetups can be scheduled up to 7 days ahead. While a deal is pending, the item is held for that buyer. If the handoff isn’t confirmed within 72 hours of the seller accepting, or within 2 hours after the agreed meetup if that’s later, the deal ends and the item becomes available again. A meetup can be rescheduled to a later time once.",
         "Other buyers can join a backup queue. If a deal falls through, the first eligible backup buyer is offered the item.",
         "An item is marked sold only when both buyer and seller confirm the handoff in Tanu. Only confirm a handoff that actually happened.",
         "If something goes wrong after a handoff is confirmed, report it in the deal. A Tanu moderator reviews disputed handoffs and decides how they’re settled; nothing is decided automatically.",

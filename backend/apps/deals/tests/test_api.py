@@ -231,3 +231,46 @@ def test_sellers_can_split_a_day_into_several_ranges_but_not_overlap_them(client
     )
     assert overlapping.status_code == 400
     assert "Wednesday" in str(overlapping.json())
+
+
+@pytest.mark.django_db
+def test_meetup_options_tell_apart_no_preferences_and_no_open_times(client):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    seller = verified_user("busy-seller")
+    buyer = verified_user("busy-buyer")
+    listing = listing_for(seller)
+    spot = MeetingSpot.objects.create(
+        school=seller.school, name="Student union", directions="By the doors.", is_indoor=True
+    )
+    client.force_login(buyer)
+    nothing = client.get(f"/api/listings/{listing.pk}/meetup-options/").json()
+    assert (nothing["seller_configured"], nothing["seller_has_preferences"]) == (False, False)
+
+    # Usual hours every day, but marked away for the whole booking window.
+    today = timezone.localdate()
+    client.force_login(seller)
+    saved = client.put(
+        "/api/meetup-preferences/",
+        {
+            "meeting_spot_ids": [spot.pk],
+            "windows": [
+                {"weekday": weekday, "start_time": time(9, 0), "end_time": time(21, 0)}
+                for weekday in range(7)
+            ],
+            "overrides": [
+                {"date": today + timedelta(days=offset), "is_unavailable": True}
+                for offset in range(9)
+            ],
+        },
+        content_type="application/json",
+    )
+    assert saved.status_code == 200, saved.content
+
+    client.force_login(buyer)
+    away = client.get(f"/api/listings/{listing.pk}/meetup-options/").json()
+    assert (away["seller_configured"], away["seller_has_preferences"]) == (False, True)
+    assert away["slots"] == []
+    assert [s["name"] for s in away["meeting_spots"]] == ["Student union"]

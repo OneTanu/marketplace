@@ -295,12 +295,23 @@ class ListingMeetupOptionsView(GenericAPIView):
             .first()
         )
         if preference is None:
-            return Response({"seller_configured": False, "meeting_spots": [], "slots": []})
-        spots = preference.meeting_spots.filter(is_active=True, school=listing.school)
+            return Response(
+                {
+                    "seller_configured": False,
+                    "seller_has_preferences": False,
+                    "meeting_spots": [],
+                    "slots": [],
+                }
+            )
+        spots = list(preference.meeting_spots.filter(is_active=True, school=listing.school))
         slots = [{"starts_at": value} for value in services.meetup_slots(seller=listing.seller)]
+        has_times = bool(
+            preference.availability_windows.all() or preference.availability_overrides.all()
+        )
         return Response(
             {
                 "seller_configured": bool(spots and slots),
+                "seller_has_preferences": bool(spots and has_times),
                 "meeting_spots": MeetingSpotSerializer(spots, many=True).data,
                 "slots": slots,
             }

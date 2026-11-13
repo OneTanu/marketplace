@@ -9,6 +9,7 @@ import type { SVGProps } from "react";
 export {
   ArrowDownUp as SortIcon,
   ArrowUp as SendIcon,
+  Ban as BlockedIcon,
   Bell as BellIcon,
   Bookmark as BookmarkIcon,
   Check as CheckIcon,
