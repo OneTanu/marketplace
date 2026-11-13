@@ -13,3 +13,8 @@ def send_notification_email(notification_id: int) -> None:
 @app.task(name="notifications.alert_saved_searches")
 def alert_saved_searches(listing_id: int) -> None:
     services.alert_saved_searches(listing_id=listing_id)
+
+
+@app.task(name="notifications.send_unread_message_email")
+def send_unread_message_email(recipient_id: int, message_id: int) -> None:
+    services.send_unread_message_email(recipient_id=recipient_id, message_id=message_id)

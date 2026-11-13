@@ -103,8 +103,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @description My conversations with at least one message. One with none yet (a deal request, or a
+         *     Message tap with nothing sent) opens by its id but stays out of the inbox.
+         */
         get: operations["conversations_list"];
         put?: never;
+        /**
+         * @description My conversations with at least one message. One with none yet (a deal request, or a
+         *     Message tap with nothing sent) opens by its id but stays out of the inbox.
+         */
         post: operations["conversations_create"];
         delete?: never;
         options?: never;

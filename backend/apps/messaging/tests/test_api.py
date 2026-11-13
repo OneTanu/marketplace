@@ -254,15 +254,16 @@ def test_unread_counts_skip_own_messages_and_start_after_last_read(client):
     inbox = {item["id"]: item for item in listed}
     detail = client.get(f"/api/conversations/{with_maya.pk}/").json()
 
-    # Newest activity first; a conversation without messages (null last_message_at) sorts first.
-    assert [item["id"] for item in listed] == [empty.pk, with_sam.pk, with_maya.pk]
+    # Newest activity first; a conversation without messages stays out of the inbox, though it
+    # still opens by its id.
+    assert [item["id"] for item in listed] == [with_sam.pk, with_maya.pk]
     assert inbox[with_maya.pk]["unread_count"] == 2
     assert inbox[with_sam.pk]["unread_count"] == 2
-    assert inbox[empty.pk]["unread_count"] == 0
+    assert client.get(f"/api/conversations/{empty.pk}/").json()["unread_count"] == 0
     assert inbox[with_maya.pk]["latest_message"]["body"] == "Three"
     assert inbox[with_sam.pk]["latest_message"]["id"] == own.pk
     assert inbox[with_sam.pk]["latest_message"]["is_mine"] is True
-    assert inbox[empty.pk]["latest_message"] is None
+    assert client.get(f"/api/conversations/{empty.pk}/").json()["latest_message"] is None
     assert detail["unread_count"] == 2
     assert detail["other_user"]["username"] == "maya"
     assert client.get("/api/conversations/unread-count/").json() == {"unread_count": 4}

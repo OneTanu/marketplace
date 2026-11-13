@@ -1,6 +1,8 @@
 """Notifications: in-app, plus email for things a student needs even when they can't sign in
 (e.g. a suspension). Other apps call notify(); nothing else creates Notification rows."""
 
+from datetime import timedelta
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -72,6 +74,58 @@ def send_email(*, notification_id: int) -> None:
         message=f"{notification.body}{link}\n\n— Tanu",
         from_email=None,
         recipient_list=[notification.user.email],
+    )
+
+
+# --- Message emails ---
+#
+# A student hears about new messages by email only when a conversation goes from read to
+# unread, and only if it's still unread a few minutes later (so not while they're chatting).
+# More messages before they read it send nothing more.
+
+MESSAGE_EMAIL_DELAY = timedelta(minutes=3)
+
+
+def queue_unread_message_email(*, recipient_id: int, message_id: int) -> None:
+    """Called by Messaging, inside the transaction that saves the message."""
+    from .tasks import send_unread_message_email
+
+    send_unread_message_email.configure(schedule_at=timezone.now() + MESSAGE_EMAIL_DELAY).defer(
+        recipient_id=recipient_id, message_id=message_id
+    )
+
+
+def send_unread_message_email(*, recipient_id: int, message_id: int) -> None:
+    """Email "New message from @x" if the message is still unread, the recipient can sign in,
+    and neither has blocked the other. The email names the sender and links to the chat; the
+    message itself stays in Tanu."""
+    from apps.messaging.models import ConversationParticipant, Message
+    from apps.trust import checks as trust_checks
+
+    message = Message.objects.select_related("sender").filter(pk=message_id).first()
+    membership = (
+        ConversationParticipant.objects.select_related("user")
+        .filter(user_id=recipient_id, conversation_id=getattr(message, "conversation_id", None))
+        .first()
+    )
+    if message is None or membership is None:
+        return
+    recipient = membership.user
+    if not (recipient.is_active and recipient.email):
+        return
+    if membership.last_read_message_id and membership.last_read_message_id >= message.pk:
+        return  # read in the meantime
+    if trust_checks.is_blocked(recipient, message.sender):
+        return
+    sender = message.sender.username
+    send_mail(
+        subject=f"Tanu: New message from @{sender}",
+        message=(
+            f"@{sender} sent you a message on Tanu.\n\n"
+            f"{settings.WEB_APP_URL}/inbox/{message.conversation_id}\n\n— Tanu"
+        ),
+        from_email=None,
+        recipient_list=[recipient.email],
     )
 
 

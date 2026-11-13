@@ -141,6 +141,9 @@ paths:
   /api/conversations/:
     get:
       operationId: conversations_list
+      description: |-
+        My conversations with at least one message. One with none yet (a deal request, or a
+        Message tap with nothing sent) opens by its id but stays out of the inbox.
       tags:
       - conversations
       security:
@@ -156,6 +159,9 @@ paths:
           description: ''
     post:
       operationId: conversations_create
+      description: |-
+        My conversations with at least one message. One with none yet (a deal request, or a
+        Message tap with nothing sent) opens by its id but stays out of the inbox.
       tags:
       - conversations
       requestBody:

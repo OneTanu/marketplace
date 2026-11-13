@@ -47,10 +47,11 @@ def test_offer_starts_awaiting_seller_with_conversation_and_event():
     assert deal.conversation.participants.count() == 2
     assert DealOffer.objects.get(deal=deal).offered_by == buyer
     assert DealEvent.objects.get(deal=deal).event_type == "request_created"
-    message = deal.conversation.messages.get()
-    assert message.sender == buyer
-    assert message.listing == listing
-    assert message.body == "Made an offer of $42.00 for this item."
+    # The request isn't posted in the chat; the seller is notified instead.
+    assert not deal.conversation.messages.exists()
+    notice = listing.seller.notifications.get()
+    assert notice.title == f"New request for “{listing.title}”"
+    assert "offered $42.00. Reply within 24 hours." in notice.body
     assert deal.response_deadline > timezone.now()
 
 

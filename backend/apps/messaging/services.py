@@ -43,10 +43,9 @@ def send_message(
     sender: User,
     body: str,
     listing: Listing | None = None,
-    automated: bool = False,
 ) -> Message:
-    """Send a message. `automated` marks the notes Deals writes for a student ("Made an offer
-    of $20"), which still go out when the student can't send their own messages."""
+    """Send a student's message. Deals never writes into chats: requests and their updates
+    live on the Deals page and in notifications."""
     body = body.strip()
     if not body:
         raise ValidationError("Message cannot be empty.")
@@ -59,8 +58,7 @@ def send_message(
     ).first()
     if membership is None:
         raise ValidationError("You are not a participant in this conversation.")
-    if not automated:
-        trust_checks.require_can(sender, trust_checks.Kind.MESSAGING)
+    trust_checks.require_can(sender, trust_checks.Kind.MESSAGING)
     if conversation.participants.exclude(pk=sender.pk).filter(is_active=False).exists():
         # Deactivated, suspended, or banned: the conversation stays as history, read-only.
         raise ValidationError("This account isn't available right now.")
@@ -83,7 +81,23 @@ def send_message(
     )
     membership.last_read_message = message
     membership.save(update_fields=["last_read_message"])
+    _queue_unread_emails(conversation, message)
     return message
+
+
+def _queue_unread_emails(conversation: Conversation, message: Message) -> None:
+    """Email each other participant about this message if it's the first one they haven't
+    read (their conversation just went from read to unread)."""
+    from apps.notifications.services import queue_unread_message_email
+
+    for other in conversation.participant_records.exclude(user_id=message.sender_id):
+        already_unread = (
+            conversation.messages.filter(pk__lt=message.pk, pk__gt=other.last_read_message_id or 0)
+            .exclude(sender_id=other.user_id)
+            .exists()
+        )
+        if not already_unread:
+            queue_unread_message_email(recipient_id=other.user_id, message_id=message.pk)
 
 
 @transaction.atomic
