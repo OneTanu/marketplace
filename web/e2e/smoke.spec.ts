@@ -47,16 +47,13 @@ test("signs in through the proxy and loads the app shell", async ({ context, pag
   const menu = page.getByRole("menu", { name: "Account menu" });
   await expect(menu.getByRole("menuitem")).toHaveText(["Profile", "My listings", "Saved", "Log out"]);
   await menu.getByRole("menuitem", { name: "Saved" }).click();
-  await expect(page).toHaveURL("/profile?tab=bookmarks");
-  await expect(page.getByRole("tab", { name: "Bookmarks" })).toHaveAttribute("aria-selected", "true");
+  await expect(page).toHaveURL("/profile/saved");
+  await expect(page.getByRole("heading", { level: 1, name: "Saved" })).toBeVisible();
   await expect(menu).toHaveCount(0);
 
-  // The tab is in the URL, so "Saved" works again after switching tabs on the profile.
-  await page.getByRole("tab", { name: "Selling" }).click();
-  await expect(page).toHaveURL("/profile");
-  await page.getByRole("button", { name: "Account menu" }).click();
-  await menu.getByRole("menuitem", { name: "Saved" }).click();
-  await expect(page.getByRole("tab", { name: "Bookmarks" })).toHaveAttribute("aria-selected", "true");
+  // Saved used to be a profile tab; the old link lands on its page.
+  await page.goto("/profile?tab=bookmarks");
+  await expect(page).toHaveURL("/profile/saved");
 
   // Escape closes the menu and gives focus back to its button.
   const menuButton = page.getByRole("button", { name: "Account menu" });

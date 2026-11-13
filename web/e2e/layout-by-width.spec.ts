@@ -71,6 +71,7 @@ test.describe("a phone", () => {
       ["/sell", "Sell an item", "/"],
       [`/listings/${listingId}/edit`, "Edit listing", "/listings/mine"],
       ["/profile/meetup", "Meetup preferences", "/profile"],
+      ["/profile/edit", "Edit profile", "/profile"],
     ]) {
       await page.goto(path);
       await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();

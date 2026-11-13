@@ -41,6 +41,6 @@ export function isFocusedPath(pathname: string) {
     /^\/inbox\/[^/]+\/?$/.test(pathname) ||
     /^\/sell\/?$/.test(pathname) ||
     /^\/listings\/[^/]+\/edit\/?$/.test(pathname) ||
-    /^\/profile\/meetup\/?$/.test(pathname)
+    /^\/profile\/(meetup|edit)\/?$/.test(pathname)
   );
 }

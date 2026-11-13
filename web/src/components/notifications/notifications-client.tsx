@@ -28,7 +28,7 @@ export function NotificationsClient() {
   }, []);
 
   return (
-    <main className="mx-auto min-h-[70vh] max-w-2xl px-4 py-8 pb-28 sm:px-6 desktop:pb-12">
+    <main className="mx-auto min-h-[70vh] max-w-2xl px-4 py-8 pb-12 sm:px-6">
       <h1 className="type-wide text-3xl font-black">Notifications</h1>
       {items === undefined && <div className="mt-6 space-y-2">{[0, 1, 2].map((i) => <div key={i} className="h-20 animate-pulse rounded-xl bg-surface" />)}</div>}
       {items === null && <p className="mt-6 rounded-xl bg-surface p-6 text-center text-sm text-muted">Log in to see your notifications.</p>}

@@ -39,9 +39,8 @@ test("bookmarks a listing, saves a search, and is alerted once to a new match", 
   const card = page.getByRole("list", { name: "Listings" }).getByRole("article").filter({ hasText: lampTitle });
   await expect(card.getByRole("button", { name: "Remove saved listing" })).toBeVisible();
 
-  // 2. It's in the profile's Bookmarks tab.
-  await page.goto("/profile");
-  await page.getByRole("tab", { name: "Bookmarks" }).click();
+  // 2. It's on the Saved page.
+  await page.goto("/profile/saved");
   await expect(page.getByRole("list", { name: "Saved listings" }).getByText(lampTitle)).toBeVisible();
 
   // 3. Save a filtered search.

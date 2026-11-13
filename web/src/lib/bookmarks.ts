@@ -1,6 +1,6 @@
 // Saved listings ("bookmarks"). Each listing from the API says whether the viewer saved it
 // (`is_bookmarked`); this store remembers every change made in this tab, so the feed, a
-// listing page and the profile's Bookmarks tab agree without refetching.
+// listing page and the Saved page agree without refetching.
 
 import { useSyncExternalStore } from "react";
 

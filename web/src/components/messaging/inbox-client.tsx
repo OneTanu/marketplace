@@ -29,7 +29,7 @@ export function InboxClient() {
   if (conversations === undefined) return <main className="mx-auto min-h-[70vh] max-w-2xl animate-pulse px-4 py-10 sm:px-6"><div className="h-9 w-32 rounded bg-surface" /><div className="mt-8 space-y-5">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="flex items-center gap-4"><div className="size-12 rounded-full bg-surface" /><div className="h-10 flex-1 rounded bg-surface" /></div>)}</div></main>;
   if (conversations === null) return <main className="mx-auto grid min-h-[70vh] max-w-xl place-items-center px-4 text-center"><div><h1 className="type-wide text-3xl font-black">Log in to see your messages</h1><p className="mt-3 text-muted">Messages are tied to your verified student account.</p><Link href="/account/login" className="btn btn-primary mt-6">Log in</Link></div></main>;
 
-  return <main className="mx-auto min-h-[70vh] max-w-2xl px-4 py-8 pb-28 sm:px-6 sm:py-10 desktop:pb-12">
+  return <main className="mx-auto min-h-[70vh] max-w-2xl px-4 py-8 pb-12 sm:px-6 sm:py-10">
     <h1 className="type-wide text-3xl font-black">Inbox</h1>
     {conversations.length ? <ul className="mt-6 divide-y divide-line border-y border-line">{conversations.map((conversation) => {
       const user = conversation.other_user;

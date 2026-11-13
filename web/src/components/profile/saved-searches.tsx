@@ -114,13 +114,13 @@ export function SavedSearches() {
   }, [attempt]);
 
   const header = <>
-    <Link href="/profile" className="text-sm font-bold text-muted hover:text-ink">← Back to profile</Link>
-    <div className="mt-5">
+    <Link href="/profile" className="inline-flex min-h-11 items-center text-sm font-bold text-muted hover:text-ink">← Back to profile</Link>
+    <div className="mt-2">
       <h1 className="type-wide text-3xl font-black">Saved searches</h1>
       <p className="mt-2 max-w-2xl leading-6 text-muted">Run a search again in one tap, and get a notification when a new listing matches one with alerts on.</p>
     </div>
   </>;
-  const shell = "mx-auto min-h-[70vh] max-w-3xl px-4 py-8 pb-28 sm:px-6 sm:py-10 desktop:pb-12";
+  const shell = "mx-auto min-h-[70vh] max-w-3xl px-4 py-8 pb-12 sm:px-6 sm:py-10";
 
   if (failed) {
     return <main className={shell}>{header}<div role="alert" className="mt-8 rounded-2xl bg-surface p-6 text-center"><p className="font-bold">Couldn’t load your saved searches</p><button type="button" onClick={() => { setFailed(false); setAttempt((n) => n + 1); }} className="btn btn-secondary mt-4">Try again</button></div></main>;

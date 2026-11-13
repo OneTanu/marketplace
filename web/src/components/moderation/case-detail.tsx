@@ -87,7 +87,7 @@ export function CaseDetailView({ caseId }: { caseId: number }) {
 
   const row = detail.case;
   return (
-    <main className="mx-auto min-h-[70vh] max-w-6xl px-4 py-8 pb-28 sm:px-6 desktop:pb-12">
+    <main className="mx-auto min-h-[70vh] max-w-6xl px-4 py-8 pb-12 sm:px-6">
       <Link href="/moderation" className="text-sm font-bold text-muted hover:text-ink">← Moderation queue</Link>
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
         <span className={`rounded-full px-2.5 py-1 font-bold ${PRIORITY_STYLES[row.priority]}`}>{row.priority_label}</span>

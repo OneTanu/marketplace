@@ -77,15 +77,6 @@ export async function setFollowing(username: string, following: boolean) {
   return data;
 }
 
-export async function homeMarketplacePath() {
-  try {
-    const user = await getCurrentUser();
-    return user?.school ? `/schools/${user.school.slug}` : "/";
-  } catch {
-    return "/";
-  }
-}
-
 export type FollowDirection = "followers" | "following";
 
 /** One page of a student's followers or follows. Null when signed out. */

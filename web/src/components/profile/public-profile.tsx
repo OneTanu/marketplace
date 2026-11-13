@@ -70,7 +70,8 @@ export function PublicProfile({ username }: { username: string }) {
     return <main className="mx-auto min-h-[70vh] max-w-2xl px-4 py-20 text-center"><h1 className="text-3xl font-black">Profile unavailable</h1><p className="mt-3 text-muted">This account does not exist, is not verified, or requires you to log in.</p><Link href="/account/login" className="mt-6 inline-flex btn btn-primary">Log in</Link></main>;
   }
 
-  return <main className="mx-auto min-h-[70vh] max-w-6xl px-4 py-10 pb-28 sm:px-6 desktop:pb-12">
+  return <main className="mx-auto min-h-[70vh] max-w-6xl px-4 py-10 pb-12 sm:px-6">
+    {user.is_self && <p className="mb-6 rounded-xl bg-surface px-4 py-3 text-sm">This is how other students see your profile.</p>}
     <section className="grid items-start gap-6 lg:grid-cols-[minmax(0,26rem)_1fr] lg:gap-8">
       <StudentIdCard firstName={user.first_name} lastInitial={user.last_initial} username={user.username} schoolName={user.school?.name} schoolColors={user.school?.colors} dateJoined={user.date_joined} soldCount={user.sold_count} photoUrl={user.profile_photo_url} />
       <div>
@@ -80,7 +81,7 @@ export function PublicProfile({ username }: { username: string }) {
           {user.instagram_handle && <InstagramLink handle={user.instagram_handle} />}
         </div>
         <div className="mt-5 flex flex-wrap items-start gap-2">
-          {user.is_self ? <Link href="/profile" className="btn btn-secondary">Edit your profile</Link> : <><button onClick={toggleFollow} disabled={pending} className={`btn ${user.is_following ? "btn-secondary" : "btn-primary"}`}>{pending ? "Saving…" : user.is_following ? "Following" : "Follow"}</button><button onClick={messageUser} disabled={pending} className="btn btn-secondary">Message</button></>}
+          {user.is_self ? <Link href="/profile/edit" className="btn btn-secondary">Edit profile</Link> : <><button onClick={toggleFollow} disabled={pending} className={`btn ${user.is_following ? "btn-secondary" : "btn-primary"}`}>{pending ? "Saving…" : user.is_following ? "Following" : "Follow"}</button><button onClick={messageUser} disabled={pending} className="btn btn-secondary">Message</button></>}
         </div>
         {!user.is_self && (
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">

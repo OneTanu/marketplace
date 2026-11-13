@@ -90,7 +90,7 @@ export function ModerationStatsView() {
   if (stats === null) return <ModeratorsOnly message={denied} />;
 
   return (
-    <main className="mx-auto min-h-[70vh] max-w-5xl px-4 py-8 pb-28 sm:px-6 desktop:pb-12">
+    <main className="mx-auto min-h-[70vh] max-w-5xl px-4 py-8 pb-12 sm:px-6">
       <Link href="/moderation" className="text-sm font-bold text-muted hover:text-ink">← Moderation queue</Link>
       <h1 className="type-wide mt-3 text-3xl font-black">Moderation stats</h1>
 
