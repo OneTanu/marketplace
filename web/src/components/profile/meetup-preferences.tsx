@@ -182,9 +182,9 @@ export function MeetupPreferences() {
                 <div className="space-y-2">
                   {windows[index].ranges.map((range, rangeIndex) => (
                     <div key={rangeIndex} className="flex items-center gap-2">
-                      <input type="time" value={range.start} onChange={(event) => updateRange(index, rangeIndex, { start: event.target.value })} className="field h-10 min-w-0 flex-1 px-3" aria-label={`${day} start time ${rangeIndex + 1}`} />
+                      <input type="time" value={range.start} onChange={(event) => updateRange(index, rangeIndex, { start: event.target.value })} className="field h-11 min-w-0 flex-1 px-3" aria-label={`${day} start time ${rangeIndex + 1}`} />
                       <span className="text-sm text-muted">to</span>
-                      <input type="time" value={range.end} onChange={(event) => updateRange(index, rangeIndex, { end: event.target.value })} className="field h-10 min-w-0 flex-1 px-3" aria-label={`${day} end time ${rangeIndex + 1}`} />
+                      <input type="time" value={range.end} onChange={(event) => updateRange(index, rangeIndex, { end: event.target.value })} className="field h-11 min-w-0 flex-1 px-3" aria-label={`${day} end time ${rangeIndex + 1}`} />
                       <button type="button" onClick={() => removeRange(index, rangeIndex)} aria-label={`Remove ${day} time range ${rangeIndex + 1}`} className="grid size-10 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface hover:text-ink">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-4" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
                       </button>

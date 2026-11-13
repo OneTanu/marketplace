@@ -102,7 +102,7 @@ export function ModerationStatsView() {
             </button>
           ))}
         </div>
-        <select aria-label="School" value={query.school ?? ""} onChange={(event) => setQuery((current) => ({ ...current, school: event.target.value }))} className="field h-10 w-auto px-3 text-sm">
+        <select aria-label="School" value={query.school ?? ""} onChange={(event) => setQuery((current) => ({ ...current, school: event.target.value }))} className="field h-11 w-auto px-3">
           <option value="">Every school</option>
           {schools.map((school) => <option key={school.slug} value={school.slug}>{school.short_name}</option>)}
         </select>

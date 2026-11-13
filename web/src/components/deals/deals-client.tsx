@@ -83,12 +83,12 @@ function ProblemReporter({ deal, onDone, onCancel }: { deal: Deal; onDone: (deal
             : "Tanu’s moderators will review it. Nobody is penalized automatically."}
       </p>
       <label className="mt-3 block text-sm font-bold">What happened?
-        <select value={kind} onChange={(event) => setKind(event.target.value as DealProblemKind)} className="field mt-2 h-11 px-3 text-sm font-normal">
+        <select value={kind} onChange={(event) => setKind(event.target.value as DealProblemKind)} className="field mt-2 h-11 px-3 font-normal">
           {PROBLEM_KINDS.map((option) => <option key={option.value} value={option.value} disabled={deal.my_problems.includes(option.value)}>{option.label}</option>)}
         </select>
       </label>
       <label className="mt-3 block text-sm font-bold">Details <span className="font-normal text-muted">Optional</span>
-        <textarea value={details} onChange={(event) => setDetails(event.target.value)} maxLength={1000} rows={3} className="mt-2 w-full resize-none rounded-xl border border-line bg-white px-3 py-2 text-sm font-normal outline-none focus:border-brand" />
+        <textarea value={details} onChange={(event) => setDetails(event.target.value)} maxLength={1000} rows={3} className="mt-2 w-full resize-none rounded-xl border border-line bg-white px-3 py-2 font-normal outline-none focus:border-brand" />
       </label>
       {error && <p role="alert" className="mt-2 text-sm text-[var(--danger)]">{error}</p>}
       <div className="mt-3 flex gap-2">

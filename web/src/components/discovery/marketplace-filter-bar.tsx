@@ -125,7 +125,7 @@ export function MarketplaceFilterBar({
         <button type="button" onClick={() => toggle("brand")} aria-expanded={open === "brand"} className={buttonClass}>Brand <Chevron open={open === "brand"} /></button>
         {open === "brand" && <div className={panelClass}>
           <form className="sticky top-0 border-b border-line bg-background p-3" onSubmit={(event) => { event.preventDefault(); if (typedBrand) choose({ brand: typedBrand }); }}>
-            <input value={brandQuery} onChange={(event) => setBrandQuery(event.target.value)} placeholder="Search or type a brand" aria-label="Brand" className="field h-10 px-3 text-sm" />
+            <input value={brandQuery} onChange={(event) => setBrandQuery(event.target.value)} placeholder="Search or type a brand" aria-label="Brand" className="field h-11 px-3" />
           </form>
           {typedBrand && !brands.some((name) => name.toLowerCase() === typedBrand.toLowerCase()) && <button type="button" className={rowClass} onClick={() => choose({ brand: typedBrand })}>Use “{typedBrand}”</button>}
           {brands.map((name) => <button type="button" key={name} className={rowClass} onClick={() => choose({ brand: name })}>{name}<Check checked={feed.brand.toLowerCase() === name.toLowerCase()} /></button>)}
@@ -136,9 +136,9 @@ export function MarketplaceFilterBar({
         <button type="button" onClick={() => toggle("price")} aria-expanded={open === "price"} className={buttonClass}>Price <Chevron open={open === "price"} /></button>
         {open === "price" && <form className={`${panelClass} p-4`} onSubmit={(event) => { event.preventDefault(); choose({ minPrice, maxPrice }); }}>
           <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-3">
-            <label className="text-xs font-bold">Min.<span className="field mt-2 flex h-11 items-center px-3 text-sm font-normal"><span className="text-muted">$</span><input value={minPrice} onChange={(event) => setMinPrice(event.target.value.replace(/[^0-9]/g, "").slice(0, 6))} inputMode="numeric" className="min-w-0 flex-1 bg-transparent pl-1 outline-none" /></span></label>
+            <label className="text-xs font-bold">Min.<span className="field mt-2 flex h-11 items-center px-3 font-normal"><span className="text-muted">$</span><input value={minPrice} onChange={(event) => setMinPrice(event.target.value.replace(/[^0-9]/g, "").slice(0, 6))} inputMode="numeric" className="min-w-0 flex-1 bg-transparent pl-1 outline-none" /></span></label>
             <span className="pb-3 text-muted">–</span>
-            <label className="text-xs font-bold">Max.<span className="field mt-2 flex h-11 items-center px-3 text-sm font-normal"><span className="text-muted">$</span><input value={maxPrice} onChange={(event) => setMaxPrice(event.target.value.replace(/[^0-9]/g, "").slice(0, 6))} inputMode="numeric" className="min-w-0 flex-1 bg-transparent pl-1 outline-none" /></span></label>
+            <label className="text-xs font-bold">Max.<span className="field mt-2 flex h-11 items-center px-3 font-normal"><span className="text-muted">$</span><input value={maxPrice} onChange={(event) => setMaxPrice(event.target.value.replace(/[^0-9]/g, "").slice(0, 6))} inputMode="numeric" className="min-w-0 flex-1 bg-transparent pl-1 outline-none" /></span></label>
           </div>
           {minPrice && maxPrice && Number(minPrice) > Number(maxPrice) && <p className="mt-2 text-xs text-[var(--danger)]">The minimum is above the maximum.</p>}
           <div className="mt-4 grid grid-cols-2 gap-2">
@@ -160,8 +160,8 @@ export function MarketplaceFilterBar({
             <p className="text-sm font-bold">Waist and length</p>
             <p className="mt-1 text-xs leading-5 text-muted">Or pick both measurements to match an exact size.</p>
             <div className="mt-3 grid grid-cols-2 gap-3">
-              <label className="text-xs font-bold">Waist<select value={waist} onChange={(event) => pickPants(event.target.value, length)} className="field mt-2 h-11 px-3 text-sm font-normal"><option value="">Any</option>{WAIST_SIZES.map((w) => <option key={w} value={w}>W{w}</option>)}</select></label>
-              <label className="text-xs font-bold">Length<select value={length} onChange={(event) => pickPants(waist, event.target.value)} className="field mt-2 h-11 px-3 text-sm font-normal"><option value="">Any</option>{LENGTH_SIZES.map((l) => <option key={l} value={l}>L{l}</option>)}</select></label>
+              <label className="text-xs font-bold">Waist<select value={waist} onChange={(event) => pickPants(event.target.value, length)} className="field mt-2 h-11 px-3 font-normal"><option value="">Any</option>{WAIST_SIZES.map((w) => <option key={w} value={w}>W{w}</option>)}</select></label>
+              <label className="text-xs font-bold">Length<select value={length} onChange={(event) => pickPants(waist, event.target.value)} className="field mt-2 h-11 px-3 font-normal"><option value="">Any</option>{LENGTH_SIZES.map((l) => <option key={l} value={l}>L{l}</option>)}</select></label>
             </div>
           </> : <div className="grid grid-cols-3 gap-2">
             {sizes.map((value) => <button type="button" key={value} aria-pressed={feed.size === value} onClick={() => choose({ size: feed.size === value ? "" : value })} className="chip justify-center">{value}</button>)}

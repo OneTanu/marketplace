@@ -199,7 +199,7 @@ export function ProfileClient() {
             <form onSubmit={saveProfile} className="max-w-2xl space-y-5 rounded-2xl border border-line bg-white/65 p-5">
               <label className="block">
                 <span className="flex justify-between text-sm font-bold">Description <span className="font-normal text-muted">Optional · 300 characters</span></span>
-                <textarea name="profile_description" defaultValue={user.profile_description} maxLength={300} rows={4} className="mt-2 w-full resize-none rounded-xl border border-line bg-white px-4 py-3 text-[15px] outline-none transition focus:border-brand focus:ring-4 focus:ring-[var(--brand-soft)]" placeholder="Tell other students a little about you and what you sell." />
+                <textarea name="profile_description" defaultValue={user.profile_description} maxLength={300} rows={4} className="mt-2 w-full resize-none rounded-xl border border-line bg-white px-4 py-3 outline-none transition focus:border-brand focus:ring-4 focus:ring-[var(--brand-soft)]" placeholder="Tell other students a little about you and what you sell." />
                 {errors.profile_description && <span className="mt-1.5 block text-sm text-[var(--danger)]">{errors.profile_description}</span>}
               </label>
               <label className="block">

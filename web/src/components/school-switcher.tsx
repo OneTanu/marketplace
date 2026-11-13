@@ -52,7 +52,7 @@ export function SchoolSwitcher() {
         aria-label="School marketplace"
         value={selected}
         onChange={(event) => router.push(event.target.value === "all" ? "/search?school=all" : `/schools/${event.target.value}`)}
-        className="chip h-9 max-w-36 appearance-none truncate pr-8 text-ink outline-none sm:max-w-48"
+        className="chip max-w-36 appearance-none truncate pr-8 text-base text-ink outline-none sm:max-w-48"
       >
         <option value="all">All schools</option>
         {schools.map((school) => (

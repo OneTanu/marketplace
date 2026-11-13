@@ -313,7 +313,7 @@ function RestrictionRow({ restriction, caseId, senior, onLifted }: { restriction
       <p className="mt-1 text-muted">{restriction.reason}</p>
       {lifting && (
         <div className="mt-2 flex flex-wrap gap-2">
-          <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Why lift it?" aria-label="Reason for lifting" className="field h-9 min-w-0 flex-1 px-3" />
+          <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Why lift it?" aria-label="Reason for lifting" className="field h-11 min-w-0 flex-1 px-3" />
           <button type="button" onClick={lift} className="btn btn-primary btn-sm">Lift</button>
           <button type="button" onClick={() => setLifting(false)} className="btn btn-secondary btn-sm">Cancel</button>
         </div>
@@ -426,7 +426,7 @@ function ActionPanel({ detail, onChange }: { detail: CaseDetail; onChange: (deta
       <div className="rounded-xl border border-line p-4">
         <h2 className="font-black">Assign</h2>
         <div className="mt-2 flex gap-2">
-          <select value={assignee} onChange={(event) => setAssignee(event.target.value)} aria-label="Moderator" className="field h-10 min-w-0 flex-1 px-2 text-sm">
+          <select value={assignee} onChange={(event) => setAssignee(event.target.value)} aria-label="Moderator" className="field h-11 min-w-0 flex-1 px-2">
             <option value="">Choose a moderator</option>
             {detail.eligible_assignees.map((user) => <option key={user.id} value={user.id}>@{user.username}</option>)}
           </select>
@@ -466,7 +466,7 @@ function ActionPanel({ detail, onChange }: { detail: CaseDetail; onChange: (deta
             {current.needsUser && (
               <label className="block font-bold">
                 Student
-                <select value={userId} onChange={(event) => setUserId(Number(event.target.value))} className="field mt-1 h-10 w-full px-2 font-normal">
+                <select value={userId} onChange={(event) => setUserId(Number(event.target.value))} className="field mt-1 h-11 w-full px-2 font-normal">
                   {detail.involved_users.map((user, index) => <option key={user.id} value={user.id}>@{user.username}{index === 0 ? " (reported)" : " (reporter)"}</option>)}
                 </select>
               </label>
@@ -474,7 +474,7 @@ function ActionPanel({ detail, onChange }: { detail: CaseDetail; onChange: (deta
             {current.value === "restrict" && (
               <label className="block font-bold">
                 Restrict
-                <select value={kind} onChange={(event) => setKind(event.target.value as typeof kind)} className="field mt-1 h-10 w-full px-2 font-normal">
+                <select value={kind} onChange={(event) => setKind(event.target.value as typeof kind)} className="field mt-1 h-11 w-full px-2 font-normal">
                   <option value="selling">Selling</option>
                   <option value="messaging">Messaging</option>
                   <option value="deals">Buying and deals</option>
@@ -484,7 +484,7 @@ function ActionPanel({ detail, onChange }: { detail: CaseDetail; onChange: (deta
             {(current.value === "restrict" || current.value === "suspend") && (
               <label className="block font-bold">
                 For
-                <select value={days} onChange={(event) => setDays(Number(event.target.value))} className="field mt-1 h-10 w-full px-2 font-normal">
+                <select value={days} onChange={(event) => setDays(Number(event.target.value))} className="field mt-1 h-11 w-full px-2 font-normal">
                   {DURATIONS.map(([label, value]) => <option key={value} value={value}>{label}</option>)}
                   {current.value === "restrict" && <option value={0}>Until lifted</option>}
                 </select>

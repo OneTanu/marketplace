@@ -66,7 +66,7 @@ function SavedSearchRow({ search, tree, onChange, onDelete }: {
     {renaming
       ? <form onSubmit={rename} className="flex flex-wrap items-end gap-2">
           <label className="min-w-0 flex-1 text-sm font-bold">Search name
-            <input name="name" defaultValue={search.name} maxLength={MAX_NAME_LENGTH} required autoFocus className="field mt-2 text-[15px] font-normal" />
+            <input name="name" defaultValue={search.name} maxLength={MAX_NAME_LENGTH} required autoFocus className="field mt-2 font-normal" />
           </label>
           <button disabled={busy} className="btn btn-primary btn-sm h-11">{busy ? "Saving…" : "Save name"}</button>
           <button type="button" onClick={() => setRenaming(false)} className="btn btn-quiet btn-sm h-11">Cancel</button>

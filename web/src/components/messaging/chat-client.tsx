@@ -187,7 +187,7 @@ export function ChatClient({ conversationId, listingId }: { conversationId: numb
   const user = conversation.other_user;
   const nearLimit = body.length > MAX_LENGTH - 200;
 
-  return <main className="mx-auto flex h-[calc(100dvh-8rem-env(safe-area-inset-bottom))] max-w-2xl flex-col desktop:h-[calc(100dvh-4rem)] desktop:border-x desktop:border-line">
+  return <main className="mx-auto flex h-[calc(100dvh-11rem-env(safe-area-inset-bottom))] max-w-2xl flex-col desktop:h-[calc(100dvh-4rem)] desktop:border-x desktop:border-line">
     <header className="flex items-center gap-3 border-b border-line px-2 py-2.5 sm:px-4">
       <Link href="/inbox" aria-label="Back to inbox" className="grid size-10 place-items-center rounded-lg text-ink transition hover:bg-surface"><svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg></Link>
       <Link href={`/users/${user.username}`} className="flex min-w-0 items-center gap-3 rounded-lg py-1 pr-3 transition hover:bg-surface">
@@ -241,7 +241,7 @@ export function ChatClient({ conversationId, listingId }: { conversationId: numb
         <button type="button" onClick={() => setAttachedListing(null)} className="text-xs font-semibold text-muted hover:text-ink">Remove</button>
       </div>}
       <div className="flex items-end gap-2">
-        <textarea value={body} onChange={(event) => setBody(event.target.value)} onKeyDown={onKeyDown} maxLength={MAX_LENGTH} rows={1} placeholder="Message" aria-label="Message" className="field max-h-36 min-h-11 flex-1 resize-none rounded-[1.375rem] px-4 py-2.5 text-[15px] leading-snug [field-sizing:content]" />
+        <textarea value={body} onChange={(event) => setBody(event.target.value)} onKeyDown={onKeyDown} maxLength={MAX_LENGTH} rows={1} placeholder="Message" aria-label="Message" className="field max-h-36 min-h-11 flex-1 resize-none rounded-[1.375rem] px-4 py-2.5 leading-snug [field-sizing:content]" />
         <button disabled={pending || !body.trim()} aria-label={pending ? "Sending" : "Send message"} className="grid size-11 shrink-0 place-items-center rounded-full bg-brand text-white transition hover:bg-brand-strong disabled:bg-surface disabled:text-muted">
           <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
         </button>

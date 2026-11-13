@@ -37,7 +37,7 @@ export default function HomePage() {
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {heroPhotos.map((photo, index) => <Link key={photo.src} href="/search" className={`group relative block overflow-hidden rounded-md bg-surface ${index % 2 === 1 ? "translate-y-8" : ""}`}>
-          <div className="relative aspect-[4/5]"><Image src={photo.src} alt={photo.alt} fill priority={index < 2} sizes="(max-width: 1024px) 50vw, 28vw" className="object-cover transition duration-500 desktop:group-hover:scale-[1.03]" /></div>
+          <div className="relative aspect-[4/5]"><Image src={photo.src} alt={photo.alt} fill priority={index < 2} sizes="(max-width: 1024px) 50vw, 28vw" className="object-cover transition duration-500 group-hover:scale-[1.03]" /></div>
         </Link>)}
       </div>
     </section>
@@ -50,7 +50,7 @@ export default function HomePage() {
         </div>
         <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
           {departments.map((department) => <Link key={department.name} href={department.href} className="group block">
-            <div className="relative aspect-square overflow-hidden rounded-md bg-surface"><Image src={department.image} alt="" fill sizes="(max-width: 1024px) 50vw, 20vw" className="object-cover transition duration-500 desktop:group-hover:scale-[1.03]" /></div>
+            <div className="relative aspect-square overflow-hidden rounded-md bg-surface"><Image src={department.image} alt="" fill sizes="(max-width: 1024px) 50vw, 20vw" className="object-cover transition duration-500 group-hover:scale-[1.03]" /></div>
             <p className="mt-2.5 font-bold">{department.name}</p>
           </Link>)}
           <Link href="/search?category=dorm-furniture" className="group col-span-2 flex flex-col justify-between rounded-md bg-ink p-5 text-white transition hover:bg-kraft hover:text-ink lg:col-span-1 lg:aspect-square">

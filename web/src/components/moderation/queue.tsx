@@ -109,7 +109,7 @@ export function ModerationQueue() {
     ["Escalated", summary.escalated, () => setFilters({ status: "active" })],
   ];
   // `field` is full width by default; filters sit side by side in one row.
-  const select = "field h-10 w-auto px-3 text-sm";
+  const select = "field h-11 w-auto px-3";
 
   return (
     <main className="mx-auto min-h-[70vh] max-w-5xl px-4 py-8 pb-28 sm:px-6 desktop:pb-12">
