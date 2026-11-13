@@ -11,7 +11,7 @@ const Email = () => <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold
 export default function PrivacyPage() {
   return <LegalPage
     title="Privacy Policy"
-    updated="November 8, 2026"
+    updated="November 13, 2026"
     intro={<>
       <p>Tanu is a marketplace where verified students buy and sell items with other students at their school. This policy explains what we collect, why, who can see it, and the choices you have. “Tanu,” “we,” and “us” mean the team that operates tanu.one.</p>
       <p>Tanu is independent and is not affiliated with or endorsed by any university.</p>
@@ -45,6 +45,7 @@ export default function PrivacyPage() {
     <LegalSection title="3. Who can see what">
       <LegalList items={[
         "Other students can see your username, first name, school, profile details you add, your listings, and reviews about you. Your last name and email address are not shown to other students.",
+        "Signed-in students can see who follows you and who you follow.",
         "Messages are visible to the people in the conversation. Deal and meetup details are visible to the buyer and seller in that deal.",
         "Tanu moderators can see reported content and the records needed to review a report, such as the listing, the conversation, or the deal history involved. Access to evidence is logged.",
         "If you block someone, neither of you can message or make deals with the other. They aren’t told that you blocked them.",

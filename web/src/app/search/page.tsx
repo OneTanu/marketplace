@@ -3,7 +3,7 @@ import { Suspense } from "react";
 
 import { MarketplaceFeed } from "@/components/discovery/marketplace-feed";
 
-export const metadata: Metadata = { title: "Search" };
+export const metadata: Metadata = { title: "Browse" };
 
 export default function SearchPage() {
   return <Suspense fallback={<main className="mx-auto min-h-[70vh] max-w-6xl animate-pulse px-4 py-10 sm:px-6"><div className="h-40 rounded-3xl bg-foreground/5" /></main>}><MarketplaceFeed /></Suspense>;

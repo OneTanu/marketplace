@@ -14,6 +14,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 
 from apps.errors import service_validation_errors
+from apps.listings import pagination
 from apps.listings.services import sold_count_annotation
 
 from .models import Follow, User
@@ -21,6 +22,7 @@ from .serializers import (
     CurrentUserSerializer,
     DeactivateSerializer,
     DeactivationPreviewSerializer,
+    FollowListPageSerializer,
     PasswordResetKeyStatusRequestSerializer,
     PasswordResetKeyStatusSerializer,
     PublicUserSerializer,
@@ -29,6 +31,7 @@ from .serializers import (
 from .services import (
     deactivate_account,
     deactivation_preview,
+    follow_list,
     follow_user,
     password_reset_key_status,
     reactivate_account,
@@ -141,6 +144,36 @@ class FollowUserView(GenericAPIView):
         target = self.get_target(username)
         unfollow_user(follower=request.user, following=target)
         return Response(status=204)
+
+
+FOLLOW_ORDERING = ("-follow_id",)  # newest follow first
+
+
+@extend_schema(
+    parameters=[OpenApiParameter("cursor", description="`next_cursor` from the last page.")],
+    responses={200: FollowListPageSerializer},
+)
+class FollowListView(GenericAPIView):
+    """A student's followers, or the students they follow, newest first and a page at a time.
+    Each row has the viewer's own follow state, so the list can show Follow buttons."""
+
+    serializer_class = PublicUserSerializer
+    direction = ""  # "followers" or "following", set in urls.py
+
+    def get(self, request, username):
+        viewer = request.user
+        user = get_object_or_404(verified_users(), username__iexact=username)
+        students = follow_list(
+            user=user, direction=self.direction, viewer=viewer, users=public_users(viewer)
+        )
+        rows, next_cursor = pagination.page(
+            students,
+            f"follow-{self.direction}",
+            FOLLOW_ORDERING,
+            request.query_params.get("cursor"),
+        )
+        results = PublicUserSerializer(rows, many=True, context={"request": request})
+        return Response({"results": results.data, "next_cursor": next_cursor})
 
 
 class PasswordResetKeyStatusView(GenericAPIView):

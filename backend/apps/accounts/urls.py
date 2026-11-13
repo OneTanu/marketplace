@@ -4,6 +4,7 @@ from .views import (
     CurrentUserView,
     DeactivateView,
     DeactivationPreviewView,
+    FollowListView,
     FollowUserView,
     PasswordResetKeyStatusView,
     PublicUserView,
@@ -24,4 +25,14 @@ urlpatterns = [
     path("users/", UserSearchView.as_view(), name="user-search"),
     path("users/<str:username>/", PublicUserView.as_view(), name="public-user"),
     path("users/<str:username>/follow/", FollowUserView.as_view(), name="follow-user"),
+    path(
+        "users/<str:username>/followers/",
+        FollowListView.as_view(direction="followers"),
+        name="user-followers",
+    ),
+    path(
+        "users/<str:username>/following/",
+        FollowListView.as_view(direction="following"),
+        name="user-following",
+    ),
 ]

@@ -3,7 +3,7 @@ from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import Q, QuerySet
+from django.db.models import OuterRef, Q, QuerySet, Subquery
 from django.utils import timezone
 from django.utils.http import base36_to_int
 
@@ -49,14 +49,49 @@ def update_profile(
 
 
 def follow_user(*, follower: User, following: User) -> Follow:
+    # Imported here: trust's services import this module.
+    from apps.trust.checks import require_not_blocked
+
     if follower.pk == following.pk:
         raise ValidationError("You cannot follow yourself.")
+    require_not_blocked(follower, following)
     relationship, _ = Follow.objects.get_or_create(follower=follower, following=following)
     return relationship
 
 
 def unfollow_user(*, follower: User, following: User) -> None:
     Follow.objects.filter(follower=follower, following=following).delete()
+
+
+def remove_follows_between(first: User, second: User) -> None:
+    """End the follows in both directions, e.g. when one student blocks the other."""
+    Follow.objects.filter(
+        Q(follower=first, following=second) | Q(follower=second, following=first)
+    ).delete()
+
+
+def follow_list(
+    *, user: User, direction: str, viewer: User, users: QuerySet[User] | None = None
+) -> QuerySet[User]:
+    """The students who follow `user` ("followers") or whom `user` follows ("following"), newest
+    follow first, as `viewer` may see them: only active, verified students, and never anyone
+    the viewer has blocked or been blocked by. Each row is annotated with `follow_id`, the id
+    of the Follow that put it on the list, for ordering and paging. Pass `users` (a subset of
+    verified_users(), e.g. with extra annotations) to build on it."""
+    from apps.trust.checks import blocked_either_way_ids
+
+    if direction == "followers":
+        follows = Follow.objects.filter(following=user, follower=OuterRef("pk"))
+    elif direction == "following":
+        follows = Follow.objects.filter(follower=user, following=OuterRef("pk"))
+    else:
+        raise ValueError(direction)
+    return (
+        (verified_users() if users is None else users)
+        .annotate(follow_id=Subquery(follows.values("pk")[:1]))
+        .filter(follow_id__isnull=False)
+        .exclude(pk__in=blocked_either_way_ids(viewer.pk))
+    )
 
 
 def set_account_active(user: User, active: bool) -> User:

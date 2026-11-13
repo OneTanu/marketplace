@@ -91,3 +91,15 @@ export async function homeMarketplacePath() {
     return "/";
   }
 }
+
+export type FollowDirection = "followers" | "following";
+
+/** One page of a student's followers or follows. Null when signed out. */
+export async function getFollowList(username: string, direction: FollowDirection, cursor?: string) {
+  const options = { params: { path: { username }, query: cursor ? { cursor } : {} } };
+  const { data, response } = direction === "followers"
+    ? await api.GET("/api/users/{username}/followers/", options)
+    : await api.GET("/api/users/{username}/following/", options);
+  if (response.status === 401 || response.status === 403) return null;
+  return data ?? failed(response);
+}

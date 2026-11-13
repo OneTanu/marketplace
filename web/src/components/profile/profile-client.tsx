@@ -15,6 +15,7 @@ import {
 import type { components } from "@/lib/api/schema";
 
 import { BookmarksTab } from "./bookmarks-tab";
+import { FollowCounts } from "./follow-counts";
 import { InstagramLink } from "./instagram-link";
 import { StudentIdCard } from "./student-id-card";
 
@@ -209,7 +210,7 @@ export function ProfileClient() {
             <div>
               <p className="max-w-2xl leading-7 text-foreground/80">{user.profile_description || "Add a short description so other students know a little about you and what you usually sell."}</p>
               <div className="mt-4 flex flex-wrap items-center gap-x-7 gap-y-3 text-sm">
-                <div className="flex gap-6"><div><strong className="text-base">{user.follower_count}</strong> <span className="text-muted">Followers</span></div><div><strong className="text-base">{user.following_count}</strong> <span className="text-muted">Following</span></div></div>
+                <FollowCounts username={user.username} followers={user.follower_count} following={user.following_count} />
                 {user.instagram_handle && <InstagramLink handle={user.instagram_handle} />}
               </div>
               {saved && <p className="mt-3 text-sm font-semibold text-ink">Profile saved.</p>}

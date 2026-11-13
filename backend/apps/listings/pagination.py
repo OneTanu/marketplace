@@ -41,6 +41,8 @@ CURSOR_FIELDS = {
     "created_at": (datetime.isoformat, _datetime),
     "price_cents": (int, _int),
     "id": (int, _int),
+    # Follow lists (accounts) order students by the id of the follow that listed them.
+    "follow_id": (int, _int),
 }
 
 

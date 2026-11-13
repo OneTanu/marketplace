@@ -1085,6 +1085,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/users/{username}/followers/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description A student's followers, or the students they follow, newest first and a page at a time.
+         *     Each row has the viewer's own follow state, so the list can show Follow buttons.
+         */
+        get: operations["users_followers_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/{username}/following/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description A student's followers, or the students they follow, newest first and a page at a time.
+         *     Each row has the viewer's own follow state, so the list can show Follow buttons.
+         */
+        get: operations["users_following_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/users/{username}/listings/": {
         parameters: {
             query?: never;
@@ -1601,6 +1641,11 @@ export interface components {
             readonly user: components["schemas"]["StaffUser"];
             readonly reviewed: number;
             readonly upheld: number;
+        };
+        FollowListPage: {
+            results: components["schemas"]["PublicUser"][];
+            /** @description Pass as `cursor` to get the next page. Null on the last page. */
+            next_cursor: string | null;
         };
         ItemDetails: {
             readonly condition: components["schemas"]["ConditionEnum"];
@@ -4220,6 +4265,54 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    users_followers_retrieve: {
+        parameters: {
+            query?: {
+                /** @description `next_cursor` from the last page. */
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowListPage"];
+                };
+            };
+        };
+    };
+    users_following_retrieve: {
+        parameters: {
+            query?: {
+                /** @description `next_cursor` from the last page. */
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowListPage"];
+                };
             };
         };
     };

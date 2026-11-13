@@ -2086,6 +2086,62 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/users/{username}/followers/:
+    get:
+      operationId: users_followers_retrieve
+      description: |-
+        A student's followers, or the students they follow, newest first and a page at a time.
+        Each row has the viewer's own follow state, so the list can show Follow buttons.
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: '`next_cursor` from the last page.'
+      - in: path
+        name: username
+        schema:
+          type: string
+        required: true
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FollowListPage'
+          description: ''
+  /api/users/{username}/following/:
+    get:
+      operationId: users_following_retrieve
+      description: |-
+        A student's followers, or the students they follow, newest first and a page at a time.
+        Each row has the viewer's own follow state, so the list can show Follow buttons.
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: '`next_cursor` from the last page.'
+      - in: path
+        name: username
+        schema:
+          type: string
+        required: true
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FollowListPage'
+          description: ''
   /api/users/{username}/listings/:
     get:
       operationId: users_listings_list
@@ -3541,6 +3597,20 @@ components:
       - reviewed
       - upheld
       - user
+    FollowListPage:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicUser'
+        next_cursor:
+          type: string
+          nullable: true
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      required:
+      - next_cursor
+      - results
     ItemDetails:
       type: object
       properties:

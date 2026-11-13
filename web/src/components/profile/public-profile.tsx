@@ -11,6 +11,7 @@ import { getPublicUser, getPublicUserListings, setFollowing } from "@/lib/platfo
 import { startConversation } from "@/lib/messaging";
 import type { components } from "@/lib/api/schema";
 
+import { FollowCounts } from "./follow-counts";
 import { InstagramLink } from "./instagram-link";
 import { StudentIdCard } from "./student-id-card";
 
@@ -75,7 +76,7 @@ export function PublicProfile({ username }: { username: string }) {
       <div>
         <p className="max-w-2xl leading-7 text-foreground/80">{user.profile_description || "This student has not added a profile description yet."}</p>
         <div className="mt-4 flex flex-wrap items-center gap-x-7 gap-y-3 text-sm">
-          <div className="flex gap-6"><div><strong className="text-base">{user.follower_count}</strong> <span className="text-muted">Followers</span></div><div><strong className="text-base">{user.following_count}</strong> <span className="text-muted">Following</span></div></div>
+          <FollowCounts username={user.username} followers={user.follower_count} following={user.following_count} />
           {user.instagram_handle && <InstagramLink handle={user.instagram_handle} />}
         </div>
         <div className="mt-5 flex flex-wrap items-start gap-2">
