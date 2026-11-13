@@ -14,13 +14,12 @@ import {
   type FeedParams,
   type ListingCard as Card,
 } from "@/lib/discovery";
-import { getCurrentUser, getSchools, searchUsers } from "@/lib/platform";
+import { getCurrentUser, getSchools } from "@/lib/platform";
 import { hasSearchFilters } from "@/lib/saved-searches";
 import { ListingCard } from "./listing-card";
 import { MarketplaceFilterBar } from "./marketplace-filter-bar";
 import { SaveSearch } from "./save-search";
 
-type PublicUser = components["schemas"]["PublicUser"];
 type School = components["schemas"]["School"];
 
 // One feed request's results. `key` is the API query it was for, so a response that arrives
@@ -29,14 +28,6 @@ type Feed =
   | { key: string; state: "loading" }
   | { key: string; state: "signed-out" | "error" | "invalid" }
   | { key: string; state: "ready"; listings: Card[]; next: string | null; loadingMore: boolean; moreFailed: boolean };
-
-function UserResult({ user }: { user: PublicUser }) {
-  const initial = (user.first_name[0] || user.username[0]).toUpperCase();
-  return <Link href={`/users/${user.username}`} className="flex items-center gap-3.5 rounded-xl border border-line p-3.5 transition hover:border-ink">
-    <div className="type-wide grid size-11 shrink-0 place-items-center rounded-full bg-[var(--brand-soft)] text-base font-extrabold text-brand">{initial}</div>
-    <div className="min-w-0 flex-1"><p className="font-bold">{user.first_name || `@${user.username}`}</p><p className="truncate text-sm text-muted">@{user.username}{user.school ? `, ${user.school.short_name}` : ""}</p></div>
-  </Link>;
-}
 
 async function fetchPage(query: ReturnType<typeof feedApiQuery>, cursor?: string) {
   return api.GET("/api/listings/", { params: { query: cursor ? { ...query, cursor } : query } });
@@ -60,7 +51,6 @@ export function MarketplaceFeed({ school }: { school?: School }) {
   const [result, setResult] = useState<Feed>({ key, state: "loading" });
   // Bumped by "Try again", to refetch the same query.
   const [attempt, setAttempt] = useState(0);
-  const [people, setPeople] = useState<{ query: string; users: PublicUser[]; state: "ready" | "signed-out" | "error" }>({ query: "", users: [], state: "ready" });
   const sentinel = useRef<HTMLDivElement>(null);
 
   const update = useCallback((patch: Partial<FeedParams>) => {
@@ -125,19 +115,6 @@ export function MarketplaceFeed({ school }: { school?: School }) {
     return () => observer.disconnect();
   }, [nextCursor]);
 
-  // People results for a keyword. Searching listings by keyword comes with the search function.
-  const search = feed.search;
-  const schoolScope = feed.school || undefined;
-  useEffect(() => {
-    if (school || !search) return;
-    let active = true;
-    searchUsers(search, schoolScope)
-      .then((users) => active && setPeople({ query: search, users, state: "ready" }))
-      .catch((error: Error) => active && setPeople({ query: search, users: [], state: /40[13]/.test(error.message) ? "signed-out" : "error" }));
-    return () => { active = false; };
-  }, [school, search, schoolScope]);
-  const peopleState = people.query === search ? people.state : "loading";
-
   const category = tree?.bySlug.get(feed.category);
   const department = category && tree?.departmentOf(category);
   const subcategories = department ? tree?.children.get(department.id) ?? [] : [];
@@ -152,13 +129,6 @@ export function MarketplaceFeed({ school }: { school?: School }) {
 
   return (
     <section className="mx-auto max-w-6xl px-4 pt-6 pb-28 sm:px-6 sm:pt-9 desktop:pb-16">
-      {!school && search && <section className="mb-10"><h2 className="type-wide text-lg font-extrabold">People</h2>
-        {peopleState === "loading" && <div className="mt-4 h-20 animate-pulse rounded-xl bg-surface" />}
-        {peopleState === "signed-out" && <p className="mt-3 rounded-xl bg-surface p-4 text-sm"><Link href="/account/login" className="font-bold text-brand underline underline-offset-2">Log in</Link> to search for students by name or username.</p>}
-        {peopleState === "error" && <p className="mt-3 text-sm text-[var(--danger)]">Account search isn’t available right now. Try again in a moment.</p>}
-        {peopleState === "ready" && (people.users.length ? <div className="mt-4 grid gap-3 sm:grid-cols-2">{people.users.map((user) => <UserResult key={user.id} user={user} />)}</div> : <p className="mt-3 text-sm text-muted">No students match “{search}”.</p>)}
-      </section>}
-
       <div className="mb-5">
         <p className="text-sm font-semibold text-muted">{scopeName}</p>
         <h1 className="type-wide mt-1 text-2xl font-black sm:text-[2rem]">{heading}</h1>

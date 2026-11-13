@@ -40,4 +40,36 @@ test("signs in through the proxy and loads the app shell", async ({ context, pag
     const status = await page.evaluate(async (url) => (await fetch(url)).status, `${AUTH}/auth/session`);
     expect(status, `session status from ${path}`).toBe(200);
   }
+
+  // Desktop: the account menu holds Profile, My listings, Saved and Log out.
+  await page.goto("/deals");
+  await page.getByRole("button", { name: "Account menu" }).click();
+  const menu = page.getByRole("menu", { name: "Account menu" });
+  await expect(menu.getByRole("menuitem")).toHaveText(["Profile", "My listings", "Saved", "Log out"]);
+  await menu.getByRole("menuitem", { name: "Saved" }).click();
+  await expect(page).toHaveURL("/profile?tab=bookmarks");
+  await expect(page.getByRole("tab", { name: "Bookmarks" })).toHaveAttribute("aria-selected", "true");
+  await expect(menu).toHaveCount(0);
+
+  // The tab is in the URL, so "Saved" works again after switching tabs on the profile.
+  await page.getByRole("tab", { name: "Selling" }).click();
+  await expect(page).toHaveURL("/profile");
+  await page.getByRole("button", { name: "Account menu" }).click();
+  await menu.getByRole("menuitem", { name: "Saved" }).click();
+  await expect(page.getByRole("tab", { name: "Bookmarks" })).toHaveAttribute("aria-selected", "true");
+
+  // Escape closes the menu and gives focus back to its button.
+  const menuButton = page.getByRole("button", { name: "Account menu" });
+  await menuButton.focus();
+  await page.keyboard.press("Enter");
+  await expect(menu.getByRole("menuitem", { name: "Profile" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(menu).toHaveCount(0);
+  await expect(menuButton).toBeFocused();
+
+  await menuButton.click();
+  await menu.getByRole("menuitem", { name: "Log out" }).click();
+  await expect(page).toHaveURL("/");
+  await expect(page.getByRole("link", { name: "Join Tanu" })).toBeVisible();
+  expect((await api.get(`${AUTH}/auth/session`)).status()).toBe(401);
 });

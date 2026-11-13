@@ -5,6 +5,7 @@ import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import { DealPanel } from "@/components/deals/deal-panel";
 import { ReportButton } from "@/components/trust/report";
+import { BackLink } from "@/components/ui/focused-header";
 import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
 import { getConversation, listMessages, markConversationRead, sendMessage } from "@/lib/messaging";
@@ -16,6 +17,10 @@ type Conversation = components["schemas"]["Conversation"];
 type Listing = components["schemas"]["Listing"];
 
 const MAX_LENGTH = 2000;
+
+function BackToInbox() {
+  return <BackLink href="/inbox" label="Back to inbox" />;
+}
 // A new timestamp divider appears when messages are this far apart.
 const GAP_MS = 15 * 60 * 1000;
 
@@ -181,15 +186,17 @@ export function ChatClient({ conversationId, listingId }: { conversationId: numb
     }
   }
 
-  if (conversation === undefined) return <main className="mx-auto min-h-[70vh] max-w-2xl animate-pulse px-4 py-6 sm:px-6"><div className="flex items-center gap-3"><div className="size-9 rounded-full bg-surface" /><div className="h-5 w-32 rounded bg-surface" /></div><div className="mt-8 space-y-3"><div className="h-10 w-48 rounded-2xl bg-surface" /><div className="ml-auto h-10 w-40 rounded-2xl bg-surface" /></div></main>;
+  if (conversation === undefined) return <main className="mx-auto min-h-[70vh] max-w-2xl px-2 py-2.5 sm:px-4"><div className="flex items-center gap-3"><BackToInbox /><div className="size-9 animate-pulse rounded-full bg-surface" /><div className="h-5 w-32 animate-pulse rounded bg-surface" /></div><div className="mt-8 animate-pulse space-y-3 px-2"><div className="h-10 w-48 rounded-2xl bg-surface" /><div className="ml-auto h-10 w-40 rounded-2xl bg-surface" /></div></main>;
   if (conversation === null) return <main className="mx-auto grid min-h-[70vh] max-w-xl place-items-center px-4 text-center"><div><h1 className="type-wide text-3xl font-black">Conversation not found</h1><p className="mt-3 text-muted">It may have been removed, or it belongs to another account.</p><Link href="/inbox" className="btn btn-primary mt-6">Back to inbox</Link></div></main>;
 
   const user = conversation.other_user;
   const nearLimit = body.length > MAX_LENGTH - 200;
 
-  return <main className="mx-auto flex h-[calc(100dvh-11rem-env(safe-area-inset-bottom))] max-w-2xl flex-col desktop:h-[calc(100dvh-4rem)] desktop:border-x desktop:border-line">
+  // A focused screen: on phones there is no site header or bottom bar, so the chat fills the
+  // screen; on desktop it fills what the 65px site header leaves.
+  return <main className="mx-auto flex h-dvh max-w-2xl flex-col pb-[env(safe-area-inset-bottom)] desktop:h-[calc(100dvh-4rem-1px)] desktop:border-x desktop:border-line desktop:pb-0">
     <header className="flex items-center gap-3 border-b border-line px-2 py-2.5 sm:px-4">
-      <Link href="/inbox" aria-label="Back to inbox" className="grid size-10 place-items-center rounded-lg text-ink transition hover:bg-surface"><svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg></Link>
+      <BackToInbox />
       <Link href={`/users/${user.username}`} className="flex min-w-0 items-center gap-3 rounded-lg py-1 pr-3 transition hover:bg-surface">
         <Avatar user={user} size="sm" />
         <div className="min-w-0"><p className="truncate font-bold leading-tight">{user.first_name || `@${user.username}`}</p><p className="truncate text-xs text-muted">@{user.username}{user.school ? `, ${user.school.short_name}` : ""}</p></div>

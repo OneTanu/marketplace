@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { api } from "@/lib/api/client";
@@ -8,6 +7,7 @@ import type { components } from "@/lib/api/schema";
 import { getMeetupPreferences, saveMeetupPreferences } from "@/lib/deals";
 import { getCurrentUser } from "@/lib/platform";
 import { MeetingSpotName } from "@/components/deals/meeting-spot-name";
+import { FocusedHeader } from "@/components/ui/focused-header";
 
 type MeetingSpot = components["schemas"]["MeetingSpot"];
 type Override = components["schemas"]["AvailabilityOverrideRequest"];
@@ -138,17 +138,16 @@ export function MeetupPreferences() {
     }
   }
 
+  const header = <FocusedHeader title="Meetup preferences" backHref="/profile" backLabel="Back to profile" width="max-w-3xl" />;
+
   if (loading) {
-    return <main className="mx-auto min-h-[70vh] max-w-3xl animate-pulse px-4 py-10 sm:px-6"><div className="h-96 rounded-2xl bg-surface" /></main>;
+    return <>{header}<main className="mx-auto min-h-[70vh] max-w-3xl animate-pulse px-4 py-6 sm:px-6"><div className="h-96 rounded-2xl bg-surface" /></main></>;
   }
 
   return (
-    <main className="mx-auto min-h-[70vh] max-w-3xl px-4 py-8 pb-28 sm:px-6 sm:py-10 desktop:pb-12">
-      <Link href="/profile" className="text-sm font-bold text-muted hover:text-ink">← Back to profile</Link>
-      <div className="mt-5">
-        <p className="text-sm font-bold uppercase tracking-[0.14em] text-signal">Seller setup</p>
-        <h1 className="type-wide mt-1 text-3xl font-black">Meetup preferences</h1>
-        <p className="mt-2 max-w-2xl leading-6 text-muted">Buyers only see approved campus locations and times that fit your schedule. You confirm every request before a meetup becomes official.</p>
+    <>{header}<main className="mx-auto min-h-[70vh] max-w-3xl px-4 pb-12 pt-4 sm:px-6">
+      <div>
+        <p className="max-w-2xl leading-6 text-muted">Buyers only see approved campus locations and times that fit your schedule. You confirm every request before a meetup becomes official.</p>
       </div>
 
       <section className="mt-8 rounded-2xl border border-line bg-background p-5">
@@ -205,6 +204,6 @@ export function MeetupPreferences() {
       {error && <p role="alert" className="mt-4 text-sm text-[var(--danger)]">{error}</p>}
       {saved && <p role="status" className="mt-4 text-sm font-bold text-brand">Meetup preferences saved.</p>}
       <button type="button" onClick={save} disabled={saving} className="btn btn-primary mt-5 w-full">{saving ? "Saving…" : "Save meetup preferences"}</button>
-    </main>
+    </main></>
   );
 }

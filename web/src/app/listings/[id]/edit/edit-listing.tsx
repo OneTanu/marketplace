@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useId, useState, type ChangeEvent, type FormEvent } from "react";
 
 import {
@@ -30,7 +29,6 @@ type ListingUpdate = components["schemas"]["PatchedListingUpdateRequest"];
 type ItemDetailsUpdate = components["schemas"]["ItemDetailsUpdateRequest"];
 type ListingPhotoUploadRequest = components["schemas"]["ListingPhotoUploadRequest"];
 
-const MY_LISTINGS_HREF = "/listings/mine";
 const OFFLINE = "Couldn't reach Tanu. Check your connection and try again.";
 const NOT_FOUND = "This listing doesn't exist.";
 
@@ -64,15 +62,6 @@ export function EditListing({ listingId }: { listingId: number }) {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Edit listing</h1>
-        <Link
-          href={MY_LISTINGS_HREF}
-          className="text-sm font-medium text-foreground/70 hover:text-foreground"
-        >
-          My listings
-        </Link>
-      </div>
       {loaded.state === "loading" && <p className="mt-4 text-sm text-foreground/60">Loading…</p>}
       {loaded.state === "blocked" && (
         <p className="mt-4 text-sm text-foreground/70">{loaded.message}</p>
