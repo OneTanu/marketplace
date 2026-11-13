@@ -72,42 +72,42 @@ export function MeetupPicker({
   }
 
   if (options === undefined) {
-    return <div className="mt-3 h-36 animate-pulse rounded-xl bg-surface" aria-label="Loading meetup options" />;
+    return <div className="mt-3 h-36 rounded-xl skeleton" aria-label="Loading meetup options" />;
   }
   if (options === null) {
-    return <p className="mt-3 rounded-lg bg-surface p-3 text-sm text-muted">Couldn&apos;t load meetup options. Try again.</p>;
+    return <p className="mt-3 rounded-lg bg-surface p-3 text-label text-muted">Couldn&apos;t load meetup options. Try again.</p>;
   }
   if (!options.seller_configured) {
-    return <p className="mt-3 rounded-lg border border-line bg-surface p-3 text-sm leading-6 text-muted">This seller hasn&apos;t set meetup times yet. Agree on a campus spot and time in chat.</p>;
+    return <p className="mt-3 rounded-lg border border-line bg-surface p-3 text-label leading-6 text-muted">This seller hasn&apos;t set meetup times yet. Agree on a campus spot and time in chat.</p>;
   }
 
   return (
     <div className="mt-4 space-y-4 border-t border-line pt-4">
       <fieldset>
-        <legend className="text-sm font-bold">Choose a safe campus location</legend>
+        <legend className="text-label font-semibold">Choose a safe campus location</legend>
         <div className="mt-2 grid gap-2">
           {options.meeting_spots.map((spot) => (
-            <button key={spot.id} type="button" onClick={() => setSpotId(spot.id)} aria-pressed={spot.id === spotId} className={`rounded-lg border px-3 py-2 text-left text-sm ${spot.id === spotId ? "border-ink bg-surface ring-1 ring-ink" : "border-line"}`}>
-              <span className="block font-bold"><MeetingSpotName spot={spot} /></span>
-              <span className="block text-xs leading-5 text-muted">{spot.directions}</span>
+            <button key={spot.id} type="button" onClick={() => setSpotId(spot.id)} aria-pressed={spot.id === spotId} className={`rounded-lg border px-3 py-2 text-left text-label ${spot.id === spotId ? "border-ink bg-surface ring-1 ring-ink" : "border-line"}`}>
+              <span className="block font-semibold"><MeetingSpotName spot={spot} /></span>
+              <span className="block text-fine leading-5 text-muted">{spot.directions}</span>
             </button>
           ))}
         </div>
       </fieldset>
 
       <fieldset>
-        <legend className="text-sm font-bold">{allowTwo ? "Choose up to two times" : "Choose a time"}</legend>
-        {allowTwo && <p className="mt-1 text-xs text-muted">A second option helps if price negotiation takes time.</p>}
+        <legend className="text-label font-semibold">{allowTwo ? "Choose up to two times" : "Choose a time"}</legend>
+        {allowTwo && <p className="mt-1 text-fine text-muted">A second option helps if price negotiation takes time.</p>}
         <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
           {days.map(([key, slots]) => (
-            <button key={key} type="button" onClick={() => setDay(key)} aria-pressed={day === key} className={`shrink-0 rounded-lg border px-3 py-2 text-sm font-bold ${day === key ? "border-ink bg-ink text-white" : "border-line"}`}>
+            <button key={key} type="button" onClick={() => setDay(key)} aria-pressed={day === key} className={`shrink-0 rounded-lg border px-3 py-2 text-label font-semibold ${day === key ? "border-ink bg-ink text-white" : "border-line"}`}>
               {formatWeekdayDate(slots[0])}
             </button>
           ))}
         </div>
         <div className="mt-2 flex flex-wrap gap-2">
           {(days.find(([key]) => key === day)?.[1] ?? []).map((slot) => (
-            <button key={slot} type="button" onClick={() => toggleTime(slot)} aria-pressed={selected.includes(slot)} className={`rounded-full border px-3 py-2 text-sm font-bold ${selected.includes(slot) ? "border-brand bg-[var(--brand-soft)] text-brand" : "border-line"}`}>
+            <button key={slot} type="button" onClick={() => toggleTime(slot)} aria-pressed={selected.includes(slot)} className={`rounded-full border px-3 py-2 text-label font-semibold ${selected.includes(slot) ? "border-brand bg-brand-soft text-brand" : "border-line"}`}>
               {formatTime(slot)}
             </button>
           ))}

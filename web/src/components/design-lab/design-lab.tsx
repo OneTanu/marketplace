@@ -28,7 +28,7 @@ const STUDENTS: Record<string, { firstName: string; lastInitial: string; usernam
 function Section({ title, note, children }: { title: string; note: string; children: ReactNode }) {
   return (
     <section className="border-t border-line py-10">
-      <h2 className="type-wide text-2xl font-black text-ink">{title}</h2>
+      <h2 className="type-wide text-display font-extrabold text-ink">{title}</h2>
       <p className="mt-2 max-w-2xl leading-6 text-muted">{note}</p>
       <div className="mt-6">{children}</div>
     </section>
@@ -62,7 +62,7 @@ export function DesignLab() {
     <div className="mx-auto max-w-6xl px-4 pt-8 pb-16 sm:px-6">
       <header className="flex flex-col gap-4 pb-8 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="type-wide text-4xl font-black text-ink">Design lab</h1>
+          <h1 className="type-wide text-display font-extrabold text-ink">Design lab</h1>
           <p className="mt-2 max-w-xl leading-6 text-muted">Dev only. The real listing card and student ID with sample data, plus ideas not built yet. Pick a school to see its colors.</p>
         </div>
         <div className="flex flex-wrap gap-2" role="group" aria-label="School">
@@ -72,10 +72,10 @@ export function DesignLab() {
 
       <Section title="Listing card" note="The price hangs on the photo as a tag. Pending and Sold are stamps. A price drop (not built yet: needs price history) hangs a yellow tag over the crossed-out old one.">
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-4">
-          <div><p className="mb-2 text-xs font-bold text-muted">Available</p><ListingCard listing={jacket} showSchool /></div>
-          <div><p className="mb-2 text-xs font-bold text-muted">Price drop</p><ListingCard listing={jacket} showSchool previousPriceCents={4500} /></div>
-          <div><p className="mb-2 text-xs font-bold text-muted">Pending</p><ListingCard listing={{ ...jacket, status: "pending" }} showSchool /></div>
-          <div><p className="mb-2 text-xs font-bold text-muted">Sold</p><ListingCard listing={{ ...jacket, status: "sold" }} showSchool /></div>
+          <div><p className="mb-2 text-fine font-semibold text-muted">Available</p><ListingCard listing={jacket} showSchool /></div>
+          <div><p className="mb-2 text-fine font-semibold text-muted">Price drop</p><ListingCard listing={jacket} showSchool previousPriceCents={4500} /></div>
+          <div><p className="mb-2 text-fine font-semibold text-muted">Pending</p><ListingCard listing={{ ...jacket, status: "pending" }} showSchool /></div>
+          <div><p className="mb-2 text-fine font-semibold text-muted">Sold</p><ListingCard listing={{ ...jacket, status: "sold" }} showSchool /></div>
         </div>
       </Section>
 
@@ -97,22 +97,22 @@ export function DesignLab() {
           </div>
         </div>
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <p className="text-sm font-bold text-muted">Badges</p>
+          <p className="text-label font-semibold text-muted">Badges</p>
           {LAB_SCHOOLS.map((option) => {
             const palette = schoolPalette(option.colors);
-            return <span key={option.slug} className="rounded-r px-2 py-1 text-xs font-extrabold" style={{ background: palette.lead, color: palette.text, boxShadow: `inset 3px 0 0 ${palette.accent}` }}>{option.shortName}</span>;
+            return <span key={option.slug} className="rounded-r-lg px-2 py-1 text-fine font-extrabold" style={{ background: palette.lead, color: palette.text, boxShadow: `inset 3px 0 0 ${palette.accent}` }}>{option.shortName}</span>;
           })}
         </div>
       </Section>
 
       <Section title="Deal timers" note="Deadlines read as clock times in Eastern time. They turn red in the last 3 hours. Drag the slider to move time forward.">
-        <label className="flex max-w-md flex-col gap-2 text-sm font-semibold text-ink">
+        <label className="flex max-w-md flex-col gap-2 text-label font-semibold text-ink">
           <span>{hoursLater === 0 ? "Now" : `${hoursLater} hours later`}</span>
-          <input type="range" min={0} max={80} value={hoursLater} onChange={(event) => setHoursLater(Number(event.target.value))} className="accent-[var(--brand)]" />
+          <input type="range" min={0} max={80} value={hoursLater} onChange={(event) => setHoursLater(Number(event.target.value))} className="accent-brand" />
         </label>
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <div className="rounded-xl border border-line p-4">
-            <p className="text-sm font-bold text-muted">Seller&apos;s inbox: 24 hours to answer</p>
+            <p className="text-label font-semibold text-muted">Seller&apos;s inbox: 24 hours to answer</p>
             <div className="divide-y divide-line">
               <RequestRow buyer="Jordan" action={`offered ${centsToDollars(3000)}`} image="/demo-listings/real/tan-washed-chore-jacket.jpg" receivedAt={new Date(BASE.getTime() - 5 * HOUR)} now={now} />
               <RequestRow buyer="Sam" action="wants to buy now" image="/demo-listings/real/timberland-wheat-boots.jpg" receivedAt={new Date(BASE.getTime() - 22 * HOUR)} now={now} />

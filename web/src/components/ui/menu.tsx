@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useId, useRef, useState, type Key
 
 const CloseMenu = createContext<() => void>(() => {});
 
-const ITEM = "flex min-h-11 w-full items-center px-4 text-left text-sm font-semibold text-ink transition hover:bg-surface focus-visible:bg-surface focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink";
+const ITEM = "flex min-h-11 w-full items-center px-4 text-left text-label font-semibold text-ink transition hover:bg-surface focus-visible:bg-surface focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink";
 
 function items(menu: HTMLElement | null) {
   return menu ? [...menu.querySelectorAll<HTMLElement>("[role=menuitem]")] : [];
@@ -101,7 +101,7 @@ export function Menu({ label, trigger, triggerClassName = "", align = "end", chi
           role="menu"
           aria-label={label}
           onKeyDown={onMenuKey}
-          className={`absolute top-full z-40 mt-2 min-w-52 overflow-hidden rounded-xl border border-line bg-background py-1.5 shadow-[0_16px_40px_-12px_rgb(23_22_43/22%)] ${align === "end" ? "right-0" : "left-0"}`}
+          className={`absolute top-full z-40 mt-2 min-w-52 overflow-hidden rounded-xl border border-line bg-background py-1.5 shadow-overlay ${align === "end" ? "right-0" : "left-0"}`}
         >
           <CloseMenu.Provider value={() => close(false)}>{children}</CloseMenu.Provider>
         </div>

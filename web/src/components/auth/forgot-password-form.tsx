@@ -22,11 +22,11 @@ export function ForgotPasswordForm() {
     finally { setPending(false); }
   }
   if (sentTo) return <div className="space-y-5">
-    <div role="status" className="rounded-2xl bg-surface p-6">
-      <div className="grid size-12 place-items-center rounded-full bg-[var(--brand-soft)] text-xl" aria-hidden="true">✉</div>
-      <p className="mt-4 font-bold text-ink">Check your inbox.</p>
-      <p className="mt-2 text-sm leading-6 text-muted">If <strong className="break-all font-semibold text-ink">{sentTo}</strong> belongs to a Tanu account, we’ve sent it a link to reset your password. The link works once and expires after a few days.</p>
-      <p className="mt-2 text-sm leading-6 text-muted">Nothing there after a few minutes? Check your spam folder.</p>
+    <div role="status" className="rounded-xl bg-surface p-6">
+      <div className="grid size-12 place-items-center rounded-full bg-brand-soft text-title" aria-hidden="true">✉</div>
+      <p className="mt-4 font-semibold text-ink">Check your inbox.</p>
+      <p className="mt-2 text-label leading-6 text-muted">If <strong className="break-all font-semibold text-ink">{sentTo}</strong> belongs to a Tanu account, we’ve sent it a link to reset your password. The link works once and expires after a few days.</p>
+      <p className="mt-2 text-label leading-6 text-muted">Nothing there after a few minutes? Check your spam folder.</p>
     </div>
     <button type="button" onClick={() => setSentTo(null)} className="btn btn-secondary h-12 w-full">Use a different email</button>
   </div>;
@@ -35,6 +35,6 @@ export function ForgotPasswordForm() {
     {errors.filter((error) => error.field !== "email").map((error) => <FormAlert key={error.message}>{error.message}</FormAlert>)}
     <Field label="School email" name="email" type="email" autoComplete="email" inputMode="email" placeholder="you@umd.edu" required error={fieldError} />
     <SubmitButton pending={pending} pendingText="Sending reset link…">Send reset link</SubmitButton>
-    <p className="text-center text-sm text-muted">Remembered it? <Link href="/account/login" className="font-bold text-foreground hover:underline">Back to login</Link></p>
+    <p className="text-center text-label text-muted">Remembered it? <Link href="/account/login" className="font-semibold text-foreground hover:underline">Back to login</Link></p>
   </form>;
 }

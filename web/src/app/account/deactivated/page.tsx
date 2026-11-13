@@ -7,7 +7,7 @@ export default function AccountDeactivatedPage() {
   return (
     <main className="mx-auto grid min-h-[70vh] max-w-xl place-items-center px-4 text-center">
       <div>
-        <h1 className="type-wide text-3xl font-black">Your account is deactivated</h1>
+        <h1 className="type-wide text-display font-extrabold">Your account is deactivated</h1>
         <p className="mt-3 leading-7 text-muted">
           Your profile and listings are hidden, and you&apos;ve been signed out everywhere. We&apos;ve emailed you a confirmation.
         </p>

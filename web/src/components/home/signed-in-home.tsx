@@ -11,8 +11,8 @@ import { NeedsYouStrip } from "./needs-you-strip";
 
 function FeedSkeleton() {
   return <div aria-busy="true" aria-label="Loading listings" className="mx-auto max-w-6xl animate-pulse px-4 pt-6 sm:px-6 sm:pt-9">
-    <div className="h-8 w-48 rounded bg-surface" />
-    <div className="mt-6 grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4">{Array.from({ length: 8 }).map((_, index) => <div key={index} className="aspect-[4/5] rounded-md bg-surface" />)}</div>
+    <div className="h-8 w-48 rounded-lg bg-surface" />
+    <div className="mt-6 grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4">{Array.from({ length: 8 }).map((_, index) => <div key={index} className="aspect-[4/5] rounded-lg bg-surface" />)}</div>
   </div>;
 }
 

@@ -32,8 +32,8 @@ export function RestrictionNotice({ only }: { only?: Restriction["kind"][] }) {
   const shown = restrictions.filter((row) => !only || only.includes(row.kind));
   if (!shown.length) return null;
   return (
-    <div role="status" className="mb-4 rounded-xl border border-[var(--danger)] bg-background p-4 text-sm">
-      <p className="font-bold">Some features are paused on your account</p>
+    <div role="status" className="mb-4 rounded-xl border border-danger bg-background p-4 text-label">
+      <p className="font-semibold">Some features are paused on your account</p>
       <ul className="mt-2 space-y-1 text-muted">
         {shown.map((row, index) => (
           <li key={index}>

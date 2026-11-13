@@ -166,16 +166,16 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
       <div className="flex items-center gap-3">
         {deal.listing.cover_url && (
           // eslint-disable-next-line @next/next/no-img-element -- media is uploaded at runtime.
-          <img src={deal.listing.cover_url} alt="" className="size-12 rounded-md object-cover" />
+          <img src={deal.listing.cover_url} alt="" className="size-12 rounded-lg object-cover" />
         )}
         <div className="min-w-0 flex-1">
-          <Link href={`/listings/${deal.listing.id}`} className="block truncate text-sm font-bold hover:underline">
+          <Link href={`/listings/${deal.listing.id}`} className="block truncate text-label font-semibold hover:underline">
             {deal.listing.title}
           </Link>
-          <p className="text-sm">
+          <p className="text-label">
             <span className="font-semibold">{isTrade ? "Trade" : centsToDollars(deal.agreed_amount_cents ?? deal.current_amount_cents)}</span>
             <span className="text-muted"> · {statusText[deal.status]}</span>
-            {deal.asap && <span className="ml-2 rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-xs font-bold text-brand">ASAP</span>}
+            {deal.asap && <span className="ml-2 rounded-full bg-brand-soft px-2 py-0.5 text-fine font-semibold text-brand">ASAP</span>}
           </p>
         </div>
       </div>
@@ -184,20 +184,20 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
         <div className="mt-2 rounded-lg border border-line bg-background p-3">
           <TradeSummary deal={deal} compact />
           {deal.awaiting_me && (
-            <Link href="/deals" className="mt-2 inline-block text-sm font-semibold text-brand underline">
+            <Link href="/deals" className="mt-2 inline-block text-label font-semibold text-brand underline">
               {tradeOffer ? "Counter with different items in Deals" : "Pick items in Deals"}
             </Link>
           )}
         </div>
       )}
       {deal.asap && deal.my_role === "seller" && open && deal.status !== "pending" && (
-        <p className="mt-2 text-xs font-semibold text-brand">@{deal.buyer.username} wants to meet as soon as possible.</p>
+        <p className="mt-2 text-fine font-semibold text-brand">@{deal.buyer.username} wants to meet as soon as possible.</p>
       )}
       {(deal.status === "backup" || deal.status === "disputed") && (
-        <p className="mt-2 text-xs leading-5 text-muted">{dealNextStep(deal)}</p>
+        <p className="mt-2 text-fine leading-5 text-muted">{dealNextStep(deal)}</p>
       )}
       {deal.status === "pending" && (
-        <div className="mt-2 text-xs leading-5 text-muted">
+        <div className="mt-2 text-fine leading-5 text-muted">
           <p>Meet in a public campus location. Inspect the item and exchange payment in person. Tanu doesn’t handle or verify payment.</p>
           {acceptedMeetup && (
             <p className="mt-1 font-semibold text-ink">
@@ -211,24 +211,24 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
         </div>
       )}
       {latestMeetupUpdate && deal.status === "pending" && (
-        <p className="mt-2 text-sm font-semibold text-ink">
+        <p className="mt-2 text-label font-semibold text-ink">
           @{latestMeetupUpdate.actor.username} {latestMeetupUpdate.kind === "arrived" ? "is here." : `is running about ${latestMeetupUpdate.minutes_late} minutes late.`}
         </p>
       )}
       {deal.awaiting_me && meetups.allStale && (
-        <p className="mt-2 text-xs leading-5 text-ink">
+        <p className="mt-2 text-fine leading-5 text-ink">
           The proposed meetup times have passed. <Link href="/deals" className="font-semibold underline">Suggest a new time</Link> before accepting.
         </p>
       )}
       {deal.awaiting_me && meetups.fromOther.length > 0 && (
         <fieldset className="mt-2">
-          <legend className="text-xs font-bold text-muted">
+          <legend className="text-fine font-semibold text-muted">
             {meetups.fromOther.length > 1 ? "Choose a meetup time" : "Proposed meetup"} · <Link href="/deals" className="underline">suggest another</Link>
           </legend>
           <div className="mt-2 flex flex-wrap gap-2">
             {meetups.fromOther.map((proposal) => (
-              <button key={proposal.id} type="button" onClick={() => setMeetupProposalId(proposal.id)} aria-pressed={meetupProposalId === proposal.id} className={`rounded-lg border px-3 py-2 text-left text-xs ${meetupProposalId === proposal.id ? "border-ink bg-background ring-1 ring-ink" : "border-line"}`}>
-                <span className="block font-bold text-ink">{deadlineText(proposal.starts_at)}</span>
+              <button key={proposal.id} type="button" onClick={() => setMeetupProposalId(proposal.id)} aria-pressed={meetupProposalId === proposal.id} className={`rounded-lg border px-3 py-2 text-left text-fine ${meetupProposalId === proposal.id ? "border-ink bg-background ring-1 ring-ink" : "border-line"}`}>
+                <span className="block font-semibold text-ink">{deadlineText(proposal.starts_at)}</span>
                 <span className="block text-muted"><MeetingSpotName spot={proposal.meeting_spot} /></span>
               </button>
             ))}
@@ -236,25 +236,25 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
         </fieldset>
       )}
       {deal.status === "pending" && meetingSpots.length > 0 && (
-        <details className="mt-2 rounded-lg border border-line bg-background px-3 py-2 text-sm">
+        <details className="mt-2 rounded-lg border border-line bg-background px-3 py-2 text-label">
           <summary className="cursor-pointer font-semibold">Suggested {deal.listing.school_name} meetup spots</summary>
           <ul className="mt-2 space-y-2">
             {meetingSpots.map((spot) => (
               <li key={spot.id}>
                 <p className="font-semibold"><MeetingSpotName spot={spot} /></p>
-                <p className="text-xs leading-5 text-muted">{spot.directions}</p>
-                {spot.safety_note && <p className="text-xs leading-5 text-muted">{spot.safety_note}</p>}
+                <p className="text-fine leading-5 text-muted">{spot.directions}</p>
+                {spot.safety_note && <p className="text-fine leading-5 text-muted">{spot.safety_note}</p>}
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-xs text-muted">Agree on the exact place and time in chat before traveling.</p>
+          <p className="mt-2 text-fine text-muted">Agree on the exact place and time in chat before traveling.</p>
         </details>
       )}
       {deal.response_deadline && open && (
-        <p className="mt-1 text-xs text-muted">Response due {deadlineText(deal.response_deadline)}</p>
+        <p className="mt-1 text-fine text-muted">Response due {deadlineText(deal.response_deadline)}</p>
       )}
 
-      {error && <p role="alert" className="mt-2 text-sm text-[var(--danger)]">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-label text-danger">{error}</p>}
 
       {countering && (
         <div className="mt-3 flex gap-2">
@@ -268,7 +268,7 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
       )}
 
       {confirmingHandoff && (
-        <div className="mt-3 rounded-lg border border-line bg-background p-3 text-sm">
+        <div className="mt-3 rounded-lg border border-line bg-background p-3 text-label">
           <p className="font-semibold">
             {deal.my_role === "buyer"
               ? "Confirm that you received the item."
@@ -285,38 +285,38 @@ export function DealPanel({ conversationId, listingId }: { conversationId: numbe
       {!countering && !confirmingHandoff && (
         <div className="mt-3 flex flex-wrap gap-2">
           {can.accept && (!isTrade || tradeOffer) && (
-            <button type="button" onClick={() => run("accept")} disabled={working} className="btn btn-primary h-9 px-3 text-sm">Accept</button>
+            <button type="button" onClick={() => run("accept")} disabled={working} className="btn btn-primary h-9 px-3 text-label">Accept</button>
           )}
-          {can.counter && !isTrade && <button type="button" onClick={() => setCountering(true)} disabled={working} className="btn btn-secondary h-9 px-3 text-sm">Counter</button>}
-          {can.decline && <button type="button" onClick={() => run("decline")} disabled={working} className="btn btn-secondary h-9 px-3 text-sm">{deal.status === "backup" ? "Remove from line" : "Decline"}</button>}
+          {can.counter && !isTrade && <button type="button" onClick={() => setCountering(true)} disabled={working} className="btn btn-secondary h-9 px-3 text-label">Counter</button>}
+          {can.decline && <button type="button" onClick={() => run("decline")} disabled={working} className="btn btn-secondary h-9 px-3 text-label">{deal.status === "backup" ? "Remove from line" : "Decline"}</button>}
           {can.confirm_handoff && (
-            <button type="button" onClick={() => setConfirmingHandoff(true)} disabled={working} className="btn btn-primary h-9 px-3 text-sm">Confirm handoff</button>
+            <button type="button" onClick={() => setConfirmingHandoff(true)} disabled={working} className="btn btn-primary h-9 px-3 text-label">Confirm handoff</button>
           )}
-          {deal.status === "pending" && mineConfirmed && <p className="self-center text-sm font-semibold text-muted">Waiting for the other person to confirm</p>}
-          {can.cancel && <button type="button" onClick={() => run("cancel")} disabled={working} className="btn btn-secondary h-9 px-3 text-sm">{deal.status === "backup" ? "Leave the line" : `Cancel ${deal.status === "pending" ? "purchase" : "request"}`}</button>}
-          {can.report_problem && <Link href="/deals" className="btn btn-quiet h-9 px-3 text-sm">Report a problem</Link>}
+          {deal.status === "pending" && mineConfirmed && <p className="self-center text-label font-semibold text-muted">Waiting for the other person to confirm</p>}
+          {can.cancel && <button type="button" onClick={() => run("cancel")} disabled={working} className="btn btn-secondary h-9 px-3 text-label">{deal.status === "backup" ? "Leave the line" : `Cancel ${deal.status === "pending" ? "purchase" : "request"}`}</button>}
+          {can.report_problem && <Link href="/deals" className="btn btn-quiet h-9 px-3 text-label">Report a problem</Link>}
         </div>
       )}
 
       {deal.status === "completed" && (
         <div className="mt-3 border-t border-line pt-3">
           {myReview ? (
-            <div className="text-sm">
+            <div className="text-label">
               <p className="font-semibold">Your review: {myReview.rating}/5</p>
               {myReview.comment && <p className="mt-1 text-muted">{myReview.comment}</p>}
             </div>
           ) : (
             <div>
-              <p className="text-sm font-semibold">How did the handoff go?</p>
+              <p className="text-label font-semibold">How did the handoff go?</p>
               <div className="mt-2 flex gap-1" role="group" aria-label="Rating">
                 {[1, 2, 3, 4, 5].map((value) => (
-                  <button key={value} type="button" onClick={() => setRating(value)} aria-pressed={rating === value} className={`grid size-9 place-items-center rounded-full text-sm font-bold ${rating === value ? "bg-brand text-white" : "bg-surface text-ink"}`}>
+                  <button key={value} type="button" onClick={() => setRating(value)} aria-pressed={rating === value} className={`grid size-9 place-items-center rounded-full text-label font-semibold ${rating === value ? "bg-brand text-white" : "bg-surface text-ink"}`}>
                     {value}
                   </button>
                 ))}
               </div>
               <textarea value={reviewComment} onChange={(event) => setReviewComment(event.target.value)} maxLength={500} rows={2} placeholder="Optional review" className="field mt-2 resize-none" />
-              <button type="button" onClick={submitReview} disabled={working} className="btn btn-primary mt-2 h-9 px-3 text-sm">Submit review</button>
+              <button type="button" onClick={submitReview} disabled={working} className="btn btn-primary mt-2 h-9 px-3 text-label">Submit review</button>
             </div>
           )}
         </div>

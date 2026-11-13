@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 
 import type { components } from "@/lib/api/schema";
+import { ChevronLeftIcon, ChevronRightIcon } from "@/components/ui/icons";
 
 type Photo = components["schemas"]["ListingPhoto"];
 
@@ -39,7 +40,7 @@ export function PhotoGallery({ photos, title }: { photos: Photo[]; title: string
                 onClick={() => show(index)}
                 aria-label={`Show photo ${index + 1} of ${count}`}
                 aria-current={current === index || undefined}
-                className="relative block aspect-[4/5] w-full overflow-hidden rounded-md bg-surface outline-offset-2 ring-ink aria-[current]:ring-2"
+                className="relative block aspect-[4/5] w-full overflow-hidden rounded-lg bg-surface outline-offset-2 ring-ink aria-[current]:ring-2"
               >
                 <Image src={photo.thumbnail_url ?? photo.image_url} alt="" fill unoptimized className="object-cover" />
               </button>
@@ -80,7 +81,7 @@ export function PhotoGallery({ photos, title }: { photos: Photo[]; title: string
             {ordered.map((photo, index) => (
               <span
                 key={photo.id}
-                className={`size-1.5 rounded-full ${current === index ? "bg-white" : "bg-white/50"} shadow`}
+                className={`size-1.5 rounded-full ${current === index ? "bg-white" : "bg-white/50"} shadow-float`}
               />
             ))}
           </div>
@@ -107,11 +108,9 @@ function GalleryArrow({
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className={`absolute top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-background/90 text-ink shadow disabled:hidden lg:hidden ${side === "left" ? "left-2" : "right-2"}`}
+      className={`absolute top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-background/90 text-ink shadow-float disabled:hidden lg:hidden ${side === "left" ? "left-2" : "right-2"}`}
     >
-      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden="true">
-        <path d={side === "left" ? "M15 6l-6 6 6 6" : "M9 6l6 6-6 6"} />
-      </svg>
+      {side === "left" ? <ChevronLeftIcon className="size-5" aria-hidden="true" /> : <ChevronRightIcon className="size-5" aria-hidden="true" />}
     </button>
   );
 }

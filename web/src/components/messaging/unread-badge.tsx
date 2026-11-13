@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 
 import { getUnreadCount } from "@/lib/messaging";
+import { CountBadge } from "@/components/ui/badge";
 
 // One poller per tab, shared by every mounted badge (the desktop and mobile navs each mount
 // one). It runs while at least one badge is subscribed.
@@ -37,6 +38,5 @@ function subscribe(listener: () => void) {
 export function UnreadBadge() {
   const count = useSyncExternalStore(subscribe, () => unreadCount, () => 0);
 
-  if (!count) return null;
-  return <span className="ml-1 inline-grid min-w-5 place-items-center rounded-full bg-signal px-1.5 text-fine font-black leading-5 text-white" aria-label={`${count} unread messages`}>{count > 99 ? "99+" : count}</span>;
+  return <CountBadge count={count} label={`${count} unread ${count === 1 ? "message" : "messages"}`} className="ml-1" />;
 }

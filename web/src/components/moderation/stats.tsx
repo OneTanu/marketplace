@@ -23,9 +23,9 @@ function duration(hours: number | null) {
 function Tile({ label, value, note }: { label: string; value: string | number; note?: string }) {
   return (
     <div className="rounded-xl border border-line p-4">
-      <p className="text-sm text-muted">{label}</p>
-      <p className="type-wide mt-1 text-3xl font-black">{value}</p>
-      {note && <p className="mt-1 text-xs text-muted">{note}</p>}
+      <p className="text-label text-muted">{label}</p>
+      <p className="type-wide mt-1 text-display font-extrabold">{value}</p>
+      {note && <p className="mt-1 text-fine text-muted">{note}</p>}
     </div>
   );
 }
@@ -37,16 +37,16 @@ function BarList({ title, rows, empty }: { title: string; rows: CountRow[]; empt
   const total = rows.reduce((sum, row) => sum + row.count, 0);
   return (
     <section aria-label={title} className="rounded-xl border border-line p-4">
-      <h2 className="font-black">{title}</h2>
+      <h2 className="font-extrabold">{title}</h2>
       {rows.length === 0 ? (
-        <p className="mt-2 text-sm text-muted">{empty}</p>
+        <p className="mt-2 text-label text-muted">{empty}</p>
       ) : (
         <ul className="mt-3 space-y-2.5">
           {rows.map((row) => (
-            <li key={row.key} title={`${row.label}: ${row.count} (${Math.round((row.count / total) * 100)}%)`} className="text-sm">
+            <li key={row.key} title={`${row.label}: ${row.count} (${Math.round((row.count / total) * 100)}%)`} className="text-label">
               <div className="flex items-baseline justify-between gap-3">
                 <span className="truncate">{row.label}</span>
-                <span className="shrink-0 font-bold tabular-nums">{row.count}</span>
+                <span className="shrink-0 font-semibold tabular-nums">{row.count}</span>
               </div>
               <div className="mt-1 h-2 rounded-full bg-surface">
                 <div className="h-2 rounded-full bg-brand" style={{ width: `${(row.count / max) * 100}%` }} />
@@ -91,13 +91,13 @@ export function ModerationStatsView() {
 
   return (
     <main className="mx-auto min-h-[70vh] max-w-5xl px-4 py-8 pb-12 sm:px-6">
-      <Link href="/moderation" className="text-sm font-bold text-muted hover:text-ink">← Moderation queue</Link>
-      <h1 className="type-wide mt-3 text-3xl font-black">Moderation stats</h1>
+      <Link href="/moderation" className="text-label font-semibold text-muted hover:text-ink">← Moderation queue</Link>
+      <h1 className="type-wide mt-3 text-display font-extrabold">Moderation stats</h1>
 
       <div className="mt-5 flex flex-wrap items-center gap-2" aria-label="Filters">
-        <div className="flex rounded-lg bg-surface p-1 text-sm" role="group" aria-label="Time range">
+        <div className="flex rounded-lg bg-surface p-1 text-label" role="group" aria-label="Time range">
           {RANGES.map((days) => (
-            <button key={days} type="button" onClick={() => setQuery((current) => ({ ...current, days }))} aria-pressed={query.days === days} className={`rounded-md px-3 py-1.5 font-semibold ${query.days === days ? "bg-background shadow-sm" : "text-muted"}`}>
+            <button key={days} type="button" onClick={() => setQuery((current) => ({ ...current, days }))} aria-pressed={query.days === days} className={`rounded-lg px-3 py-1.5 font-semibold ${query.days === days ? "bg-background shadow-float" : "text-muted"}`}>
               Last {days} days
             </button>
           ))}
@@ -127,21 +127,21 @@ export function ModerationStatsView() {
             <BarList title="Outcomes" rows={stats.outcomes} empty="No decisions in this range." />
           </div>
 
-          <p className="mt-8 text-sm text-muted">The lists below are signals for a closer look, not proof. Review each case before acting.</p>
+          <p className="mt-8 text-label text-muted">The lists below are signals for a closer look, not proof. Review each case before acting.</p>
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
             <section aria-label="Repeat offenders" className="rounded-xl border border-line p-4">
-              <h2 className="font-black">Repeat offenders</h2>
-              <p className="text-xs text-muted">Two or more warnings, restrictions, removals, suspensions or bans in the last 90 days.</p>
+              <h2 className="font-extrabold">Repeat offenders</h2>
+              <p className="text-fine text-muted">Two or more warnings, restrictions, removals, suspensions or bans in the last 90 days.</p>
               {stats.repeat_offenders.length === 0 ? (
-                <p className="mt-2 text-sm text-muted">None.</p>
+                <p className="mt-2 text-label text-muted">None.</p>
               ) : (
-                <table className="mt-3 w-full text-sm">
-                  <thead><tr className="text-left text-xs text-muted"><th className="font-semibold">Student</th><th className="text-right font-semibold">Consequences</th></tr></thead>
+                <table className="mt-3 w-full text-label">
+                  <thead><tr className="text-left text-fine text-muted"><th className="font-semibold">Student</th><th className="text-right font-semibold">Consequences</th></tr></thead>
                   <tbody>
                     {stats.repeat_offenders.map((row) => (
                       <tr key={row.user.id} className="border-t border-line">
                         <td className="py-2"><Link href={`/users/${row.user.username}`} className="font-semibold hover:underline">@{row.user.username}</Link></td>
-                        <td className="py-2 text-right font-bold tabular-nums">{row.count}</td>
+                        <td className="py-2 text-right font-semibold tabular-nums">{row.count}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -149,18 +149,18 @@ export function ModerationStatsView() {
               )}
             </section>
             <section aria-label="Possible false reporters" className="rounded-xl border border-line p-4">
-              <h2 className="font-black">Possible false reporters</h2>
-              <p className="text-xs text-muted">Three or more reviewed reports, with a quarter or fewer leading to action.</p>
+              <h2 className="font-extrabold">Possible false reporters</h2>
+              <p className="text-fine text-muted">Three or more reviewed reports, with a quarter or fewer leading to action.</p>
               {stats.possible_false_reporters.length === 0 ? (
-                <p className="mt-2 text-sm text-muted">None.</p>
+                <p className="mt-2 text-label text-muted">None.</p>
               ) : (
-                <table className="mt-3 w-full text-sm">
-                  <thead><tr className="text-left text-xs text-muted"><th className="font-semibold">Reporter</th><th className="text-right font-semibold">Led to action</th></tr></thead>
+                <table className="mt-3 w-full text-label">
+                  <thead><tr className="text-left text-fine text-muted"><th className="font-semibold">Reporter</th><th className="text-right font-semibold">Led to action</th></tr></thead>
                   <tbody>
                     {stats.possible_false_reporters.map((row) => (
                       <tr key={row.user.id} className="border-t border-line">
                         <td className="py-2"><Link href={`/users/${row.user.username}`} className="font-semibold hover:underline">@{row.user.username}</Link></td>
-                        <td className="py-2 text-right tabular-nums"><span className="font-bold">{row.upheld}</span> of {row.reviewed}</td>
+                        <td className="py-2 text-right tabular-nums"><span className="font-semibold">{row.upheld}</span> of {row.reviewed}</td>
                       </tr>
                     ))}
                   </tbody>

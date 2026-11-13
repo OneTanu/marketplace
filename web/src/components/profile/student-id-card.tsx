@@ -1,3 +1,4 @@
+import { Avatar } from "@/components/ui/avatar";
 import { schoolPalette } from "@/lib/school-colors";
 
 // The first color takes most of the stripe; the rest share what's left.
@@ -19,35 +20,39 @@ export type StudentIdCardProps = {
   schoolColors?: readonly string[];
   dateJoined: string;
   soldCount: number;
-  /** Adds a followers line (the account hub shows it; the public profile has its own count). */
+  /** Adds a followers count (the account hub shows it; the public profile has its own). */
   followerCount?: number;
   /** The name is the page's h1 on a profile; the design lab nests the card under an h2. */
   nameAs?: "h1" | "h3";
 };
 
-// The profile header, shaped like a campus ID (a little shorter than the real 85.6 × 54 mm card)
-// without copying any school's real card: no logos, seals, ID numbers, or barcodes.
+/**
+ * The profile header, in the shape of a campus ID (85.6 × 54 mm, like a bank card) at every
+ * width, without copying any school's real card: no logos, seals, ID numbers or barcodes.
+ * The school's colours fill the stripe across the top and nowhere else.
+ */
 export function StudentIdCard({ firstName, lastInitial, username, schoolName, schoolColors, dateJoined, soldCount, followerCount, nameAs: Name = "h1" }: StudentIdCardProps) {
   const { stripe } = schoolPalette(schoolColors);
   const name = firstName ? `${firstName}${lastInitial ? ` ${lastInitial}.` : ""}` : `@${username}`;
-  const initial = (firstName[0] || username[0] || "T").toUpperCase();
 
   return (
-    <div className="relative grid w-full max-w-[26rem] grid-cols-[30%_1fr] items-center gap-4 overflow-hidden rounded-[14px] border border-line bg-background px-4 pt-8 pb-4 sm:aspect-[85.6/48]">
-      {/* School stripe: the one place the school's colors fill space. */}
-      <div className="absolute inset-x-0 top-0 flex h-4" aria-hidden="true">
+    <div className="grid aspect-[85.6/54] w-full max-w-[26rem] grid-rows-[auto_1fr] overflow-hidden rounded-xl border border-line bg-background shadow-card">
+      <div className="flex h-3.5" aria-hidden="true">
         {stripe.map((color, index) => <span key={index} style={{ background: color, width: stripeWidth(index, stripe.length) }} />)}
       </div>
-      <div className="type-wide grid aspect-[4/5] place-items-center rounded-md bg-surface text-4xl font-black text-ink" aria-hidden="true">{initial}</div>
-      <div className="min-w-0">
-        <Name className="type-wide truncate text-[22px] font-black leading-none text-ink">{name}</Name>
-        {schoolName && <p className="mt-1 text-[13px] text-muted">{schoolName}</p>}
-        <p className="mt-0.5 truncate text-[13px] font-bold text-ink">@{username}</p>
-        <ul className="mt-3 grid gap-1 text-[13px] text-ink">
-          <li>Joined <b className="font-extrabold">{joinedLabel(dateJoined)}</b></li>
-          <li><b className="font-extrabold">{soldCount}</b> sold</li>
-          {followerCount !== undefined && <li><b className="font-extrabold">{followerCount}</b> {followerCount === 1 ? "follower" : "followers"}</li>}
-        </ul>
+      <div className="flex min-h-0 items-center gap-4 px-4.5 desktop:gap-5 desktop:px-5">
+        <Avatar user={{ first_name: firstName, username }} size="lg" />
+        <div className="min-w-0">
+          <Name className="type-wide line-clamp-2 text-title font-extrabold text-ink [overflow-wrap:anywhere]">{name}</Name>
+          {/* Without a first name the heading is already the username, so it isn't repeated. */}
+          {firstName && <p className="truncate text-fine text-muted">@{username}</p>}
+          {schoolName && <p className="truncate text-fine text-muted">{schoolName}</p>}
+          <p className="mt-2 flex flex-wrap gap-x-3.5 text-fine text-ink">
+            <span><b className="font-semibold tabular-nums">{soldCount}</b> sold</span>
+            {followerCount !== undefined && <span><b className="font-semibold tabular-nums">{followerCount}</b> {followerCount === 1 ? "follower" : "followers"}</span>}
+          </p>
+          <p className="mt-0.5 text-fine text-muted">Joined {joinedLabel(dateJoined)}</p>
+        </div>
       </div>
     </div>
   );

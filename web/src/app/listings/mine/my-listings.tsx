@@ -85,8 +85,8 @@ function ListingRow({ listing, onRemoved }: { listing: Listing; onRemoved: (list
     <li
       className={`rounded-xl border p-2 ${
         confirming
-          ? "border-[var(--danger)] bg-[var(--danger-soft)]"
-          : "border-black/10 dark:border-white/10"
+          ? "border-danger bg-danger-soft"
+          : "border-line"
       }`}
     >
       <div className="flex gap-3">
@@ -98,19 +98,19 @@ function ListingRow({ listing, onRemoved }: { listing: Listing; onRemoved: (list
           )}
         </div>
         <div className="min-w-0 flex-1 py-0.5">
-          <p className="truncate font-medium">{listing.title}</p>
-          <p className="mt-0.5 text-sm text-foreground/80">
+          <p className="truncate font-semibold">{listing.title}</p>
+          <p className="mt-0.5 text-label text-foreground/80">
             {listing.price_cents === 0 ? "Free" : centsToDollars(listing.price_cents)}
           </p>
           <span
-            className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE_CLASSES[listing.status]}`}
+            className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-fine font-semibold ${STATUS_BADGE_CLASSES[listing.status]}`}
           >
             {STATUS_LABELS[listing.status]}
           </span>
         </div>
       </div>
       {listing.removed_by === "moderation" && (
-        <p className="mt-2 text-sm text-foreground/60">
+        <p className="mt-2 text-label text-foreground/60">
           Removed by moderation. Buyers can&apos;t see this listing.
         </p>
       )}
@@ -128,7 +128,7 @@ function ListingRow({ listing, onRemoved }: { listing: Listing; onRemoved: (list
                 ref={removeButton}
                 type="button"
                 onClick={() => setConfirming(true)}
-                className="btn btn-sm text-[var(--danger)] hover:bg-[var(--danger-soft)]"
+                className="btn btn-sm text-danger hover:bg-danger-soft"
               >
                 Remove
               </button>
@@ -143,14 +143,14 @@ function ListingRow({ listing, onRemoved }: { listing: Listing; onRemoved: (list
           onKeyDown={(event) => {
             if (event.key === "Escape" && !removing) cancel();
           }}
-          className="mt-2 border-t border-[var(--danger)]/20 pt-2"
+          className="mt-2 border-t border-danger/20 pt-2"
         >
-          <p className="text-sm">
+          <p className="text-label">
             <span className="block font-semibold">Remove this listing?</span>
             Buyers won&apos;t see it anymore. This can&apos;t be undone.
           </p>
           {error && (
-            <p role="alert" className="mt-1.5 text-sm text-[var(--danger)]">
+            <p role="alert" className="mt-1.5 text-label text-danger">
               {error}
             </p>
           )}
@@ -172,7 +172,7 @@ function ListingRow({ listing, onRemoved }: { listing: Listing; onRemoved: (list
               type="button"
               onClick={remove}
               aria-disabled={removing}
-              className="btn btn-sm bg-[var(--danger)] text-white aria-disabled:cursor-not-allowed aria-disabled:opacity-55"
+              className="btn btn-sm bg-danger text-white aria-disabled:cursor-not-allowed aria-disabled:opacity-55"
             >
               {removing ? "Removing…" : "Remove listing"}
             </button>
@@ -232,23 +232,23 @@ export function MyListings() {
 
   let body;
   if (!result) {
-    body = <p className="text-sm text-foreground/60">Loading…</p>;
+    body = <p className="text-label text-foreground/60">Loading…</p>;
   } else if ("error" in result) {
-    body = <p className="text-sm text-foreground/70">{result.error}</p>;
+    body = <p className="text-label text-foreground/70">{result.error}</p>;
   } else if (result.listings.length === 0 && result.filter !== "all") {
     body = (
-      <p className="text-sm text-foreground/60">
+      <p className="text-label text-foreground/60">
         No {STATUS_LABELS[result.filter].toLowerCase()} listings.
       </p>
     );
   } else if (result.listings.length === 0) {
     body = (
-      <div className="rounded-xl border border-dashed border-black/20 px-4 py-10 text-center dark:border-white/25">
-        <p className="font-medium">You haven&apos;t posted anything yet.</p>
-        <p className="mt-1 text-sm text-foreground/60">Got something to sell? It takes a minute.</p>
+      <div className="rounded-xl border border-dashed border-line px-4 py-10 text-center">
+        <p className="font-semibold">You haven&apos;t posted anything yet.</p>
+        <p className="mt-1 text-label text-foreground/60">Got something to sell? It takes a minute.</p>
         <Link
           href="/sell"
-          className="mt-4 inline-block rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-background"
+          className="mt-4 inline-block rounded-full bg-foreground px-5 py-2.5 text-label font-semibold text-background"
         >
           Sell an item
         </Link>
@@ -273,7 +273,7 @@ export function MyListings() {
             type="button"
             onClick={() => setFilter(option.value)}
             aria-pressed={filter === option.value}
-            className="shrink-0 rounded-full px-4 py-2 text-sm font-medium text-foreground/70 hover:bg-foreground/5 aria-pressed:bg-foreground aria-pressed:text-background"
+            className="shrink-0 rounded-full px-4 py-2 text-label font-semibold text-foreground/70 hover:bg-foreground/5 aria-pressed:bg-foreground aria-pressed:text-background"
           >
             {option.label}
           </button>

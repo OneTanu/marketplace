@@ -24,8 +24,8 @@ export function BottomBarSpacer() {
 /** Terms, Privacy and the non-affiliation note. `bottomBar` adds room under it for the phone
  * bottom bar, when the page has one. */
 export function Footer({ bottomBar = false }: { bottomBar?: boolean }) {
-  return <footer data-site-footer className={`border-t border-line ${bottomBar ? "pb-[calc(4rem+env(safe-area-inset-bottom))] desktop:pb-0" : ""}`}><div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
-    <p><span className="type-wide font-black text-ink">tanu</span> <span className="ml-2">© 2026. Built by students.</span></p>
+  return <footer data-site-footer className={`border-t border-line ${bottomBar ? "pb-[calc(4rem+env(safe-area-inset-bottom))] desktop:pb-0" : ""}`}><div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-label text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
+    <p><span className="type-wide font-extrabold text-ink">tanu</span> <span className="ml-2">© 2026. Built by students.</span></p>
     <div className="flex gap-5"><Link className="transition hover:text-ink" href="/terms">Terms</Link><Link className="transition hover:text-ink" href="/privacy">Privacy</Link><a className="transition hover:text-ink" href={`mailto:${SUPPORT_EMAIL}`}>Contact support</a></div>
     <p className="max-w-sm text-fine sm:text-right">Independent and not affiliated with or endorsed by any university.</p>
   </div></footer>;
