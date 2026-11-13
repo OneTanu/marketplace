@@ -380,7 +380,7 @@ def _snapshot(report: Report, target: dict, evidence: list[Message]) -> None:
         )
     if target["reported_user"] and report.target_type == Report.TargetType.USER:
         user = target["reported_user"]
-        EvidenceSnapshot.objects.create(
+        snapshot = EvidenceSnapshot.objects.create(
             report=report,
             kind="profile",
             source_id=user.pk,
@@ -391,6 +391,8 @@ def _snapshot(report: Report, target: dict, evidence: list[Message]) -> None:
                 "instagram_handle": user.instagram_handle,
             },
         )
+        if user.profile_photo:
+            _copy_file(snapshot, user.profile_photo)
     if deal := target.get("deal"):
         EvidenceSnapshot.objects.create(
             report=report,

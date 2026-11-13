@@ -21,7 +21,7 @@ export default function PrivacyPage() {
       <p><strong>Information you give us:</strong></p>
       <LegalList items={[
         <>Your account: first and last name, a username, your school email address, and a password (stored only in scrambled, one-way form). Your school is set from your verified email.</>,
-        <>Optional profile details, such as a short description and an Instagram handle.</>,
+        <>Optional profile details, such as a profile photo, a short description, and an Instagram handle. We remove location and camera details from photos when you upload them.</>,
         <>Listings: photos, titles, descriptions, prices, condition, size, brand, and category.</>,
         <>Activity in the marketplace: messages, offers and counteroffers, deals, meetup preferences and availability, proposed and confirmed meetup times and spots, handoff confirmations, and reviews.</>,
         <>Things you save: bookmarks, saved searches, follows, and blocks.</>,

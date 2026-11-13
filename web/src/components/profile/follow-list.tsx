@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import type { components } from "@/lib/api/schema";
 import { getFollowList, setFollowing, type FollowDirection } from "@/lib/platform";
 
+import { Avatar } from "./avatar";
+
 type PublicUser = components["schemas"]["PublicUser"];
 type ListState =
   | { state: "loading" }
@@ -74,7 +76,6 @@ export function FollowList({ username, direction }: { username: string; directio
 function FollowRow({ user, onChange }: { user: PublicUser; onChange: (user: PublicUser) => void }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-  const initial = (user.first_name[0] || user.username[0]).toUpperCase();
 
   async function toggleFollow() {
     setPending(true);
@@ -91,7 +92,7 @@ function FollowRow({ user, onChange }: { user: PublicUser; onChange: (user: Publ
 
   return <div className="flex items-center gap-3.5 rounded-xl border border-line p-3.5">
     <Link href={`/users/${user.username}`} className="flex min-w-0 flex-1 items-center gap-3.5">
-      <div className="type-wide grid size-11 shrink-0 place-items-center rounded-full bg-[var(--brand-soft)] text-base font-extrabold text-brand" aria-hidden="true">{initial}</div>
+      <Avatar photoUrl={user.profile_photo_url} firstName={user.first_name} username={user.username} className="size-11 rounded-full text-base" />
       <div className="min-w-0"><p className="truncate font-bold">{user.first_name ? `${user.first_name}${user.last_initial ? ` ${user.last_initial}.` : ""}` : `@${user.username}`}</p><p className="truncate text-sm text-muted">{[user.first_name && `@${user.username}`, user.school?.short_name].filter(Boolean).join(", ")}</p></div>
     </Link>
     {!user.is_self && <div className="shrink-0 text-right">

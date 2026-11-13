@@ -17,6 +17,7 @@ import type { components } from "@/lib/api/schema";
 import { BookmarksTab } from "./bookmarks-tab";
 import { FollowCounts } from "./follow-counts";
 import { InstagramLink } from "./instagram-link";
+import { ProfilePhotoButton, RemoveProfilePhotoButton } from "./profile-photo-picker";
 import { StudentIdCard } from "./student-id-card";
 
 type CurrentUser = components["schemas"]["CurrentUser"];
@@ -104,6 +105,7 @@ export function ProfileClient() {
   const [pending, setPending] = useState(false);
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<ProfileUpdateErrors>({});
+  const [photoError, setPhotoError] = useState("");
   const [tab, setTab] = useState<ProfileTab>("selling");
   // undefined while loading, null if the request failed.
   const [listings, setListings] = useState<Card[] | null>();
@@ -185,7 +187,13 @@ export function ProfileClient() {
     <main className="mx-auto w-full max-w-6xl px-4 py-8 pb-28 sm:px-6 sm:py-12 desktop:pb-12">
       <RestrictionNotice />
       <section className="animate-in grid items-start gap-6 lg:grid-cols-[minmax(0,26rem)_1fr] lg:gap-8">
-        <StudentIdCard firstName={user.first_name} lastInitial={user.last_name[0]?.toUpperCase() ?? ""} username={user.username} schoolName={user.school?.name} schoolColors={user.school?.colors} dateJoined={user.date_joined} soldCount={user.sold_count} />
+        <div>
+          <StudentIdCard firstName={user.first_name} lastInitial={user.last_name[0]?.toUpperCase() ?? ""} username={user.username} schoolName={user.school?.name} schoolColors={user.school?.colors} dateJoined={user.date_joined} soldCount={user.sold_count} photoUrl={user.profile_photo_url} photoAction={<ProfilePhotoButton hasPhoto={Boolean(user.profile_photo_url)} onChange={setUser} onError={setPhotoError} />} />
+          {(photoError || user.profile_photo_url) && <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+            {user.profile_photo_url && <RemoveProfilePhotoButton onChange={setUser} onError={setPhotoError} />}
+            {photoError && <p role="alert" className="text-sm text-[var(--danger)]">{photoError}</p>}
+          </div>}
+        </div>
         <div>
           {editing ? (
             <form onSubmit={saveProfile} className="max-w-2xl space-y-5 rounded-2xl border border-line bg-white/65 p-5">

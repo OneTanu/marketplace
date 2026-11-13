@@ -152,7 +152,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "EXCEPTION_HANDLER": "config.exceptions.exception_handler",
     # Only views that opt in with `throttle_scope` are limited.
-    "DEFAULT_THROTTLE_RATES": {"reactivate": "10/hour"},
+    "DEFAULT_THROTTLE_RATES": {"reactivate": "10/hour", "profile_photo": "30/hour"},
 }
 SPECTACULAR_SETTINGS = {
     "TITLE": "Tanu API",

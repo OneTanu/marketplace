@@ -9,6 +9,7 @@ from rest_framework.generics import (
     RetrieveAPIView,
     RetrieveUpdateAPIView,
 )
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -25,6 +26,7 @@ from .serializers import (
     FollowListPageSerializer,
     PasswordResetKeyStatusRequestSerializer,
     PasswordResetKeyStatusSerializer,
+    ProfilePhotoUploadSerializer,
     PublicUserSerializer,
     ReactivateSerializer,
 )
@@ -35,6 +37,8 @@ from .services import (
     follow_user,
     password_reset_key_status,
     reactivate_account,
+    remove_profile_photo,
+    set_profile_photo,
     unfollow_user,
     verified_users,
 )
@@ -73,6 +77,33 @@ class CurrentUserView(RetrieveUpdateAPIView):
     def perform_update(self, serializer):
         with service_validation_errors():
             serializer.save()
+
+
+class ProfilePhotoView(GenericAPIView):
+    """Set or remove my profile photo. Returns my account, with the new photo's URL."""
+
+    serializer_class = CurrentUserSerializer
+    parser_classes = [MultiPartParser, FormParser]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "profile_photo"
+
+    @extend_schema(
+        request={"multipart/form-data": ProfilePhotoUploadSerializer},
+        responses=CurrentUserSerializer,
+    )
+    def post(self, request):
+        """Upload a new profile photo, replacing any current one. It's stored as a square crop
+        of the photo's centre, with location and other metadata removed."""
+        payload = ProfilePhotoUploadSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        with service_validation_errors():
+            set_profile_photo(request.user, payload.validated_data["photo"])
+        return Response(self.get_serializer(request.user).data)
+
+    @extend_schema(request=None, responses=CurrentUserSerializer)
+    def delete(self, request):
+        remove_profile_photo(request.user)
+        return Response(self.get_serializer(request.user).data)
 
 
 @extend_schema(

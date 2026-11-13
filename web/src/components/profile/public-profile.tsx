@@ -72,7 +72,7 @@ export function PublicProfile({ username }: { username: string }) {
 
   return <main className="mx-auto min-h-[70vh] max-w-6xl px-4 py-10 pb-28 sm:px-6 desktop:pb-12">
     <section className="grid items-start gap-6 lg:grid-cols-[minmax(0,26rem)_1fr] lg:gap-8">
-      <StudentIdCard firstName={user.first_name} lastInitial={user.last_initial} username={user.username} schoolName={user.school?.name} schoolColors={user.school?.colors} dateJoined={user.date_joined} soldCount={user.sold_count} />
+      <StudentIdCard firstName={user.first_name} lastInitial={user.last_initial} username={user.username} schoolName={user.school?.name} schoolColors={user.school?.colors} dateJoined={user.date_joined} soldCount={user.sold_count} photoUrl={user.profile_photo_url} />
       <div>
         <p className="max-w-2xl leading-7 text-foreground/80">{user.profile_description || "This student has not added a profile description yet."}</p>
         <div className="mt-4 flex flex-wrap items-center gap-x-7 gap-y-3 text-sm">

@@ -7,6 +7,7 @@ from .views import (
     FollowListView,
     FollowUserView,
     PasswordResetKeyStatusView,
+    ProfilePhotoView,
     PublicUserView,
     ReactivateView,
     UserSearchView,
@@ -14,6 +15,7 @@ from .views import (
 
 urlpatterns = [
     path("me/", CurrentUserView.as_view(), name="current-user"),
+    path("me/photo/", ProfilePhotoView.as_view(), name="profile-photo"),
     path("me/deactivation/", DeactivationPreviewView.as_view(), name="deactivation-preview"),
     path("me/deactivate/", DeactivateView.as_view(), name="deactivate-account"),
     path("account/reactivate/", ReactivateView.as_view(), name="reactivate-account"),
