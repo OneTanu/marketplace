@@ -1,5 +1,9 @@
+from datetime import timedelta
+
 import pytest
 from allauth.account.models import EmailAddress
+from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.listings.models import Category, Listing
@@ -272,3 +276,72 @@ def test_unread_counts_skip_own_messages_and_start_after_last_read(client):
     assert client.get("/api/conversations/unread-count/").json() == {"unread_count": 0}
     client.force_login(verified_user("nobody"))
     assert client.get("/api/conversations/unread-count/").json() == {"unread_count": 0}
+
+
+@pytest.mark.django_db
+def test_sending_more_than_30_messages_a_minute_is_refused(client):
+    from apps.messaging.services import MAX_MESSAGES_PER_MINUTE, TOO_FAST
+
+    alex, maya = verified_user("fast-alex"), verified_user("fast-maya")
+    chat = start_direct_conversation(sender=alex, recipient=maya)
+    for number in range(MAX_MESSAGES_PER_MINUTE):
+        send_message(conversation=chat, sender=alex, body=f"msg {number}")
+    client.force_login(alex)
+
+    response = client.post(
+        f"/api/conversations/{chat.pk}/messages/",
+        {"body": "one more"},
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == TOO_FAST
+    # Older messages no longer count.
+    Message.objects.filter(sender=alex).update(created_at=timezone.now() - timedelta(minutes=2))
+    assert (
+        client.post(
+            f"/api/conversations/{chat.pk}/messages/",
+            {"body": "later"},
+            content_type="application/json",
+        ).status_code
+        == 201
+    )
+
+
+@pytest.mark.django_db
+def test_messaging_more_than_20_new_people_an_hour_is_refused_but_ongoing_chats_continue():
+    from apps.messaging.services import MAX_NEW_PEOPLE_PER_HOUR, TOO_MANY_NEW_PEOPLE
+
+    alex = verified_user("wide-alex")
+    chats = [
+        start_direct_conversation(sender=alex, recipient=verified_user(f"wide-{number}"))
+        for number in range(MAX_NEW_PEOPLE_PER_HOUR + 1)
+    ]
+    for chat in chats[:MAX_NEW_PEOPLE_PER_HOUR]:
+        send_message(conversation=chat, sender=alex, body="Hey, interested in your item?")
+
+    with pytest.raises(ValidationError, match="new people"):
+        send_message(conversation=chats[-1], sender=alex, body="Hey, interested?")
+    assert TOO_MANY_NEW_PEOPLE.startswith("You've messaged a lot of new people")
+
+    # Students already messaged can still be written to.
+    send_message(conversation=chats[0], sender=alex, body="Following up")
+    # And after an hour the limit resets.
+    Message.objects.filter(sender=alex).update(created_at=timezone.now() - timedelta(hours=2))
+    send_message(conversation=chats[-1], sender=alex, body="Hey, interested?")
+
+
+@pytest.mark.django_db
+def test_replying_never_counts_toward_the_new_people_limit():
+    from apps.messaging.services import MAX_NEW_PEOPLE_PER_HOUR
+
+    alex = verified_user("busy-alex")
+    for number in range(MAX_NEW_PEOPLE_PER_HOUR):
+        chat = start_direct_conversation(sender=alex, recipient=verified_user(f"busy-{number}"))
+        send_message(conversation=chat, sender=alex, body="Hi")
+    # Alex has hit the limit for starting chats, but a student who asks first gets a reply.
+    newcomer = verified_user("busy-newcomer")
+    inbound = start_direct_conversation(sender=newcomer, recipient=alex)
+    send_message(conversation=inbound, sender=newcomer, body="Is the lamp available?")
+
+    send_message(conversation=inbound, sender=alex, body="Yes!")

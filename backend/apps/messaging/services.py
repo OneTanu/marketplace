@@ -1,5 +1,8 @@
+from datetime import timedelta
+
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import F, OuterRef, Subquery
 from django.utils import timezone
 
 from apps.accounts.models import User
@@ -8,6 +11,37 @@ from apps.listings.models import Listing
 from apps.trust import checks as trust_checks
 
 from .models import MESSAGE_MAX_LENGTH, Conversation, ConversationParticipant, Message
+
+# Spam limits, high enough that normal chatting never meets them.
+MAX_MESSAGES_PER_MINUTE = 30
+# Conversations a student starts, i.e. sends the first message in. Replying never counts, and
+# neither do deal requests or opening an empty chat.
+MAX_NEW_PEOPLE_PER_HOUR = 20
+TOO_FAST = "You're sending messages too quickly. Wait a moment and try again."
+TOO_MANY_NEW_PEOPLE = (
+    "You've messaged a lot of new people in the last hour. Try again later, or keep chatting "
+    "with students you've already messaged."
+)
+
+
+def _check_send_limits(sender: User, conversation: Conversation) -> None:
+    now = timezone.now()
+    sent = Message.objects.filter(sender=sender)
+    if sent.filter(created_at__gte=now - timedelta(minutes=1)).count() >= MAX_MESSAGES_PER_MINUTE:
+        raise ValidationError(TOO_FAST)
+    if conversation.messages.exists():
+        return  # a reply or a follow-up, not starting a conversation
+    first_in_conversation = (
+        Message.objects.filter(conversation=OuterRef("conversation")).order_by("id").values("id")
+    )
+    started = (
+        sent.filter(created_at__gte=now - timedelta(hours=1))
+        .annotate(first_id=Subquery(first_in_conversation[:1]))
+        .filter(pk=F("first_id"))
+        .count()
+    )
+    if started >= MAX_NEW_PEOPLE_PER_HOUR:
+        raise ValidationError(TOO_MANY_NEW_PEOPLE)
 
 
 def direct_key(first: User, second: User) -> str:
@@ -64,6 +98,7 @@ def send_message(
         raise ValidationError("This account isn't available right now.")
     for other in conversation.participants.exclude(pk=sender.pk):
         trust_checks.require_not_blocked(sender, other)
+    _check_send_limits(sender, conversation)
     if listing is not None:
         if listing.status == Listing.Status.REMOVED:
             raise ValidationError("This listing is no longer available.")
