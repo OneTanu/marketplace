@@ -55,7 +55,7 @@ export function AuthActions() {
         <MenuDivider />
         <MenuLink href="/profile">Profile</MenuLink>
         <MenuLink href="/listings/mine">My listings</MenuLink>
-        <MenuLink href="/profile?tab=bookmarks">Saved</MenuLink>
+        <MenuLink href="/profile/saved">Saved</MenuLink>
         <MenuDivider />
         <MenuButton onSelect={async () => { if (await logOut()) setUser(null); }}>Log out</MenuButton>
       </Menu>

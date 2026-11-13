@@ -75,12 +75,3 @@ export async function setFollowing(username: string, following: boolean) {
   if (!data) throw new Error(errorMessage(error, "detail") ?? "We couldn’t update this follow.");
   return data;
 }
-
-export async function homeMarketplacePath() {
-  try {
-    const user = await getCurrentUser();
-    return user?.school ? `/schools/${user.school.slug}` : "/";
-  } catch {
-    return "/";
-  }
-}

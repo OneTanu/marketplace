@@ -39,8 +39,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col">
         <SiteNav />
-        {/* No bottom padding here: the footer that follows carries the space for the phone
-            bottom bar, and focused screens have neither. */}
+        {/* No bottom padding here: SiteFooter, last on the page, carries the space for the phone
+            bottom bar (the footer itself, or a spacer), and focused screens have neither. */}
         <main className="flex-1">{children}</main>
         <SiteFooter />
       </body>

@@ -480,7 +480,7 @@ export function DealsClient() {
   if (deals === null) return <main className="mx-auto grid min-h-[70vh] max-w-xl place-items-center px-4 text-center"><div><h1 className="type-wide text-3xl font-black">Log in to see your deals</h1><p className="mt-3 text-muted">Offers, purchase requests, and transaction history are tied to your verified account.</p><Link href="/account/login" className="btn btn-primary mt-6">Log in</Link></div></main>;
 
   return (
-    <main className="mx-auto min-h-[70vh] max-w-5xl px-4 py-8 pb-28 sm:px-6 sm:py-10 desktop:pb-12">
+    <main className="mx-auto min-h-[70vh] max-w-5xl px-4 py-8 pb-12 sm:px-6 sm:py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm font-bold uppercase tracking-[0.14em] text-signal">Offers and purchases</p>

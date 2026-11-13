@@ -19,13 +19,15 @@ export type StudentIdCardProps = {
   schoolColors?: readonly string[];
   dateJoined: string;
   soldCount: number;
+  /** Adds a followers line (the account hub shows it; the public profile has its own count). */
+  followerCount?: number;
   /** The name is the page's h1 on a profile; the design lab nests the card under an h2. */
   nameAs?: "h1" | "h3";
 };
 
 // The profile header, shaped like a campus ID (a little shorter than the real 85.6 × 54 mm card)
 // without copying any school's real card: no logos, seals, ID numbers, or barcodes.
-export function StudentIdCard({ firstName, lastInitial, username, schoolName, schoolColors, dateJoined, soldCount, nameAs: Name = "h1" }: StudentIdCardProps) {
+export function StudentIdCard({ firstName, lastInitial, username, schoolName, schoolColors, dateJoined, soldCount, followerCount, nameAs: Name = "h1" }: StudentIdCardProps) {
   const { stripe } = schoolPalette(schoolColors);
   const name = firstName ? `${firstName}${lastInitial ? ` ${lastInitial}.` : ""}` : `@${username}`;
   const initial = (firstName[0] || username[0] || "T").toUpperCase();
@@ -44,6 +46,7 @@ export function StudentIdCard({ firstName, lastInitial, username, schoolName, sc
         <ul className="mt-3 grid gap-1 text-[13px] text-ink">
           <li>Joined <b className="font-extrabold">{joinedLabel(dateJoined)}</b></li>
           <li><b className="font-extrabold">{soldCount}</b> sold</li>
+          {followerCount !== undefined && <li><b className="font-extrabold">{followerCount}</b> {followerCount === 1 ? "follower" : "followers"}</li>}
         </ul>
       </div>
     </div>

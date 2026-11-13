@@ -44,9 +44,9 @@ export function AccountStanding() {
   const allClear = !standing.restrictions.length && !standing.notices.length && !standing.info_requests.length;
 
   return (
-    <main className="mx-auto min-h-[70vh] max-w-2xl px-4 py-8 pb-28 sm:px-6 desktop:pb-12">
-      <Link href="/profile" className="text-sm font-bold text-muted hover:text-ink">← Back to profile</Link>
-      <h1 className="type-wide mt-4 text-3xl font-black">Account status</h1>
+    <main className="mx-auto min-h-[70vh] max-w-2xl px-4 py-8 pb-12 sm:px-6">
+      <Link href="/profile" className="inline-flex min-h-11 items-center text-sm font-bold text-muted hover:text-ink">← Back to profile</Link>
+      <h1 className="type-wide mt-2 text-3xl font-black">Account status</h1>
       <p className="mt-2 text-muted">Decisions Tanu&apos;s moderators have made about your account, and any questions they have for you.</p>
 
       <div className="mt-6"><RestrictionNotice /></div>

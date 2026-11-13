@@ -6,6 +6,7 @@ import { ProfileClient } from "@/components/profile/profile-client";
 export const metadata: Metadata = { title: "Your profile" };
 
 export default function ProfilePage() {
-  // ProfileClient reads the tab from the URL, which needs a Suspense boundary.
+  // ProfileClient reads the URL (to redirect the old ?tab=bookmarks link), which needs a
+  // Suspense boundary.
   return <Suspense><ProfileClient /></Suspense>;
 }

@@ -112,7 +112,7 @@ export function ModerationQueue() {
   const select = "field h-11 w-auto px-3";
 
   return (
-    <main className="mx-auto min-h-[70vh] max-w-5xl px-4 py-8 pb-28 sm:px-6 desktop:pb-12">
+    <main className="mx-auto min-h-[70vh] max-w-5xl px-4 py-8 pb-12 sm:px-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-sm font-bold uppercase tracking-[0.14em] text-signal">Staff</p>

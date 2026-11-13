@@ -1,5 +1,6 @@
 import { api, requestFailed } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
+import { formatDeadline, formatTime, isSameCampusDay } from "@/lib/time";
 
 const failed = requestFailed;
 
@@ -28,8 +29,9 @@ export async function getDeal(id: number) {
   return data ?? failed(error, response);
 }
 
-export async function listDeals() {
-  const { data, error, response } = await api.GET("/api/deals/");
+/** The viewer's deals; `section` narrows it (Home's strip only needs "current"). */
+export async function listDeals(section?: Deal["section"]) {
+  const { data, error, response } = await api.GET("/api/deals/", { params: { query: section ? { section } : {} } });
   return data ?? failed(error, response);
 }
 
@@ -216,4 +218,51 @@ export async function setDealArchived(id: number, archived: boolean) {
     ? await api.POST("/api/deals/{id}/archive/", path)
     : await api.DELETE("/api/deals/{id}/archive/", path);
   return data ?? failed(error, response);
+}
+
+/** One deal waiting on the viewer: an answer, a new meetup time to answer, a meetup today, or a
+ * handoff to confirm. */
+type NeedsYouItem = { kind: "answer" | "reschedule" | "meetup" | "confirm"; at: string };
+
+/** What Home's "Needs you" strip says, or null when nothing is waiting on the viewer.
+ * Waiting means a request or counter to answer (its 24h not yet up), or a Pending handoff the
+ * viewer hasn't confirmed: one where the other side proposed a new meetup time, one with a
+ * meetup later today, or one to confirm because the meetup time has passed or the other side
+ * already confirmed. An unconfirmed handoff lapses at its deadline, so it counts until then. */
+export function needsYou(deals: Deal[], now: number): { title: string; detail: string } | null {
+  const items: NeedsYouItem[] = [];
+  for (const deal of deals) {
+    if (deal.section !== "current") continue;
+    if (deal.awaiting_me) {
+      // The list doesn't settle deadlines (actions and a 10-minute sweep do), so a request whose
+      // 24h just ran out can still say it's waiting; answering it would be refused.
+      if (deal.response_deadline && new Date(deal.response_deadline).getTime() > now) items.push({ kind: "answer", at: deal.response_deadline });
+      continue;
+    }
+    if (deal.status !== "pending") continue;
+    const mine = deal.my_role === "buyer" ? deal.buyer_confirmed : deal.seller_confirmed;
+    if (mine) continue;
+    const other = deal.my_role === "buyer" ? deal.seller_confirmed : deal.buyer_confirmed;
+    const { accepted: meetup, fromOther } = meetupState(deal, now);
+    const met = meetup && new Date(meetup.starts_at).getTime() <= now;
+    // A new time from the other side (it can be accepted until it starts) comes before "you met,
+    // confirm": proposing one says the first meetup didn't happen. Their confirmation says it did.
+    if (other && deal.handoff_deadline) items.push({ kind: "confirm", at: deal.handoff_deadline });
+    else if (fromOther.length) items.push({ kind: "reschedule", at: fromOther[0].starts_at });
+    else if (met && deal.handoff_deadline) items.push({ kind: "confirm", at: deal.handoff_deadline });
+    else if (meetup && isSameCampusDay(meetup.starts_at, now)) items.push({ kind: "meetup", at: meetup.starts_at });
+  }
+  if (!items.length) return null;
+  const title = items.length === 1 ? "A deal needs you" : `${items.length} deals need you`;
+  const byTime = (a: NeedsYouItem, b: NeedsYouItem) => a.at.localeCompare(b.at);
+  // A meetup today is the most concrete thing to say; otherwise the nearest deadline.
+  const meetup = items.filter((item) => item.kind === "meetup").sort(byTime)[0];
+  if (meetup) return { title, detail: `Meetup today at ${formatTime(meetup.at)}` };
+  const first = [...items].sort(byTime)[0];
+  const when = formatDeadline(first.at, now);
+  if (items.length === 1) {
+    if (first.kind === "reschedule") return { title, detail: "Answer the new meetup time" };
+    return { title, detail: first.kind === "answer" ? `Answer by ${when}` : `Confirm the handoff by ${when}` };
+  }
+  return { title, detail: items.every((item) => item.kind === "answer") ? `Answer the first by ${when}` : `Next deadline ${when}` };
 }

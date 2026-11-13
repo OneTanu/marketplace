@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { reactivateAccount } from "@/lib/account";
 import { authRequest, errorsFrom, pendingFlow, type AuthError, type AllauthResponse } from "@/lib/auth";
-import { homeMarketplacePath } from "@/lib/platform";
 import { Field, FormAlert, SubmitButton } from "./form-parts";
 
 /** allauth answers a correct password for a switched-off account with 401 and no step to
@@ -22,7 +21,7 @@ export function LoginForm() {
 
   async function logIn(email: string, password: string) {
     const { response, body } = await authRequest("auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
-    if (response.ok) { router.push(await homeMarketplacePath()); router.refresh(); }
+    if (response.ok) { router.push("/"); router.refresh(); }
     else if (response.status === 401 && pendingFlow(body, "verify_email")) router.push(`/account/verify-email?email=${encodeURIComponent(email)}`);
     else if (isInactiveAccount(response, body)) setInactive({ email, password });
     else setErrors(errorsFrom(body, "That email and password combination didn’t work."));

@@ -56,7 +56,7 @@ export function DeactivateAccount() {
   const blocked = preview.blockers.length > 0;
 
   return (
-    <main className="mx-auto min-h-[70vh] max-w-2xl px-4 py-8 pb-28 sm:px-6 desktop:pb-12">
+    <main className="mx-auto min-h-[70vh] max-w-2xl px-4 py-8 pb-12 sm:px-6">
       <Link href="/profile/standing" className="text-sm font-bold text-muted hover:text-ink">← Account status</Link>
       <h1 className="type-wide mt-4 text-3xl font-black">Deactivate your account</h1>
       <p className="mt-2 text-muted">Taking your thrift offline. You can come back any time by logging in again.</p>
