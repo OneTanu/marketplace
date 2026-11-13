@@ -8,7 +8,7 @@ import { labSchool } from "./lab-schools";
 /** A feed card plus the school slug the lab's palettes are keyed by (the API card has none). */
 export type LabListing = ListingCard & { school: ListingCard["school"] & { slug: string } };
 
-const SELLER = { id: 1, username: "mayasells" };
+const SELLER = { id: 1, username: "mayasells", profile_photo_url: null };
 const POSTED = "2026-10-07T16:00:00Z";
 
 function card(

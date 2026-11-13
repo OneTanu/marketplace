@@ -96,7 +96,7 @@ export function ProfileClient() {
       {/* The whole card opens the public profile for a tap or click. It isn't a link itself, so
           screen readers and keyboards get one clear way there: the View profile button. */}
       <div onClick={() => router.push(publicHref)} className="cursor-pointer rounded-[14px] transition hover:shadow-[0_6px_20px_-8px_rgb(23_22_43/25%)]">
-        <StudentIdCard firstName={user.first_name} lastInitial={user.last_name[0]?.toUpperCase() ?? ""} username={user.username} schoolName={user.school?.name} schoolColors={user.school?.colors} dateJoined={user.date_joined} soldCount={user.sold_count} followerCount={user.follower_count} />
+        <StudentIdCard firstName={user.first_name} lastInitial={user.last_name[0]?.toUpperCase() ?? ""} username={user.username} schoolName={user.school?.name} schoolColors={user.school?.colors} dateJoined={user.date_joined} soldCount={user.sold_count} followerCount={user.follower_count} photoUrl={user.profile_photo_url} />
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
         <Link href={publicHref} className="btn btn-secondary">View profile</Link>

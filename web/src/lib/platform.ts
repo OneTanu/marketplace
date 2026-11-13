@@ -1,4 +1,5 @@
 import { api, errorMessage } from "@/lib/api/client";
+import type { components } from "@/lib/api/schema";
 
 export type ProfileUpdateErrors = {
   instagram_handle?: string;
@@ -73,5 +74,43 @@ export async function setFollowing(username: string, following: boolean) {
   }
   const { data, error } = await api.POST("/api/users/{username}/follow/", params);
   if (!data) throw new Error(errorMessage(error, "detail") ?? "We couldn’t update this follow.");
+  return data;
+}
+
+export type FollowDirection = "followers" | "following";
+
+/** One page of a student's followers or follows. Null when signed out. */
+export async function getFollowList(username: string, direction: FollowDirection, cursor?: string) {
+  const options = { params: { path: { username }, query: cursor ? { cursor } : {} } };
+  const { data, response } = direction === "followers"
+    ? await api.GET("/api/users/{username}/followers/", options)
+    : await api.GET("/api/users/{username}/following/", options);
+  if (response.status === 401 || response.status === 403) return null;
+  return data ?? failed(response);
+}
+
+type ProfilePhotoUploadRequest = components["schemas"]["ProfilePhotoUploadRequest"];
+
+/** Upload a new profile photo. Returns the updated account, or throws with a message to show. */
+export async function uploadProfilePhoto(file: File) {
+  const body = new FormData();
+  body.append("photo", file);
+  try {
+    const { data, error } = await api.POST("/api/me/photo/", {
+      // Sent as this multipart FormData; the generated type describes the file as a string.
+      body: {} as ProfilePhotoUploadRequest,
+      bodySerializer: () => body,
+    });
+    if (data) return data;
+    throw new Error(errorMessage(error, "photo") ?? errorMessage(error, "detail") ?? "We couldn’t upload this photo. Try another one.");
+  } catch (caught) {
+    if (caught instanceof Error && caught.message !== "Failed to fetch") throw caught;
+    throw new Error("Tanu couldn’t reach the server. Check your connection and try again.");
+  }
+}
+
+export async function removeProfilePhoto() {
+  const { data, error } = await api.DELETE("/api/me/photo/");
+  if (!data) throw new Error(errorMessage(error, "detail") ?? "We couldn’t remove your photo. Try again.");
   return data;
 }

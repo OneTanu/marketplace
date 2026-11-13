@@ -78,6 +78,8 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     instagram_handle = models.CharField(max_length=30, blank=True)
     profile_description = models.CharField(max_length=300, blank=True)
+    # A square, re-encoded copy written by accounts.services.set_profile_photo. Blank for none.
+    profile_photo = models.ImageField(upload_to="profile-photos/%Y/%m/", blank=True)
     # Set from the verified email domain at signup. Null only for staff accounts
     # created outside signup (e.g. createsuperuser).
     school = models.ForeignKey(
@@ -123,6 +125,10 @@ class User(AbstractUser):
         self.username = self.username.strip().lower()
         self.instagram_handle = normalize_instagram_handle(self.instagram_handle)
         super().save(*args, **kwargs)
+
+    @property
+    def profile_photo_url(self) -> str | None:
+        return self.profile_photo.url if self.profile_photo else None
 
     def __str__(self):
         return self.email

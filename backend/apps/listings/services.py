@@ -301,6 +301,37 @@ def _clean_photo(photo: UploadedFile) -> CleanedPhoto:
     return CleanedPhoto(content, PHOTO_EXTENSIONS[image_format])
 
 
+def clean_square_photo(photo: UploadedFile, *, edge: int) -> CleanedPhoto:
+    """A centre-cropped square copy of an uploaded photo, `edge` px a side (smaller photos
+    aren't upscaled), cleaned like listing photos: upright, re-encoded in its own format, with
+    no EXIF (GPS) or other metadata. For profile photos. Raises ValidationError with a
+    message that reads on its own."""
+    if photo.size > MAX_PHOTO_BYTES:
+        raise ValidationError(
+            f"This photo is larger than {MAX_PHOTO_BYTES // (1024 * 1024)} MB. Try a smaller one."
+        )
+    if problem := _photo_problem(photo):
+        raise ValidationError(f"This photo {problem}.")
+    try:
+        with Image.open(photo) as original:
+            image_format = original.format
+            icc_profile = original.info.get("icc_profile")
+            # Decode a large JPEG at reduced scale, keeping both sides at least `edge`.
+            original.draft(None, (edge, edge))
+            image = ImageOps.exif_transpose(original)
+        save_format = PHOTO_SAVE_FORMATS[image_format]
+        # max_edge=0: always leave palette modes, which can't be resized smoothly.
+        image = _photo_mode(image, save_format, max_edge=0)
+        side = min(edge, *image.size)
+        image = ImageOps.fit(image, (side, side), Image.Resampling.LANCZOS)
+        content = _encode_photo(image, save_format, icc_profile)
+    except Exception as exc:  # truncated or otherwise damaged image data
+        raise ValidationError(f"This photo {DAMAGED_PHOTO}.") from exc
+    finally:
+        photo.seek(0)
+    return CleanedPhoto(content, PHOTO_EXTENSIONS[image_format])
+
+
 def _encode_photo(image: Image.Image, save_format: str, icc_profile: bytes | None) -> bytes:
     """Encode an image with no metadata except its ICC colour profile."""
     # Drop everything Pillow might write back from the original (e.g. a JPEG comment);

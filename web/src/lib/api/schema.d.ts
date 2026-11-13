@@ -703,6 +703,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/photo/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Upload a new profile photo, replacing any current one. It's stored as a square crop
+         *     of the photo's centre, with location and other metadata removed.
+         */
+        post: operations["me_photo_create"];
+        /** @description Set or remove my profile photo. Returns my account, with the new photo's URL. */
+        delete: operations["me_photo_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/restrictions/": {
         parameters: {
             query?: never;
@@ -1085,6 +1106,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/users/{username}/followers/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description A student's followers, or the students they follow, newest first and a page at a time.
+         *     Each row has the viewer's own follow state, so the list can show Follow buttons.
+         */
+        get: operations["users_followers_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/{username}/following/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description A student's followers, or the students they follow, newest first and a page at a time.
+         *     Each row has the viewer's own follow state, so the list can show Follow buttons.
+         */
+        get: operations["users_following_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/users/{username}/listings/": {
         parameters: {
             query?: never;
@@ -1404,6 +1465,7 @@ export interface components {
             readonly school: components["schemas"]["School"] | null;
             instagram_handle?: string;
             profile_description?: string;
+            readonly profile_photo_url: string | null;
             readonly follower_count: number;
             readonly following_count: number;
             readonly sold_count: number;
@@ -1601,6 +1663,11 @@ export interface components {
             readonly user: components["schemas"]["StaffUser"];
             readonly reviewed: number;
             readonly upheld: number;
+        };
+        FollowListPage: {
+            results: components["schemas"]["PublicUser"][];
+            /** @description Pass as `cursor` to get the next page. Null on the last page. */
+            next_cursor: string | null;
         };
         ItemDetails: {
             readonly condition: components["schemas"]["ConditionEnum"];
@@ -1820,6 +1887,7 @@ export interface components {
             readonly id: number;
             readonly username: string;
             readonly first_name: string;
+            readonly profile_photo_url: string | null;
             readonly school: components["schemas"]["School"] | null;
             readonly is_available: boolean;
         };
@@ -1987,6 +2055,13 @@ export interface components {
          * @enum {integer}
          */
         PriorityEnum: 1 | 2 | 3;
+        ProfilePhotoUploadRequest: {
+            /**
+             * Format: binary
+             * @description A JPEG, PNG or WebP of up to 10 MB. Stored as a square crop of its centre.
+             */
+            photo: string;
+        };
         /**
          * @description * `weapon` - Weapon
          *     * `drugs` - Drugs or prescriptions
@@ -2006,6 +2081,7 @@ export interface components {
             readonly school: components["schemas"]["School"] | null;
             readonly instagram_handle: string;
             readonly profile_description: string;
+            readonly profile_photo_url: string | null;
             readonly follower_count: number;
             readonly following_count: number;
             readonly sold_count: number;
@@ -2232,6 +2308,7 @@ export interface components {
         SellerSummary: {
             readonly id: number;
             readonly username: string;
+            readonly profile_photo_url: string | null;
         };
         SendMessageRequest: {
             body: string;
@@ -3585,6 +3662,47 @@ export interface operations {
             };
         };
     };
+    me_photo_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ProfilePhotoUploadRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurrentUser"];
+                };
+            };
+        };
+    };
+    me_photo_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     me_restrictions_list: {
         parameters: {
             query?: never;
@@ -4220,6 +4338,54 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    users_followers_retrieve: {
+        parameters: {
+            query?: {
+                /** @description `next_cursor` from the last page. */
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowListPage"];
+                };
+            };
+        };
+    };
+    users_following_retrieve: {
+        parameters: {
+            query?: {
+                /** @description `next_cursor` from the last page. */
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowListPage"];
+                };
             };
         };
     };

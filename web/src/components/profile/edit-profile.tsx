@@ -5,12 +5,13 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { FocusedHeader } from "@/components/ui/focused-header";
 import { getCurrentUser, updateCurrentUser, type ProfileUpdateErrors } from "@/lib/platform";
+import { ProfilePhotoField } from "./profile-photo-picker";
 import type { components } from "@/lib/api/schema";
 
 type CurrentUser = components["schemas"]["CurrentUser"];
 
-/** Edit profile (/profile/edit), a focused screen: the description and Instagram handle that
- * other students see on your public profile. */
+/** Edit profile (/profile/edit), a focused screen: the photo, description and Instagram handle
+ * that other students see on your public profile. The photo saves on its own, as soon as it's chosen. */
 export function EditProfile() {
   // undefined while loading, null when signed out.
   const [user, setUser] = useState<CurrentUser | null>();
@@ -64,6 +65,7 @@ export function EditProfile() {
     {header}
     <form onSubmit={save} className={`${shell} space-y-6`}>
       <p className="text-muted">Other students see this on your profile.</p>
+      <ProfilePhotoField user={user} onChange={setUser} />
       <label className="block">
         <span className="flex justify-between gap-3 text-sm font-bold">Description <span className="font-normal text-muted">Optional · 300 characters</span></span>
         <textarea name="profile_description" defaultValue={user.profile_description} maxLength={300} rows={4} className="field mt-2 h-auto resize-none py-3 leading-6" placeholder="Tell other students a little about you and what you sell." />

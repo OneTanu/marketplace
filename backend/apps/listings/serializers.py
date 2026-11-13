@@ -36,6 +36,7 @@ class SchoolSummarySerializer(serializers.ModelSerializer):
 class SellerSummarySerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     username = serializers.CharField(read_only=True)
+    profile_photo_url = serializers.CharField(read_only=True, allow_null=True)
 
 
 class ItemDetailsSerializer(serializers.ModelSerializer):

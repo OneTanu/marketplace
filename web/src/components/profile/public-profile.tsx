@@ -11,6 +11,7 @@ import { getPublicUser, getPublicUserListings, setFollowing } from "@/lib/platfo
 import { startConversation } from "@/lib/messaging";
 import type { components } from "@/lib/api/schema";
 
+import { FollowCounts } from "./follow-counts";
 import { InstagramLink } from "./instagram-link";
 import { StudentIdCard } from "./student-id-card";
 
@@ -72,11 +73,11 @@ export function PublicProfile({ username }: { username: string }) {
   return <main className="mx-auto min-h-[70vh] max-w-6xl px-4 py-10 pb-12 sm:px-6">
     {user.is_self && <p className="mb-6 rounded-xl bg-surface px-4 py-3 text-sm">This is how other students see your profile.</p>}
     <section className="grid items-start gap-6 lg:grid-cols-[minmax(0,26rem)_1fr] lg:gap-8">
-      <StudentIdCard firstName={user.first_name} lastInitial={user.last_initial} username={user.username} schoolName={user.school?.name} schoolColors={user.school?.colors} dateJoined={user.date_joined} soldCount={user.sold_count} />
+      <StudentIdCard firstName={user.first_name} lastInitial={user.last_initial} username={user.username} schoolName={user.school?.name} schoolColors={user.school?.colors} dateJoined={user.date_joined} soldCount={user.sold_count} photoUrl={user.profile_photo_url} />
       <div>
         <p className="max-w-2xl leading-7 text-foreground/80">{user.profile_description || "This student has not added a profile description yet."}</p>
         <div className="mt-4 flex flex-wrap items-center gap-x-7 gap-y-3 text-sm">
-          <div className="flex gap-6"><div><strong className="text-base">{user.follower_count}</strong> <span className="text-muted">Followers</span></div><div><strong className="text-base">{user.following_count}</strong> <span className="text-muted">Following</span></div></div>
+          <FollowCounts username={user.username} followers={user.follower_count} following={user.following_count} />
           {user.instagram_handle && <InstagramLink handle={user.instagram_handle} />}
         </div>
         <div className="mt-5 flex flex-wrap items-start gap-2">
