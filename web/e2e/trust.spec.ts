@@ -65,9 +65,16 @@ test("reporting a conversation sends only the chosen messages and can block the 
   expect(reply.status()).toBe(400);
   expect(JSON.stringify(await reply.json())).toContain("isn't available");
 
-  // Unblocking from their profile restores messaging.
+  // Blocked students can't see each other's profiles.
   await page.goto(`/users/${TEST_SECOND_BUYER.username}`);
-  await page.getByRole("button", { name: "Unblock" }).click();
+  await expect(page.getByRole("heading", { name: "Profile unavailable" })).toBeVisible();
+
+  // Unblocking from Blocked accounts restores the profile and messaging.
+  await page.goto("/profile/blocked");
+  const blocked = page.getByRole("listitem").filter({ hasText: `@${TEST_SECOND_BUYER.username}` });
+  await blocked.getByRole("button", { name: "Unblock" }).click();
+  await expect(blocked).toHaveCount(0);
+  await page.goto(`/users/${TEST_SECOND_BUYER.username}`);
   await expect(page.getByRole("button", { name: "Block", exact: true })).toBeVisible();
   const again = await senderContext.request.post(`/api/conversations/${conversationId}/messages/`, { data: { body: "sorry" }, headers });
   expect(again.ok()).toBe(true);
