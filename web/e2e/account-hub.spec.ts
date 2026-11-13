@@ -3,7 +3,8 @@ import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 import { signIn } from "./sign-in";
-import { TEST_BUYER, TEST_MODERATOR } from "./test-user";
+import { PHOTO } from "./listings";
+import { TEST_BUYER, TEST_MODERATOR, TEST_SECOND_BUYER } from "./test-user";
 
 const PHONE = { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true };
 
@@ -48,6 +49,25 @@ test.describe("on a phone", () => {
     await page.getByRole("status").getByRole("link", { name: "View profile" }).click();
     await expect(page.getByText(description)).toBeVisible();
   });
+});
+
+test("the profile photo is changed on Edit profile, which the hub's avatar opens", async ({ context, page, baseURL }) => {
+  await signIn(context, baseURL!, TEST_SECOND_BUYER);
+  await page.goto("/profile");
+  await page.getByRole("link", { name: /profile photo/ }).click();
+  await expect(page).toHaveURL("/profile/edit");
+
+  // The photo saves on its own, as soon as it's chosen.
+  await page.locator("input[type=file]").setInputFiles(PHOTO);
+  await expect(page.getByRole("button", { name: "Change photo" })).toBeVisible();
+  await page.goto("/profile");
+  // The photo is decorative (the name is beside it), so it has no img role.
+  await expect(page.getByRole("link", { name: "Change your profile photo" }).locator("img")).toBeVisible();
+
+  await page.goto("/profile/edit");
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Remove" }).click();
+  await expect(page.getByRole("button", { name: "Add photo" })).toBeVisible();
 });
 
 test("staff get a Moderation row", async ({ context, page, baseURL }) => {

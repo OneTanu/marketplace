@@ -1383,6 +1383,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/MyInfoRequest'
           description: ''
+  /api/me/photo/:
+    post:
+      operationId: me_photo_create
+      description: |-
+        Upload a new profile photo, replacing any current one. It's stored as a square crop
+        of the photo's centre, with location and other metadata removed.
+      tags:
+      - me
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProfilePhotoUploadRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+          description: ''
+    delete:
+      operationId: me_photo_destroy
+      description: Set or remove my profile photo. Returns my account, with the new
+        photo's URL.
+      tags:
+      - me
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/me/restrictions/:
     get:
       operationId: me_restrictions_list
@@ -2086,6 +2120,62 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/users/{username}/followers/:
+    get:
+      operationId: users_followers_retrieve
+      description: |-
+        A student's followers, or the students they follow, newest first and a page at a time.
+        Each row has the viewer's own follow state, so the list can show Follow buttons.
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: '`next_cursor` from the last page.'
+      - in: path
+        name: username
+        schema:
+          type: string
+        required: true
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FollowListPage'
+          description: ''
+  /api/users/{username}/following/:
+    get:
+      operationId: users_following_retrieve
+      description: |-
+        A student's followers, or the students they follow, newest first and a page at a time.
+        Each row has the viewer's own follow state, so the list can show Follow buttons.
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: '`next_cursor` from the last page.'
+      - in: path
+        name: username
+        schema:
+          type: string
+        required: true
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FollowListPage'
+          description: ''
   /api/users/{username}/listings/:
     get:
       operationId: users_listings_list
@@ -2942,6 +3032,10 @@ components:
         profile_description:
           type: string
           maxLength: 300
+        profile_photo_url:
+          type: string
+          readOnly: true
+          nullable: true
         follower_count:
           type: integer
           readOnly: true
@@ -2971,6 +3065,7 @@ components:
       - is_moderator
       - is_senior_moderator
       - last_name
+      - profile_photo_url
       - school
       - sold_count
       - username
@@ -3541,6 +3636,20 @@ components:
       - reviewed
       - upheld
       - user
+    FollowListPage:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicUser'
+        next_cursor:
+          type: string
+          nullable: true
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      required:
+      - next_cursor
+      - results
     ItemDetails:
       type: object
       properties:
@@ -4177,6 +4286,10 @@ components:
         first_name:
           type: string
           readOnly: true
+        profile_photo_url:
+          type: string
+          readOnly: true
+          nullable: true
         school:
           allOf:
           - $ref: '#/components/schemas/School'
@@ -4189,6 +4302,7 @@ components:
       - first_name
       - id
       - is_available
+      - profile_photo_url
       - school
       - username
     ModerationActionKind:
@@ -4602,6 +4716,16 @@ components:
         * `1` - Urgent
         * `2` - High
         * `3` - Normal
+    ProfilePhotoUploadRequest:
+      type: object
+      properties:
+        photo:
+          type: string
+          format: binary
+          description: A JPEG, PNG or WebP of up to 10 MB. Stored as a square crop
+            of its centre.
+      required:
+      - photo
     ProhibitedCategory:
       enum:
       - weapon
@@ -4646,6 +4770,10 @@ components:
         profile_description:
           type: string
           readOnly: true
+        profile_photo_url:
+          type: string
+          readOnly: true
+          nullable: true
         follower_count:
           type: integer
           readOnly: true
@@ -4676,6 +4804,7 @@ components:
       - is_self
       - last_initial
       - profile_description
+      - profile_photo_url
       - school
       - sold_count
       - username
@@ -5194,8 +5323,13 @@ components:
         username:
           type: string
           readOnly: true
+        profile_photo_url:
+          type: string
+          readOnly: true
+          nullable: true
       required:
       - id
+      - profile_photo_url
       - username
     SendMessageRequest:
       type: object

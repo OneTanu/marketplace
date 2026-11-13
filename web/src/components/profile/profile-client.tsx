@@ -92,9 +92,10 @@ export function ProfileClient() {
     <div data-page-tint className="mx-auto w-full max-w-md px-4 py-6 sm:py-10">
       <RestrictionNotice />
       {/* The whole card opens the public profile for a tap or click. It isn't a link itself, so
-          screen readers and keyboards get one clear way there: the View profile button. */}
-      <div onClick={() => router.push(publicHref)} className="cursor-pointer rounded-xl transition-transform motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-[0.99]">
-        <StudentIdCard firstName={user.first_name} lastInitial={user.last_name[0]?.toUpperCase() ?? ""} username={user.username} schoolName={user.school?.name} schoolColors={user.school?.colors} dateJoined={user.date_joined} soldCount={user.sold_count} followerCount={user.follower_count} />
+          screen readers and keyboards get one clear way there: the View profile button. The avatar
+          is its own link, to Edit profile, where the photo changes. */}
+      <div onClick={(event) => { if (!(event.target as Element).closest("a")) router.push(publicHref); }} className="cursor-pointer rounded-xl transition-transform motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-[0.99]">
+        <StudentIdCard firstName={user.first_name} lastInitial={user.last_name[0]?.toUpperCase() ?? ""} username={user.username} schoolName={user.school?.name} schoolColors={user.school?.colors} dateJoined={user.date_joined} soldCount={user.sold_count} followerCount={user.follower_count} photoUrl={user.profile_photo_url} avatarHref="/profile/edit" />
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
         <Link href={publicHref} className="btn btn-secondary">View profile</Link>

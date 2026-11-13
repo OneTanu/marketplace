@@ -1,5 +1,7 @@
 import pytest
+from allauth.account.models import EmailAddress
 from django.core import mail
+from django.core.cache import cache
 from django.db import IntegrityError
 
 from apps.accounts.models import User
@@ -126,3 +128,23 @@ def test_username_is_unique_regardless_of_case(client):
 
     assert second.status_code == 400
     assert User.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_signup_with_registered_email_answers_like_a_new_signup(client, settings):
+    """Signing up again with a taken address must look the same as a new signup (so it doesn't
+    reveal the account exists) and email the owner a link to reset their password."""
+    client.post(SIGNUP_URL, signup_data(), content_type="application/json")
+    EmailAddress.objects.filter(email="terp@umd.edu").update(verified=True)
+    mail.outbox.clear()
+    cache.clear()  # allauth emails an address at most once per 3 minutes
+    client.cookies.clear()  # a different visitor, not the pending signup's session
+
+    response = client.post(
+        SIGNUP_URL, signup_data(username="someoneelse"), content_type="application/json"
+    )
+
+    assert response.status_code == 401
+    assert User.objects.filter(email="terp@umd.edu").count() == 1
+    assert len(mail.outbox) == 1
+    assert f"{settings.WEB_APP_URL}/account/forgot-password" in mail.outbox[0].body

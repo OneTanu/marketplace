@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Avatar } from "@/components/ui/avatar";
 import { schoolPalette } from "@/lib/school-colors";
 
@@ -22,6 +24,10 @@ export type StudentIdCardProps = {
   soldCount: number;
   /** Adds a followers count (the account hub shows it; the public profile has its own). */
   followerCount?: number;
+  /** The student's profile photo; the first letter of their name shows without one. */
+  photoUrl?: string | null;
+  /** Makes the avatar a link (the account hub sends it to Edit profile, where the photo changes). */
+  avatarHref?: string;
   /** The name is the page's h1 on a profile; the design lab nests the card under an h2. */
   nameAs?: "h1" | "h3";
 };
@@ -31,7 +37,7 @@ export type StudentIdCardProps = {
  * width, without copying any school's real card: no logos, seals, ID numbers or barcodes.
  * The school's colours fill the stripe across the top and nowhere else.
  */
-export function StudentIdCard({ firstName, lastInitial, username, schoolName, schoolColors, dateJoined, soldCount, followerCount, nameAs: Name = "h1" }: StudentIdCardProps) {
+export function StudentIdCard({ firstName, lastInitial, username, schoolName, schoolColors, dateJoined, soldCount, followerCount, photoUrl, avatarHref, nameAs: Name = "h1" }: StudentIdCardProps) {
   const { stripe } = schoolPalette(schoolColors);
   const name = firstName ? `${firstName}${lastInitial ? ` ${lastInitial}.` : ""}` : `@${username}`;
 
@@ -41,7 +47,9 @@ export function StudentIdCard({ firstName, lastInitial, username, schoolName, sc
         {stripe.map((color, index) => <span key={index} style={{ background: color, width: stripeWidth(index, stripe.length) }} />)}
       </div>
       <div className="flex min-h-0 items-center gap-4 px-4.5 desktop:gap-5 desktop:px-5">
-        <Avatar user={{ first_name: firstName, username }} size="lg" />
+        {avatarHref
+          ? <Link href={avatarHref} aria-label={photoUrl ? "Change your profile photo" : "Add a profile photo"} className="shrink-0 rounded-full transition-transform motion-safe:active:scale-95"><Avatar user={{ first_name: firstName, username, profile_photo_url: photoUrl }} size="lg" /></Link>
+          : <Avatar user={{ first_name: firstName, username, profile_photo_url: photoUrl }} size="lg" />}
         <div className="min-w-0">
           <Name className="type-wide line-clamp-2 text-title font-extrabold text-ink [overflow-wrap:anywhere]">{name}</Name>
           {/* Without a first name the heading is already the username, so it isn't repeated. */}

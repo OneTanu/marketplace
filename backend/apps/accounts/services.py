@@ -1,9 +1,13 @@
+from uuid import uuid4
+
 from allauth.account.forms import UserTokenForm
 from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
+from django.core.files.uploadedfile import UploadedFile
 from django.db import IntegrityError, transaction
-from django.db.models import Q, QuerySet
+from django.db.models import OuterRef, Q, QuerySet, Subquery
 from django.utils import timezone
 from django.utils.http import base36_to_int
 
@@ -48,15 +52,89 @@ def update_profile(
     return user
 
 
+PROFILE_PHOTO_EDGE = 512  # px, square
+
+
+def set_profile_photo(user: User, photo: UploadedFile) -> User:
+    """Replace the user's profile photo with a cleaned, square copy of `photo` (see
+    listings.services.clean_square_photo). The previous file is deleted once this commits."""
+    from apps.listings.services import clean_square_photo
+
+    try:
+        cleaned = clean_square_photo(photo, edge=PROFILE_PHOTO_EDGE)
+    except ValidationError as error:
+        raise ValidationError({"photo": error.messages}) from error
+    # A random name with the detected format's extension: the uploader's filename never
+    # decides how the file is served.
+    previous = user.profile_photo.name
+    user.profile_photo.save(
+        f"{uuid4().hex}.{cleaned.extension}", ContentFile(cleaned.content), save=False
+    )
+    _save_profile_photo(user, previous)
+    return user
+
+
+def remove_profile_photo(user: User) -> User:
+    previous = user.profile_photo.name
+    user.profile_photo = ""
+    _save_profile_photo(user, previous)
+    return user
+
+
+def _save_profile_photo(user: User, previous: str) -> None:
+    storage = user.profile_photo.storage
+    with transaction.atomic():
+        user.save(update_fields=["profile_photo"])
+        # Storage isn't part of the transaction, so the old file goes only once the row has
+        # moved off it. (Report evidence keeps its own copy.)
+        if previous and previous != user.profile_photo.name:
+            transaction.on_commit(lambda: storage.delete(previous))
+
+
 def follow_user(*, follower: User, following: User) -> Follow:
+    # Imported here: trust's services import this module.
+    from apps.trust.checks import require_not_blocked
+
     if follower.pk == following.pk:
         raise ValidationError("You cannot follow yourself.")
+    require_not_blocked(follower, following)
     relationship, _ = Follow.objects.get_or_create(follower=follower, following=following)
     return relationship
 
 
 def unfollow_user(*, follower: User, following: User) -> None:
     Follow.objects.filter(follower=follower, following=following).delete()
+
+
+def remove_follows_between(first: User, second: User) -> None:
+    """End the follows in both directions, e.g. when one student blocks the other."""
+    Follow.objects.filter(
+        Q(follower=first, following=second) | Q(follower=second, following=first)
+    ).delete()
+
+
+def follow_list(
+    *, user: User, direction: str, viewer: User, users: QuerySet[User] | None = None
+) -> QuerySet[User]:
+    """The students who follow `user` ("followers") or whom `user` follows ("following"), newest
+    follow first, as `viewer` may see them: only active, verified students, and never anyone
+    the viewer has blocked or been blocked by. Each row is annotated with `follow_id`, the id
+    of the Follow that put it on the list, for ordering and paging. Pass `users` (a subset of
+    verified_users(), e.g. with extra annotations) to build on it."""
+    from apps.trust.checks import blocked_either_way_ids
+
+    if direction == "followers":
+        follows = Follow.objects.filter(following=user, follower=OuterRef("pk"))
+    elif direction == "following":
+        follows = Follow.objects.filter(follower=user, following=OuterRef("pk"))
+    else:
+        raise ValueError(direction)
+    return (
+        (verified_users() if users is None else users)
+        .annotate(follow_id=Subquery(follows.values("pk")[:1]))
+        .filter(follow_id__isnull=False)
+        .exclude(pk__in=blocked_either_way_ids(viewer.pk))
+    )
 
 
 def set_account_active(user: User, active: bool) -> User:

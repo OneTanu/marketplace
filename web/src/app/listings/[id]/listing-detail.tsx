@@ -8,6 +8,7 @@ import { refusalMessage, toFieldErrors } from "@/components/listings/listing-for
 import { PhotoGallery } from "@/components/listings/photo-gallery";
 import { MeetupPicker, type MeetupSelection } from "@/components/deals/meetup-picker";
 import { BookmarkButton } from "@/components/discovery/bookmark-button";
+import { Avatar } from "@/components/ui/avatar";
 import { ReportButton } from "@/components/trust/report";
 import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
@@ -173,9 +174,7 @@ function ListingView({
         )}
 
         <div className="mt-5 flex items-center gap-3 border-t border-line pt-4">
-          <div className="type-wide grid size-10 shrink-0 place-items-center rounded-full bg-brand-soft font-extrabold text-brand">
-            {listing.seller.username[0].toUpperCase()}
-          </div>
+          <Avatar user={listing.seller} />
           <div className="min-w-0 flex-1 text-label">
             <Link href={`/users/${listing.seller.username}`} className="font-semibold hover:underline">
               @{listing.seller.username}
