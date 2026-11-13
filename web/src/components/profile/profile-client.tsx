@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
+import { useLogOut } from "@/components/auth/auth-actions";
 import { ListingCard } from "@/components/discovery/listing-card";
 import { RestrictionNotice } from "@/components/trust/restriction-notice";
 import { api } from "@/lib/api/client";
@@ -24,6 +26,7 @@ type CurrentUser = components["schemas"]["CurrentUser"];
 type Listing = components["schemas"]["Listing"];
 
 type ProfileTab = "selling" | "sold" | "bookmarks";
+const TABS: ProfileTab[] = ["selling", "sold", "bookmarks"];
 type ListingTab = Exclude<ProfileTab, "bookmarks">;
 
 // Which of the seller's own listings each tab shows. Removed ones stay on My listings only.
@@ -99,6 +102,12 @@ function TabContent({ tab, listings }: { tab: ListingTab; listings: Card[] | nul
 }
 
 export function ProfileClient() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const logOut = useLogOut();
+  // undefined until clicked; then pending, or the error to show.
+  const [logOutState, setLogOutState] = useState<"pending" | "failed">();
   const [user, setUser] = useState<CurrentUser | null>();
   const [loadError, setLoadError] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -106,7 +115,18 @@ export function ProfileClient() {
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<ProfileUpdateErrors>({});
   const [photoError, setPhotoError] = useState("");
-  const [tab, setTab] = useState<ProfileTab>("selling");
+  // The tab lives in the URL (?tab=bookmarks), so links such as the account menu's "Saved"
+  // can open it from anywhere, including from this page.
+  const tab = TABS.find((value) => value === searchParams.get("tab")) ?? "selling";
+  function setTab(next: ProfileTab) {
+    router.replace(next === "selling" ? pathname : `${pathname}?tab=${next}`, { scroll: false });
+  }
+
+  async function logOutNow() {
+    setLogOutState("pending");
+    const done = await logOut().catch(() => false);
+    if (!done) setLogOutState("failed");
+  }
   // undefined while loading, null if the request failed.
   const [listings, setListings] = useState<Card[] | null>();
 
@@ -231,7 +251,9 @@ export function ProfileClient() {
             <Link href="/profile/standing" className="btn btn-secondary">Account status</Link>
             {user.is_moderator && <Link href="/moderation" className="btn btn-secondary">Moderation</Link>}
             <button onClick={() => { setEditing((value) => !value); setSaved(false); setErrors({}); }} className="btn btn-secondary">{editing ? "Cancel" : "Edit profile"}</button>
+            <button type="button" onClick={logOutNow} disabled={logOutState === "pending"} className="btn btn-quiet">{logOutState === "pending" ? "Logging out…" : "Log out"}</button>
           </div>
+          {logOutState === "failed" && <p role="alert" className="mt-2 text-sm text-[var(--danger)]">Couldn’t log out. Check your connection and try again.</p>}
         </div>
       </section>
 

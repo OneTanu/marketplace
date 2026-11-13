@@ -90,3 +90,16 @@ test("scrolling loads the next page without duplicates", async ({ context, page,
   expect(new Set(titles).size).toBe(count);
   await expect(page.getByText("You’ve seen everything here.")).toBeVisible();
 });
+
+test("a keyword search shows listings only, and the School filter is how to browse another school", async ({ context, page, baseURL }) => {
+  await signIn(context, baseURL!);
+  const word = `kettle${randomUUID().slice(0, 8)}`;
+  await postListing(context, baseURL!, { title: `E2E ${word}`, category: "electronics" });
+
+  await page.goto(`/search?search=${word}`);
+  await expect(page.getByRole("list", { name: "Listings" }).getByText(`E2E ${word}`)).toBeVisible();
+  // No People block (students by name), and no school switcher in the header.
+  await expect(page.getByRole("heading", { name: "People" })).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "School marketplace" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^School/ })).toBeVisible();
+});

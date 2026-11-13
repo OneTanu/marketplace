@@ -27,13 +27,6 @@ export async function getCurrentUser() {
   return data ?? failed(response);
 }
 
-export async function searchUsers(query: string, school?: string) {
-  const { data, response } = await api.GET("/api/users/", {
-    params: { query: { q: query, ...(school ? { school } : {}) } },
-  });
-  return data ?? failed(response);
-}
-
 export async function getPublicUser(username: string) {
   const { data, response } = await api.GET("/api/users/{username}/", {
     params: { path: { username } },
