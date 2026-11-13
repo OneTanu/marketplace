@@ -13,11 +13,11 @@ class CurrentUserSerializer(serializers.ModelSerializer):
     # Blank means no handle (and clears one). Not nullable: the schema would then type the
     # response as string | null too, though it's always a string.
     instagram_handle = serializers.CharField(required=False, allow_blank=True)
-    follower_count = serializers.IntegerField(source="follower_relationships.count", read_only=True)
-    following_count = serializers.IntegerField(
-        source="following_relationships.count", read_only=True
-    )
+    # Same rule as public profiles: deactivated or suspended students don't count.
+    follower_count = serializers.SerializerMethodField()
+    following_count = serializers.SerializerMethodField()
     sold_count = serializers.SerializerMethodField()
+    profile_photo_url = serializers.CharField(read_only=True, allow_null=True)
     # Staff roles, so the app can show the moderation portal link.
     is_moderator = serializers.SerializerMethodField()
     is_senior_moderator = serializers.SerializerMethodField()
@@ -33,6 +33,7 @@ class CurrentUserSerializer(serializers.ModelSerializer):
             "school",
             "instagram_handle",
             "profile_description",
+            "profile_photo_url",
             "follower_count",
             "following_count",
             "sold_count",
@@ -49,6 +50,12 @@ class CurrentUserSerializer(serializers.ModelSerializer):
             "school",
             "date_joined",
         ]
+
+    def get_follower_count(self, user) -> int:
+        return user.follower_relationships.filter(follower__is_active=True).count()
+
+    def get_following_count(self, user) -> int:
+        return user.following_relationships.filter(following__is_active=True).count()
 
     def get_sold_count(self, user) -> int:
         return sold_count(user)
@@ -72,6 +79,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
     sold_count = serializers.IntegerField(read_only=True)
     is_following = serializers.BooleanField(read_only=True)
     is_self = serializers.SerializerMethodField()
+    profile_photo_url = serializers.CharField(read_only=True, allow_null=True)
     # Only the initial: the full last name stays private.
     last_initial = serializers.SerializerMethodField()
 
@@ -85,6 +93,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
             "school",
             "instagram_handle",
             "profile_description",
+            "profile_photo_url",
             "follower_count",
             "following_count",
             "sold_count",
@@ -100,6 +109,20 @@ class PublicUserSerializer(serializers.ModelSerializer):
     def get_is_self(self, user) -> bool:
         request = self.context.get("request")
         return bool(request and request.user.is_authenticated and request.user.pk == user.pk)
+
+
+class FollowListPageSerializer(serializers.Serializer):
+    results = PublicUserSerializer(many=True)
+    next_cursor = serializers.CharField(
+        allow_null=True,
+        help_text="Pass as `cursor` to get the next page. Null on the last page.",
+    )
+
+
+class ProfilePhotoUploadSerializer(serializers.Serializer):
+    photo = serializers.FileField(
+        help_text="A JPEG, PNG or WebP of up to 10 MB. Stored as a square crop of its centre."
+    )
 
 
 class PasswordResetKeyStatusRequestSerializer(serializers.Serializer):

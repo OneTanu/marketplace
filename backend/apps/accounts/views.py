@@ -9,11 +9,13 @@ from rest_framework.generics import (
     RetrieveAPIView,
     RetrieveUpdateAPIView,
 )
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 
 from apps.errors import service_validation_errors
+from apps.listings import pagination
 from apps.listings.services import sold_count_annotation
 
 from .models import Follow, User
@@ -21,17 +23,22 @@ from .serializers import (
     CurrentUserSerializer,
     DeactivateSerializer,
     DeactivationPreviewSerializer,
+    FollowListPageSerializer,
     PasswordResetKeyStatusRequestSerializer,
     PasswordResetKeyStatusSerializer,
+    ProfilePhotoUploadSerializer,
     PublicUserSerializer,
     ReactivateSerializer,
 )
 from .services import (
     deactivate_account,
     deactivation_preview,
+    follow_list,
     follow_user,
     password_reset_key_status,
     reactivate_account,
+    remove_profile_photo,
+    set_profile_photo,
     unfollow_user,
     verified_users,
 )
@@ -70,6 +77,33 @@ class CurrentUserView(RetrieveUpdateAPIView):
     def perform_update(self, serializer):
         with service_validation_errors():
             serializer.save()
+
+
+class ProfilePhotoView(GenericAPIView):
+    """Set or remove my profile photo. Returns my account, with the new photo's URL."""
+
+    serializer_class = CurrentUserSerializer
+    parser_classes = [MultiPartParser, FormParser]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "profile_photo"
+
+    @extend_schema(
+        request={"multipart/form-data": ProfilePhotoUploadSerializer},
+        responses=CurrentUserSerializer,
+    )
+    def post(self, request):
+        """Upload a new profile photo, replacing any current one. It's stored as a square crop
+        of the photo's centre, with location and other metadata removed."""
+        payload = ProfilePhotoUploadSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        with service_validation_errors():
+            set_profile_photo(request.user, payload.validated_data["photo"])
+        return Response(self.get_serializer(request.user).data)
+
+    @extend_schema(request=None, responses=CurrentUserSerializer)
+    def delete(self, request):
+        remove_profile_photo(request.user)
+        return Response(self.get_serializer(request.user).data)
 
 
 @extend_schema(
@@ -141,6 +175,36 @@ class FollowUserView(GenericAPIView):
         target = self.get_target(username)
         unfollow_user(follower=request.user, following=target)
         return Response(status=204)
+
+
+FOLLOW_ORDERING = ("-follow_id",)  # newest follow first
+
+
+@extend_schema(
+    parameters=[OpenApiParameter("cursor", description="`next_cursor` from the last page.")],
+    responses={200: FollowListPageSerializer},
+)
+class FollowListView(GenericAPIView):
+    """A student's followers, or the students they follow, newest first and a page at a time.
+    Each row has the viewer's own follow state, so the list can show Follow buttons."""
+
+    serializer_class = PublicUserSerializer
+    direction = ""  # "followers" or "following", set in urls.py
+
+    def get(self, request, username):
+        viewer = request.user
+        user = get_object_or_404(verified_users(), username__iexact=username)
+        students = follow_list(
+            user=user, direction=self.direction, viewer=viewer, users=public_users(viewer)
+        )
+        rows, next_cursor = pagination.page(
+            students,
+            f"follow-{self.direction}",
+            FOLLOW_ORDERING,
+            request.query_params.get("cursor"),
+        )
+        results = PublicUserSerializer(rows, many=True, context={"request": request})
+        return Response({"results": results.data, "next_cursor": next_cursor})
 
 
 class PasswordResetKeyStatusView(GenericAPIView):

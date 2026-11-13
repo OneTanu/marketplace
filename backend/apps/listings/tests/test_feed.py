@@ -160,7 +160,7 @@ def test_card_fields(viewer_client, seller, umd):
         "size": "Twin XL",
         "brand": "IKEA",
         "school": {"id": umd.pk, "short_name": "UMD", "colors": ["#E21833", "#FFD200", "#000000"]},
-        "seller": {"id": seller.pk, "username": "seller"},
+        "seller": {"id": seller.pk, "username": "seller", "profile_photo_url": None},
         "is_bookmarked": False,
         "created_at": card["created_at"],
     }

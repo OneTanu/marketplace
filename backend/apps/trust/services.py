@@ -69,11 +69,13 @@ Reason = Report.Reason
 
 @transaction.atomic
 def block_user(*, blocker: User, blocked: User) -> Block:
-    """Block another student. Open requests and deals between the two are canceled; from now
-    on neither can message, deal, or trade with the other."""
+    """Block another student. Their follows of each other end, and open requests and deals
+    between the two are canceled; from now on neither can follow, message, deal, or trade with
+    the other."""
     if blocker.pk == blocked.pk:
         raise ValidationError("You can't block yourself.")
     block, _ = Block.objects.get_or_create(blocker=blocker, blocked=blocked)
+    account_services.remove_follows_between(blocker, blocked)
     deal_services.cancel_deals_between(
         blocker, blocked, reason="One student blocked the other.", announce=False
     )
@@ -378,7 +380,7 @@ def _snapshot(report: Report, target: dict, evidence: list[Message]) -> None:
         )
     if target["reported_user"] and report.target_type == Report.TargetType.USER:
         user = target["reported_user"]
-        EvidenceSnapshot.objects.create(
+        snapshot = EvidenceSnapshot.objects.create(
             report=report,
             kind="profile",
             source_id=user.pk,
@@ -389,6 +391,8 @@ def _snapshot(report: Report, target: dict, evidence: list[Message]) -> None:
                 "instagram_handle": user.instagram_handle,
             },
         )
+        if user.profile_photo:
+            _copy_file(snapshot, user.profile_photo)
     if deal := target.get("deal"):
         EvidenceSnapshot.objects.create(
             report=report,
